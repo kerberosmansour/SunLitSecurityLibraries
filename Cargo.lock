@@ -4270,7 +4270,7 @@ dependencies = [
  "sunlit_secure_errors",
  "sunlit_security_core",
  "sunlit_security_events",
- "thiserror 1.0.69",
+ "thiserror 2.0.18",
  "tokio",
  "zeroize",
 ]
