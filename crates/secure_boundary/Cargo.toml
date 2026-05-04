@@ -39,7 +39,7 @@ mime = "0.3"
 bytes = "1"
 http = "1"
 uuid = { workspace = true, features = ["v4", "serde"] }
-quick-xml = { version = "0.36", features = ["serialize"] }
+quick-xml = { version = "0.39", features = ["serialize"] }
 thiserror = "2"
 time = { workspace = true }
 tokio = { workspace = true }
