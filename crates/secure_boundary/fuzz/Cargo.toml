@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 libfuzzer-sys = "0.4"
-secure_boundary = { package = "sunlit_secure_boundary", path = "..", features = ["mobile-platform"] }
+secure_boundary = { package = "secure_boundary", path = "..", features = ["mobile-platform"] }
 
 [[bin]]
 name = "fuzz_normalize"

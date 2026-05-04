@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 libfuzzer-sys = "0.4"
-secure_privacy = { package = "sunlit_secure_privacy", path = ".." }
+secure_privacy = { package = "secure_privacy", path = ".." }
 
 [[bin]]
 name = "fuzz_pii_classifier"

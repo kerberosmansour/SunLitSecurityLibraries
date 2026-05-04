@@ -49,8 +49,8 @@ Before making the repository public:
    - `Library device-trust contract`
    - `ZeroTrustAuth external conformance`
 5. Require the feature-matrix checks for crates that have framework adapters:
-   `sunlit_secure_boundary`, `sunlit_secure_authz`, and
-   `sunlit_secure_errors`.
+   `secure_boundary`, `secure_authz`, and
+   `secure_errors`.
 6. Enable secret scanning and push protection once GitHub exposes them for the
    public repository.
 7. Disable Projects or Wiki if they are not intentionally used for the public

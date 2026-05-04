@@ -3749,6 +3749,190 @@ dependencies = [
 ]
 
 [[package]]
+name = "secure_authz"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "axum",
+ "axum-core",
+ "casbin",
+ "http 1.4.0",
+ "http-body-util",
+ "lru",
+ "proptest",
+ "secure_device_trust",
+ "secure_errors",
+ "secure_identity",
+ "secure_network",
+ "security_core",
+ "security_events",
+ "serde",
+ "serde_json",
+ "smallvec",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "tower",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "secure_boundary"
+version = "0.1.0"
+dependencies = [
+ "actix-http",
+ "actix-web",
+ "ammonia",
+ "axum",
+ "axum-core",
+ "base64 0.22.1",
+ "bytes",
+ "futures-util",
+ "http 1.4.0",
+ "http-body-util",
+ "mime",
+ "proptest",
+ "quick-xml",
+ "secure_errors",
+ "secure_output",
+ "security_core",
+ "security_events",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "tower",
+ "tower-http",
+ "unicode-normalization",
+ "uuid",
+]
+
+[[package]]
+name = "secure_data"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "argon2",
+ "aws-config",
+ "aws-lc-rs",
+ "aws-sdk-kms",
+ "base64 0.22.1",
+ "chacha20poly1305",
+ "proptest",
+ "rand 0.8.6",
+ "reqwest",
+ "secrecy",
+ "secure_errors",
+ "security_core",
+ "security_events",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "zeroize",
+]
+
+[[package]]
+name = "secure_device_trust"
+version = "0.1.0"
+dependencies = [
+ "secure_network",
+ "security_core",
+ "serde",
+ "serde_json",
+ "time",
+]
+
+[[package]]
+name = "secure_errors"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "axum",
+ "axum-core",
+ "http 1.4.0",
+ "http-body-util",
+ "security_core",
+ "security_events",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tower",
+ "tower-layer",
+ "tracing",
+]
+
+[[package]]
+name = "secure_identity"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "jsonwebtoken",
+ "openidconnect",
+ "proptest",
+ "redis",
+ "reqwest",
+ "ring",
+ "secure_device_trust",
+ "secure_errors",
+ "secure_network",
+ "security_core",
+ "security_events",
+ "serde",
+ "serde_json",
+ "subtle",
+ "time",
+ "tokio",
+ "totp-rs",
+ "tracing",
+ "untrusted 0.9.0",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "secure_network"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "security_core",
+ "security_events",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "time",
+ "x509-parser",
+]
+
+[[package]]
+name = "secure_output"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "security_core",
+]
+
+[[package]]
+name = "secure_privacy"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "hmac 0.12.1",
+ "proptest",
+ "regex",
+ "security_core",
+ "security_events",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "time",
+]
+
+[[package]]
 name = "secure_reference_service"
 version = "0.1.0"
 dependencies = [
@@ -3758,18 +3942,18 @@ dependencies = [
  "http 1.4.0",
  "http-body-util",
  "hyper",
+ "secure_authz",
+ "secure_boundary",
+ "secure_data",
+ "secure_device_trust",
+ "secure_errors",
+ "secure_identity",
+ "secure_network",
+ "secure_output",
+ "security_core",
+ "security_events",
  "serde",
  "serde_json",
- "sunlit_secure_authz",
- "sunlit_secure_boundary",
- "sunlit_secure_data",
- "sunlit_secure_device_trust",
- "sunlit_secure_errors",
- "sunlit_secure_identity",
- "sunlit_secure_network",
- "sunlit_secure_output",
- "sunlit_security_core",
- "sunlit_security_events",
  "thiserror 2.0.18",
  "time",
  "tokio",
@@ -3778,6 +3962,19 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "secure_resilience"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "security_core",
+ "security_events",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "time",
 ]
 
 [[package]]
@@ -3793,19 +3990,19 @@ dependencies = [
  "http-body-util",
  "hyper",
  "jsonwebtoken",
+ "secure_authz",
+ "secure_boundary",
+ "secure_data",
+ "secure_errors",
+ "secure_identity",
+ "secure_network",
+ "secure_output",
+ "secure_privacy",
+ "secure_resilience",
+ "security_core",
+ "security_events",
  "serde",
  "serde_json",
- "sunlit_secure_authz",
- "sunlit_secure_boundary",
- "sunlit_secure_data",
- "sunlit_secure_errors",
- "sunlit_secure_identity",
- "sunlit_secure_network",
- "sunlit_secure_output",
- "sunlit_secure_privacy",
- "sunlit_secure_resilience",
- "sunlit_security_core",
- "sunlit_security_events",
  "thiserror 2.0.18",
  "time",
  "tokio",
@@ -3837,6 +4034,38 @@ checksum = "6ce2691df843ecc5d231c0b14ece2acc3efb62c0a398c7e1d875f3983ce020e3"
 dependencies = [
  "core-foundation-sys",
  "libc",
+]
+
+[[package]]
+name = "security_core"
+version = "0.1.0"
+dependencies = [
+ "derive_more 1.0.0",
+ "serde",
+ "time",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "security_events"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "hmac 0.12.1",
+ "opentelemetry 0.27.1",
+ "proptest",
+ "reqwest",
+ "secure_errors",
+ "security_core",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "time",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -4187,235 +4416,6 @@ name = "subtle"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
-
-[[package]]
-name = "sunlit_secure_authz"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "axum",
- "axum-core",
- "casbin",
- "http 1.4.0",
- "http-body-util",
- "lru",
- "proptest",
- "serde",
- "serde_json",
- "smallvec",
- "sunlit_secure_device_trust",
- "sunlit_secure_errors",
- "sunlit_secure_identity",
- "sunlit_secure_network",
- "sunlit_security_core",
- "sunlit_security_events",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "tower",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "sunlit_secure_boundary"
-version = "0.1.0"
-dependencies = [
- "actix-http",
- "actix-web",
- "ammonia",
- "axum",
- "axum-core",
- "base64 0.22.1",
- "bytes",
- "futures-util",
- "http 1.4.0",
- "http-body-util",
- "mime",
- "proptest",
- "quick-xml",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "sunlit_secure_errors",
- "sunlit_secure_output",
- "sunlit_security_core",
- "sunlit_security_events",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "tower",
- "tower-http",
- "unicode-normalization",
- "uuid",
-]
-
-[[package]]
-name = "sunlit_secure_data"
-version = "0.1.0"
-dependencies = [
- "aes-gcm",
- "argon2",
- "aws-config",
- "aws-lc-rs",
- "aws-sdk-kms",
- "base64 0.22.1",
- "chacha20poly1305",
- "proptest",
- "rand 0.8.6",
- "reqwest",
- "secrecy",
- "serde",
- "serde_json",
- "sunlit_secure_errors",
- "sunlit_security_core",
- "sunlit_security_events",
- "thiserror 1.0.69",
- "tokio",
- "zeroize",
-]
-
-[[package]]
-name = "sunlit_secure_device_trust"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "sunlit_secure_network",
- "sunlit_security_core",
- "time",
-]
-
-[[package]]
-name = "sunlit_secure_errors"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "axum",
- "axum-core",
- "http 1.4.0",
- "http-body-util",
- "serde",
- "serde_json",
- "sunlit_security_core",
- "sunlit_security_events",
- "thiserror 2.0.18",
- "tokio",
- "tower",
- "tower-layer",
- "tracing",
-]
-
-[[package]]
-name = "sunlit_secure_identity"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "jsonwebtoken",
- "openidconnect",
- "proptest",
- "redis",
- "reqwest",
- "ring",
- "serde",
- "serde_json",
- "subtle",
- "sunlit_secure_device_trust",
- "sunlit_secure_errors",
- "sunlit_secure_network",
- "sunlit_security_core",
- "sunlit_security_events",
- "time",
- "tokio",
- "totp-rs",
- "tracing",
- "untrusted 0.9.0",
- "url",
- "uuid",
-]
-
-[[package]]
-name = "sunlit_secure_network"
-version = "0.1.0"
-dependencies = [
- "proptest",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "sunlit_security_core",
- "sunlit_security_events",
- "time",
- "x509-parser",
-]
-
-[[package]]
-name = "sunlit_secure_output"
-version = "0.1.0"
-dependencies = [
- "proptest",
- "sunlit_security_core",
-]
-
-[[package]]
-name = "sunlit_secure_privacy"
-version = "0.1.0"
-dependencies = [
- "hex",
- "hmac 0.12.1",
- "proptest",
- "regex",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "sunlit_security_core",
- "sunlit_security_events",
- "time",
-]
-
-[[package]]
-name = "sunlit_secure_resilience"
-version = "0.1.0"
-dependencies = [
- "proptest",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "sunlit_security_core",
- "sunlit_security_events",
- "time",
-]
-
-[[package]]
-name = "sunlit_security_core"
-version = "0.1.0"
-dependencies = [
- "derive_more 1.0.0",
- "serde",
- "time",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "sunlit_security_events"
-version = "0.1.0"
-dependencies = [
- "hex",
- "hmac 0.12.1",
- "opentelemetry 0.27.1",
- "proptest",
- "reqwest",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "sunlit_secure_errors",
- "sunlit_security_core",
- "time",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "uuid",
-]
 
 [[package]]
 name = "syn"

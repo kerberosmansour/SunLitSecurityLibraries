@@ -17,14 +17,14 @@ path = "src/lib.rs"
 
 [dependencies]
 # Workspace library crates
-security_core = { package = "sunlit_security_core", version = "0.1.0", path = "../security_core" }
-secure_errors = { package = "sunlit_secure_errors", version = "0.1.0", path = "../secure_errors" }
-security_events = { package = "sunlit_security_events", version = "0.1.0", path = "../security_events" }
-secure_boundary = { package = "sunlit_secure_boundary", version = "0.1.0", path = "../secure_boundary" }
-secure_output = { package = "sunlit_secure_output", version = "0.1.0", path = "../secure_output" }
-secure_identity = { package = "sunlit_secure_identity", version = "0.1.0", path = "../secure_identity" }
-secure_authz = { package = "sunlit_secure_authz", version = "0.1.0", path = "../secure_authz" }
-secure_data = { package = "sunlit_secure_data", version = "0.1.0", path = "../secure_data" }
+security_core = { package = "security_core", version = "0.1.0", path = "../security_core" }
+secure_errors = { package = "secure_errors", version = "0.1.0", path = "../secure_errors" }
+security_events = { package = "security_events", version = "0.1.0", path = "../security_events" }
+secure_boundary = { package = "secure_boundary", version = "0.1.0", path = "../secure_boundary" }
+secure_output = { package = "secure_output", version = "0.1.0", path = "../secure_output" }
+secure_identity = { package = "secure_identity", version = "0.1.0", path = "../secure_identity" }
+secure_authz = { package = "secure_authz", version = "0.1.0", path = "../secure_authz" }
+secure_data = { package = "secure_data", version = "0.1.0", path = "../secure_data" }
 
 # Axum / Tower / Tokio
 axum = "0.8"
@@ -48,9 +48,9 @@ thiserror = "2"
 
 [dev-dependencies]
 axum = { version = "0.8", features = ["macros"] }
-secure_device_trust = { package = "sunlit_secure_device_trust", version = "0.1.0", path = "../secure_device_trust" }
-secure_network = { package = "sunlit_secure_network", version = "0.1.0", path = "../secure_network" }
-secure_identity = { package = "sunlit_secure_identity", version = "0.1.0", path = "../secure_identity" }
+secure_device_trust = { package = "secure_device_trust", version = "0.1.0", path = "../secure_device_trust" }
+secure_network = { package = "secure_network", version = "0.1.0", path = "../secure_network" }
+secure_identity = { package = "secure_identity", version = "0.1.0", path = "../secure_identity" }
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"
 bytes = "1"

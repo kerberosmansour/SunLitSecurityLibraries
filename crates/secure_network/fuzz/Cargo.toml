@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 libfuzzer-sys = "0.4"
-secure_network = { package = "sunlit_secure_network", path = ".." }
+secure_network = { package = "secure_network", path = ".." }
 
 [[bin]]
 name = "fuzz_tls_policy"

@@ -1,18 +1,18 @@
 [package]
-name = "sunlit_secure_output"
+name = "secure_output"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Context-aware output encoding and URI sanitization for safer application responses."
 repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
-documentation = "https://docs.rs/sunlit_secure_output"
+documentation = "https://docs.rs/secure_output"
 keywords = ["security", "encoding", "xss", "output"]
 
 [lib]
 name = "secure_output"
 
 [dependencies]
-security_core = { package = "sunlit_security_core", version = "0.1.0", path = "../security_core" }
+security_core = { package = "security_core", version = "0.1.0", path = "../security_core" }
 
 [dev-dependencies]
 proptest = "1"

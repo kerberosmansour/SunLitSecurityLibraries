@@ -7,8 +7,8 @@ client/server flow before Sunlit Guardian relies on them.
 ## Gate Shape
 
 1. Run the library contract tests:
-   - `cargo test -p sunlit_secure_authz --test e2e_sunlit_ndt_m4 --all-features`
-   - `cargo test -p sunlit_secure_identity -p sunlit_secure_authz -p sunlit_secure_network --all-features`
+   - `cargo test -p secure_authz --test e2e_sunlit_ndt_m4 --all-features`
+   - `cargo test -p secure_identity -p secure_authz -p secure_network --all-features`
 2. Call the reusable ZeroTrustAuth workflow:
    - `kerberosmansour/ZeroTrustAuth/.github/workflows/zero-trust-auth-external.yml@5a24e4115074f30e2372835fea30806a897704c3`
    - pass `ci_bootstrap_issuer_url`, `enrollment_url`, and `api_url` for real

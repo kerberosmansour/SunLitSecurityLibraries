@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 libfuzzer-sys = "0.4"
-secure_data = { package = "sunlit_secure_data", path = "..", features = ["mobile-storage"] }
+secure_data = { package = "secure_data", path = "..", features = ["mobile-storage"] }
 tokio = { version = "1", features = ["rt", "macros", "rt-multi-thread"] }
 
 [[bin]]

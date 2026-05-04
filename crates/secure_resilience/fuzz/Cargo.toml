@@ -8,8 +8,8 @@ publish = false
 
 [dependencies]
 libfuzzer-sys = "0.4"
-secure_resilience = { package = "sunlit_secure_resilience", path = ".." }
-security_events = { package = "sunlit_security_events", path = "../../security_events" }
+secure_resilience = { package = "secure_resilience", path = ".." }
+security_events = { package = "security_events", path = "../../security_events" }
 
 [[bin]]
 name = "fuzz_rasp_signals"
