@@ -1,0 +1,1260 @@
+openapi: "3.1.0"
+info:
+  title: SunLit Security Smoke-Test Service
+  description: >
+    A purpose-built axum microservice with 54 routes, each exercising a
+    specific security control against a known attack class. Includes 15
+    mobile security routes covering MASVS controls. Designed for automated
+    DAST scanning with OWASP ZAP.
+  version: "0.1.0"
+  license:
+    name: MIT
+
+servers:
+  - url: http://127.0.0.1:3001
+    description: Local development server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: health
+      tags: [health]
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+
+  # ── Input Validation ──────────────────────────────────────────────────
+
+  /smoke/xss:
+    post:
+      summary: XSS payload is HTML-encoded on reflection
+      operationId: smokeXss
+      tags: [input-validation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/XssRequest"
+      responses:
+        "200":
+          description: HTML-encoded reflection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/XssResponse"
+
+  /smoke/sqli:
+    post:
+      summary: SQL-injection payload rejected via SqlIdentifier
+      operationId: smokeSqli
+      tags: [input-validation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SqliRequest"
+      responses:
+        "200":
+          description: Valid SQL identifier accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SqliResponse"
+        "422":
+          description: Invalid SQL identifier rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /smoke/cmdi:
+    post:
+      summary: Command-injection payload rejected via SafeCommandArg
+      operationId: smokeCmdi
+      tags: [input-validation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CmdiRequest"
+      responses:
+        "200":
+          description: Safe command argument accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CmdiResponse"
+        "422":
+          description: Dangerous command argument rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /smoke/path-traversal/{path}:
+    get:
+      summary: Path traversal payload rejected via SafePath
+      operationId: smokePathTraversal
+      tags: [input-validation]
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Safe path accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PathResponse"
+        "422":
+          description: Path traversal blocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /smoke/xxe:
+    post:
+      summary: XXE entity expansion blocked via SecureXml
+      operationId: smokeXxe
+      tags: [input-validation]
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: Safe XML parsed
+          content:
+            application/json:
+              schema:
+                type: object
+        "400":
+          description: XXE payload rejected
+
+  /smoke/deserialization:
+    post:
+      summary: Unsafe deserialization blocked via SecureJson
+      operationId: smokeDeserialization
+      tags: [input-validation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeserializationRequest"
+      responses:
+        "200":
+          description: Safe JSON deserialized
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /smoke/mass-assignment:
+    post:
+      summary: Mass assignment blocked via deny_unknown_fields
+      operationId: smokeMassAssignment
+      tags: [input-validation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MassAssignmentRequest"
+      responses:
+        "200":
+          description: Valid fields accepted
+          content:
+            application/json:
+              schema:
+                type: object
+        "422":
+          description: Unknown fields rejected
+
+  /smoke/header-injection:
+    post:
+      summary: CRLF header injection blocked
+      operationId: smokeHeaderInjection
+      tags: [input-validation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HeaderInjectionRequest"
+      responses:
+        "200":
+          description: Safe header value accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeaderInjectionResponse"
+        "422":
+          description: CRLF injection blocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /smoke/unicode-bypass:
+    post:
+      summary: Unicode normalisation bypass check
+      operationId: smokeUnicodeBypass
+      tags: [input-validation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnicodeBypassRequest"
+      responses:
+        "200":
+          description: Unicode normalisation applied
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /smoke/body-bomb:
+    post:
+      summary: Oversized request body rejected
+      operationId: smokeBodyBomb
+      tags: [input-validation]
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Body within limits
+        "413":
+          description: Body too large
+
+  /smoke/deep-nesting:
+    post:
+      summary: Deeply nested JSON rejected
+      operationId: smokeDeepNesting
+      tags: [input-validation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeepNestingRequest"
+      responses:
+        "200":
+          description: Nesting within limits
+        "422":
+          description: Nesting depth exceeded
+
+  /smoke/field-flood:
+    post:
+      summary: Excessive field count rejected
+      operationId: smokeFieldFlood
+      tags: [input-validation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Field count within limits
+        "422":
+          description: Too many fields
+
+  # ── Output Encoding ───────────────────────────────────────────────────
+
+  /smoke/reflect-html:
+    get:
+      summary: Reflected input HTML-encoded
+      operationId: smokeReflectHtml
+      tags: [output-encoding]
+      parameters:
+        - name: input
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: HTML-encoded reflection
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /smoke/reflect-url:
+    get:
+      summary: Reflected URL with dangerous scheme rejected
+      operationId: smokeReflectUrl
+      tags: [output-encoding]
+      parameters:
+        - name: input
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Safe URL reflected
+          content:
+            application/json:
+              schema:
+                type: object
+        "422":
+          description: Dangerous URI scheme blocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /smoke/reflect-json:
+    get:
+      summary: Reflected JSON with script context escaping
+      operationId: smokeReflectJson
+      tags: [output-encoding]
+      parameters:
+        - name: input
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: JSON-encoded reflection
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /smoke/headers:
+    get:
+      summary: OWASP security headers present
+      operationId: smokeHeaders
+      tags: [output-encoding]
+      responses:
+        "200":
+          description: >
+            Response includes HSTS, CSP, X-Content-Type-Options, X-Frame-Options,
+            COEP, COOP, CORP headers
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ── Authentication ────────────────────────────────────────────────────
+
+  /smoke/auth/jwt:
+    post:
+      summary: Valid JWT accepted
+      operationId: smokeAuthJwt
+      tags: [authentication]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Token validated, actor info returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid or missing token
+
+  /smoke/auth/expired:
+    post:
+      summary: Expired JWT rejected
+      operationId: smokeAuthExpired
+      tags: [authentication]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Token validated (if unexpired)
+        "401":
+          description: Expired token rejected
+
+  /smoke/auth/alg-none:
+    post:
+      summary: alg:none JWT rejected (CVE-2015-9235)
+      operationId: smokeAuthAlgNone
+      tags: [authentication]
+      security:
+        - bearerAuth: []
+      responses:
+        "401":
+          description: alg:none token rejected
+
+  /smoke/auth/tampered:
+    post:
+      summary: Tampered JWT signature rejected
+      operationId: smokeAuthTampered
+      tags: [authentication]
+      security:
+        - bearerAuth: []
+      responses:
+        "401":
+          description: Tampered signature rejected
+
+  /smoke/auth/wrong-issuer:
+    post:
+      summary: JWT from wrong IdP rejected
+      operationId: smokeAuthWrongIssuer
+      tags: [authentication]
+      security:
+        - bearerAuth: []
+      responses:
+        "401":
+          description: Wrong issuer rejected
+
+  /smoke/auth/session:
+    post:
+      summary: Session lifecycle — create, validate, revoke
+      operationId: smokeAuthSession
+      tags: [authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionRequest"
+      responses:
+        "200":
+          description: Session operation succeeded
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          description: Session invalid or revoked
+
+  # ── Authorization ─────────────────────────────────────────────────────
+
+  /smoke/authz/allow:
+    get:
+      summary: Authorized access granted
+      operationId: smokeAuthzAllow
+      tags: [authorization]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Access granted with admin role
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          description: Authentication failed
+        "403":
+          description: Access denied
+
+  /smoke/authz/deny:
+    get:
+      summary: Unauthorized access denied
+      operationId: smokeAuthzDeny
+      tags: [authorization]
+      security:
+        - bearerAuth: []
+      responses:
+        "403":
+          description: Access denied — insufficient role
+
+  /smoke/authz/cross-tenant:
+    get:
+      summary: Cross-tenant access denied
+      operationId: smokeAuthzCrossTenant
+      tags: [authorization]
+      security:
+        - bearerAuth: []
+      responses:
+        "403":
+          description: Access denied — wrong tenant
+
+  /smoke/authz/privilege-escalation:
+    post:
+      summary: Privilege escalation attempt denied
+      operationId: smokeAuthzPrivilegeEscalation
+      tags: [authorization]
+      security:
+        - bearerAuth: []
+      responses:
+        "403":
+          description: Escalation blocked
+
+  /smoke/authz/idor:
+    get:
+      summary: Insecure direct object reference check
+      operationId: smokeAuthzIdor
+      tags: [authorization]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Access allowed (ownership matches or policy permits)
+        "403":
+          description: Access denied
+
+  # ── Data Protection ───────────────────────────────────────────────────
+
+  /smoke/encrypt:
+    post:
+      summary: Envelope encryption of plaintext
+      operationId: smokeEncrypt
+      tags: [data-protection]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EncryptRequest"
+      responses:
+        "200":
+          description: Encrypted envelope returned
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /smoke/decrypt:
+    post:
+      summary: Decryption of valid envelope
+      operationId: smokeDecrypt
+      tags: [data-protection]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecryptRequest"
+      responses:
+        "200":
+          description: Plaintext recovered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecryptResponse"
+        "400":
+          description: Decryption failed
+
+  /smoke/decrypt-tampered:
+    post:
+      summary: Tampered ciphertext rejected
+      operationId: smokeDecryptTampered
+      tags: [data-protection]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecryptRequest"
+      responses:
+        "400":
+          description: AEAD authentication failed
+
+  /smoke/secret-debug:
+    get:
+      summary: SecretString Debug format redacts value
+      operationId: smokeSecretDebug
+      tags: [data-protection]
+      responses:
+        "200":
+          description: Debug output does not contain raw secret
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretDebugResponse"
+
+  /smoke/key-rotation:
+    post:
+      summary: Key rotation preserves decryption of old data
+      operationId: smokeKeyRotation
+      tags: [data-protection]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EncryptRequest"
+      responses:
+        "200":
+          description: Old data still decryptable after rotation
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ── Error Handling ────────────────────────────────────────────────────
+
+  /smoke/error/internal:
+    get:
+      summary: Internal error with no stack trace
+      operationId: smokeErrorInternal
+      tags: [error-handling]
+      responses:
+        "500":
+          description: Generic error with no implementation details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /smoke/error/dependency:
+    get:
+      summary: Dependency error with no hostname leak
+      operationId: smokeErrorDependency
+      tags: [error-handling]
+      responses:
+        "503":
+          description: Service temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /smoke/error/panic:
+    get:
+      summary: Panic caught safely by CatchPanicLayer
+      operationId: smokeErrorPanic
+      tags: [error-handling]
+      responses:
+        "500":
+          description: Internal server error with no panic message
+
+  /smoke/error/validation:
+    post:
+      summary: Validation error returns 400
+      operationId: smokeErrorValidation
+      tags: [error-handling]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                field:
+                  type: string
+      responses:
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Security Events ──────────────────────────────────────────────────
+
+  /smoke/events/log-injection:
+    post:
+      summary: Log injection payload sanitised
+      operationId: smokeEventsLogInjection
+      tags: [security-events]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogInjectionRequest"
+      responses:
+        "200":
+          description: Event logged safely
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /smoke/events/redaction:
+    post:
+      summary: PII redacted in security events
+      operationId: smokeEventsRedaction
+      tags: [security-events]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedactionRequest"
+      responses:
+        "200":
+          description: Event emitted with redacted PII
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ── Mobile Security (MASVS) ──────────────────────────────────────────
+
+  /smoke/mobile/tls-version:
+    post:
+      summary: TLS version validation (MASVS-NETWORK-1)
+      operationId: smokeMobileTlsVersion
+      tags: [mobile-network]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TlsVersionRequest"
+      responses:
+        "200":
+          description: TLS version accepted
+        "422":
+          description: TLS version rejected
+
+  /smoke/mobile/cert-pin:
+    post:
+      summary: Certificate pin verification (MASVS-NETWORK-1)
+      operationId: smokeMobileCertPin
+      tags: [mobile-network]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CertPinRequest"
+      responses:
+        "200":
+          description: Pin valid
+        "422":
+          description: Pin mismatch or invalid hash
+
+  /smoke/mobile/cleartext:
+    post:
+      summary: Cleartext traffic detection (MASVS-NETWORK-2)
+      operationId: smokeMobileCleartext
+      tags: [mobile-network]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CleartextRequest"
+      responses:
+        "200":
+          description: URL is secure
+        "422":
+          description: Cleartext traffic blocked
+
+  /smoke/mobile/storage-policy:
+    post:
+      summary: Mobile storage policy enforcement (MASVS-STORAGE-1)
+      operationId: smokeMobileStoragePolicy
+      tags: [mobile-storage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoragePolicyRequest"
+      responses:
+        "200":
+          description: Storage policy compliant
+        "422":
+          description: Storage policy violated
+
+  /smoke/mobile/sensitive-buffer:
+    post:
+      summary: Sensitive buffer handling (MASVS-STORAGE-1)
+      operationId: smokeMobileSensitiveBuffer
+      tags: [mobile-storage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SensitiveBufferRequest"
+      responses:
+        "200":
+          description: Buffer handled securely
+
+  /smoke/mobile/biometric:
+    post:
+      summary: Biometric result validation (MASVS-AUTH-2)
+      operationId: smokeMobileBiometric
+      tags: [mobile-auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BiometricRequest"
+      responses:
+        "200":
+          description: Biometric accepted
+        "422":
+          description: Biometric rejected
+
+  /smoke/mobile/step-up:
+    post:
+      summary: Step-up authentication enforcement (MASVS-AUTH-3)
+      operationId: smokeMobileStepUp
+      tags: [mobile-auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StepUpRequest"
+      responses:
+        "200":
+          description: Step-up not required
+        "422":
+          description: Step-up required
+
+  /smoke/mobile/deep-link:
+    post:
+      summary: Deep link URL validation (MASVS-PLATFORM-1)
+      operationId: smokeMobileDeepLink
+      tags: [mobile-platform]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeepLinkRequest"
+      responses:
+        "200":
+          description: Deep link valid
+        "422":
+          description: Deep link rejected
+
+  /smoke/mobile/webview-url:
+    post:
+      summary: WebView URL safety check (MASVS-PLATFORM-1)
+      operationId: smokeMobileWebviewUrl
+      tags: [mobile-platform]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebViewUrlRequest"
+      responses:
+        "200":
+          description: WebView URL safe
+        "422":
+          description: WebView URL blocked
+
+  /smoke/mobile/clipboard:
+    post:
+      summary: Clipboard security policy check (MASVS-PLATFORM-2)
+      operationId: smokeMobileClipboard
+      tags: [mobile-platform]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClipboardRequest"
+      responses:
+        "200":
+          description: Clipboard policy evaluated
+
+  /smoke/mobile/root-detect:
+    post:
+      summary: Environment detection signal processing (MASVS-RESILIENCE-1)
+      operationId: smokeMobileRootDetect
+      tags: [mobile-resilience]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RootDetectRequest"
+      responses:
+        "200":
+          description: RASP decision returned
+
+  /smoke/mobile/app-integrity:
+    post:
+      summary: App integrity verification (MASVS-RESILIENCE-2)
+      operationId: smokeMobileAppIntegrity
+      tags: [mobile-resilience]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppIntegrityRequest"
+      responses:
+        "200":
+          description: Integrity valid
+        "422":
+          description: Integrity check failed
+
+  /smoke/mobile/pii-classify:
+    post:
+      summary: PII classification (MASVS-PRIVACY-1)
+      operationId: smokeMobilePiiClassify
+      tags: [mobile-privacy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PiiClassifyRequest"
+      responses:
+        "200":
+          description: PII classification result
+
+  /smoke/mobile/pseudonymize:
+    post:
+      summary: Data pseudonymization (MASVS-PRIVACY-2)
+      operationId: smokeMobilePseudonymize
+      tags: [mobile-privacy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PseudonymizeRequest"
+      responses:
+        "200":
+          description: Pseudonymized value returned
+
+  /smoke/mobile/consent:
+    post:
+      summary: Consent policy enforcement (MASVS-PRIVACY-3)
+      operationId: smokeMobileConsent
+      tags: [mobile-privacy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConsentRequest"
+      responses:
+        "200":
+          description: Consent allowed
+        "422":
+          description: Consent denied or not collected
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    XssRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+
+    XssResponse:
+      type: object
+      properties:
+        safe_html:
+          type: string
+
+    SqliRequest:
+      type: object
+      required: [search]
+      properties:
+        search:
+          type: string
+
+    SqliResponse:
+      type: object
+      properties:
+        safe_identifier:
+          type: string
+
+    CmdiRequest:
+      type: object
+      required: [filename]
+      properties:
+        filename:
+          type: string
+
+    CmdiResponse:
+      type: object
+      properties:
+        safe_arg:
+          type: string
+
+    PathResponse:
+      type: object
+      properties:
+        safe_path:
+          type: string
+
+    DeserializationRequest:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: string
+        count:
+          type: integer
+
+    MassAssignmentRequest:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+
+    HeaderInjectionRequest:
+      type: object
+      required: [header_value]
+      properties:
+        header_value:
+          type: string
+
+    HeaderInjectionResponse:
+      type: object
+      properties:
+        safe_header:
+          type: string
+
+    UnicodeBypassRequest:
+      type: object
+      required: [input]
+      properties:
+        input:
+          type: string
+
+    DeepNestingRequest:
+      type: object
+      required: [value]
+      properties:
+        value: {}
+
+    SessionRequest:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [create, validate, revoke]
+        session_id:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        actor_id:
+          type: string
+        message:
+          type: string
+
+    EncryptRequest:
+      type: object
+      required: [plaintext]
+      properties:
+        plaintext:
+          type: string
+
+    DecryptRequest:
+      type: object
+      required: [envelope]
+      properties:
+        envelope:
+          type: object
+
+    DecryptResponse:
+      type: object
+      properties:
+        plaintext:
+          type: string
+
+    SecretDebugResponse:
+      type: object
+      properties:
+        debug_output:
+          type: string
+        contains_raw_secret:
+          type: boolean
+
+    LogInjectionRequest:
+      type: object
+      required: [field]
+      properties:
+        field:
+          type: string
+
+    RedactionRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+
+    TlsVersionRequest:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: string
+          example: "TLS1.3"
+
+    CertPinRequest:
+      type: object
+      required: [cert_hash]
+      properties:
+        cert_hash:
+          type: string
+          description: 64-char hex SHA-256 hash of certificate SPKI
+
+    CleartextRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          example: "https://example.com"
+
+    StoragePolicyRequest:
+      type: object
+      required: [classification]
+      properties:
+        classification:
+          type: string
+          enum: [public, internal, confidential, pii, regulated, credentials]
+        is_encrypted:
+          type: boolean
+        has_hardware_keystore:
+          type: boolean
+
+    SensitiveBufferRequest:
+      type: object
+      required: [secret]
+      properties:
+        secret:
+          type: string
+
+    BiometricRequest:
+      type: object
+      required: [biometric_class]
+      properties:
+        biometric_class:
+          type: integer
+          enum: [1, 2, 3]
+        crypto_binding:
+          type: object
+          properties:
+            key_id:
+              type: string
+            enrollment_id:
+              type: string
+        device_credential_fallback:
+          type: boolean
+        current_enrollment_id:
+          type: string
+
+    StepUpRequest:
+      type: object
+      required: [operation, last_auth_age_secs]
+      properties:
+        operation:
+          type: string
+        last_auth_age_secs:
+          type: integer
+
+    DeepLinkRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          example: "myapp://profile/1"
+
+    WebViewUrlRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          example: "https://example.com/page"
+
+    ClipboardRequest:
+      type: object
+      required: [classification]
+      properties:
+        classification:
+          type: string
+          enum: [public, internal, confidential, pii, regulated, credentials]
+
+    RootDetectRequest:
+      type: object
+      required: [signal_type]
+      properties:
+        signal_type:
+          type: string
+          enum: [root, emulator, debugger]
+        confidence:
+          type: string
+          enum: [low, medium, high]
+        evidence:
+          type: string
+
+    AppIntegrityRequest:
+      type: object
+      required: [expected_hash, actual_hash]
+      properties:
+        expected_hash:
+          type: string
+        actual_hash:
+          type: string
+
+    PiiClassifyRequest:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: string
+          example: "user@test.com"
+
+    PseudonymizeRequest:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: string
+        salt:
+          type: string
+
+    ConsentRequest:
+      type: object
+      required: [purpose, requested_purpose]
+      properties:
+        purpose:
+          type: string
+        consent_state:
+          type: string
+          enum: [granted, denied, withdrawn, not_collected]
+        requested_purpose:
+          type: string

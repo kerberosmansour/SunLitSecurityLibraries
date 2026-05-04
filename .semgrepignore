@@ -1,0 +1,6 @@
+target/
+.git/
+.venv-semgrep/
+output/
+docs/slo/research/
+supply-chain/imports.lock

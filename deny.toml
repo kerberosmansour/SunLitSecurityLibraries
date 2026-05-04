@@ -1,0 +1,86 @@
+# cargo-deny configuration for SunLitSecurityLibraries workspace
+# Policy: deny vulnerabilities, deny unmaintained, deny copyleft, deny unknown sources
+#
+# Canonical supply-chain policy — downstream consumers may copy or `curl`
+# this file verbatim to adopt the same policy as SunLitSecurityLibraries.
+# The policy is enforced on every PR via the `supply-chain` job in
+# .github/workflows/ci.yml (`cargo audit`, `cargo deny check`,
+# `cargo vet`).
+#
+# Changes to this file are reviewed alongside any source change that
+# motivates them — treat it as a policy document, not a config toggle.
+
+[advisories]
+# Ignore list — each entry must have a justification reason.
+ignore = [
+    # RUSTSEC-2026-0002: lru v0.12.5 IterMut violates Stacked Borrows.
+    # lru is used by secure_authz for LRU decision cache; we do not call IterMut.
+    # Refactor to a different cache crate is deferred (no refactor budget in M10).
+    { id = "RUSTSEC-2026-0002", reason = "lru IterMut is not exercised by secure_authz; IterMut is not part of our public API surface." },
+
+    # RUSTSEC-2023-0071: rsa v0.9.10 Marvin timing side-channel attack.
+    # Pulled transitively through openidconnect -> rsa for OIDC signature
+    # verification. The Marvin attack targets RSA decryption with
+    # attacker-chosen ciphertexts (a private-key operation). This crate
+    # only uses rsa for public-key signature VERIFICATION of JWTs, which
+    # is not a decryption path and does not expose the timing side
+    # channel. No fixed upgrade is available in rsa as of this writing.
+    # Revisit when rsa publishes a constant-time release or when
+    # openidconnect moves to an alternative.
+    { id = "RUSTSEC-2023-0071", reason = "rsa used only for JWT signature VERIFICATION (public-key op); Marvin attack is a private-key-decryption timing channel. No exploitable path in this crate's usage." },
+
+    # RUSTSEC-2026-0098, 0099, 0104: rustls-webpki v0.101.7 — CRL/URI/
+    # wildcard name-constraint issues. Pulled transitively only through
+    # aws-smithy-http-client -> hyper-rustls 0.24 -> rustls 0.21 for AWS
+    # KMS API calls. The TLS chain validates against AWS-issued
+    # certificates over AWS endpoints; no customer-controlled CRLs or
+    # URI-constrained CAs flow through this path. AWS SDK has not yet
+    # released a build against rustls 0.23 + rustls-webpki 0.103.
+    # Revisit when aws-smithy-http-client drops the 0.101 dep.
+    { id = "RUSTSEC-2026-0098", reason = "rustls-webpki 0.101 pulled only by aws-smithy-http-client -> hyper-rustls 0.24; AWS endpoints use AWS-issued certs, no customer-controlled URI-constrained CAs in this path." },
+    { id = "RUSTSEC-2026-0099", reason = "rustls-webpki 0.101 pulled only by aws-smithy-http-client -> hyper-rustls 0.24; AWS endpoints use AWS-issued certs, no customer-controlled wildcard-constrained CAs in this path." },
+    { id = "RUSTSEC-2026-0104", reason = "rustls-webpki 0.101 pulled only by aws-smithy-http-client -> hyper-rustls 0.24; AWS endpoints do not accept customer-supplied CRLs, so the CRL parsing panic is not reachable in this usage." },
+]
+
+[licenses]
+# In cargo-deny 0.19+, license enforcement is via the allowlist.
+# Anything not in the allow list will fail. Copyleft/unlicensed crates
+# not in the allow list or exceptions are automatically denied.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-DFS-2016",
+    "Unicode-3.0",
+    "Zlib",
+    "CC0-1.0",   # tiny-keccak — public domain; not copyleft
+]
+confidence-threshold = 0.8
+
+# Exceptions for unavoidable transitive dependencies with copyleft-adjacent licenses.
+exceptions = [
+    # r-efi LGPL-2.1-or-later: UEFI interface crate, transitive dep of getrandom for UEFI targets.
+    # Not linked into our Linux/macOS/Windows library output; present in Cargo.lock for cross-target reproducibility.
+    { allow = ["LGPL-2.1-or-later"], crate = "r-efi" },
+    # smartstring MPL-2.0: file-level copyleft; used internally by rhai policy engine.
+    # No MPL-2.0 files are incorporated into our project source tree.
+    { allow = ["MPL-2.0"], crate = "smartstring" },
+]
+
+[licenses.private]
+# Ignore workspace members that are not published to crates.io
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+highlight = "all"
+deny = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

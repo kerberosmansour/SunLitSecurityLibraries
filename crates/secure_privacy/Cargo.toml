@@ -1,0 +1,26 @@
+[package]
+name = "sunlit_secure_privacy"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Privacy controls for classification, consent, retention, pseudonymization, and redaction."
+repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
+documentation = "https://docs.rs/sunlit_secure_privacy"
+keywords = ["security", "privacy", "pii", "redaction"]
+
+[lib]
+name = "secure_privacy"
+
+[dependencies]
+security_core = { package = "sunlit_security_core", version = "0.1.0", path = "../security_core" }
+security_events = { package = "sunlit_security_events", version = "0.1.0", path = "../security_events" }
+serde = { workspace = true }
+sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"
+regex = "1"
+time = { workspace = true }
+
+[dev-dependencies]
+serde_json = "1"
+proptest = "1"

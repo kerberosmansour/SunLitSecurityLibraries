@@ -1,0 +1,57 @@
+[package]
+name = "sunlit_secure_authz"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Deny-by-default authorization with RBAC, ABAC, tenant isolation, and web middleware."
+repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
+documentation = "https://docs.rs/sunlit_secure_authz"
+keywords = ["security", "authz", "rbac", "abac", "tenant"]
+
+[lib]
+name = "secure_authz"
+
+[features]
+default = ["axum"]
+axum = ["dep:axum", "dep:axum-core", "dep:tower"]
+actix-web = ["dep:actix-web"]
+
+[dependencies]
+security_core = { package = "sunlit_security_core", version = "0.1.0", path = "../security_core" }
+secure_device_trust = { package = "sunlit_secure_device_trust", version = "0.1.0", path = "../secure_device_trust" }
+secure_errors = { package = "sunlit_secure_errors", version = "0.1.0", path = "../secure_errors" }
+secure_identity = { package = "sunlit_secure_identity", version = "0.1.0", path = "../secure_identity" }
+secure_network = { package = "sunlit_secure_network", version = "0.1.0", path = "../secure_network" }
+security_events = { package = "sunlit_security_events", version = "0.1.0", path = "../security_events" }
+casbin = "2"
+smallvec = { version = "1", features = ["serde"] }
+lru = "0.18"
+tokio = { version = "1", features = ["sync", "time", "rt"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+time = { version = "0.3", features = ["serde"] }
+axum = { version = "0.8", optional = true }
+axum-core = { version = "0.5", optional = true }
+tower = { version = "0.5", optional = true }
+actix-web = { version = "4", optional = true }
+http = "1"
+thiserror = "2"
+tracing = "0.1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.8", features = ["macros"] }
+tower = { version = "0.5", features = ["util"] }
+actix-web = { version = "4" }
+http-body-util = "0.1"
+proptest = "1"
+uuid = { version = "1", features = ["v4"] }
+time = "0.3"
+
+[[example]]
+name = "actix_authz_minimal"
+required-features = ["actix-web"]
+
+[[example]]
+name = "route_coverage"

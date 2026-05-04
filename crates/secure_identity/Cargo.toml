@@ -1,0 +1,52 @@
+[package]
+name = "sunlit_secure_identity"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Authentication helpers for JWT, OIDC, MFA, API keys, sessions, and step-up policy."
+repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
+documentation = "https://docs.rs/sunlit_secure_identity"
+keywords = ["security", "identity", "jwt", "oidc", "mfa"]
+
+[lib]
+name = "secure_identity"
+
+[features]
+default = []
+dev = []
+biometric = []
+oidc = ["dep:openidconnect", "dep:reqwest"]
+session-redis = ["dep:redis"]
+
+[dependencies]
+jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+tokio = { version = "1", features = ["sync", "time", "net", "io-util"] }
+ring = "0.17"
+subtle = "2"
+uuid = { workspace = true }
+time = { workspace = true }
+serde = { workspace = true }
+serde_json = "1"
+tracing = "0.1"
+url = "2"
+totp-rs = { version = "5", features = ["otpauth"] }
+openidconnect = { version = "4", optional = true }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"], optional = true }
+redis = { version = "1", features = ["aio", "tokio-comp"], optional = true }
+security_core = { package = "sunlit_security_core", version = "0.1.0", path = "../security_core" }
+security_events = { package = "sunlit_security_events", version = "0.1.0", path = "../security_events" }
+secure_errors = { package = "sunlit_secure_errors", version = "0.1.0", path = "../secure_errors" }
+secure_device_trust = { package = "sunlit_secure_device_trust", version = "0.1.0", path = "../secure_device_trust" }
+secure_network = { package = "sunlit_secure_network", version = "0.1.0", path = "../secure_network" }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+uuid = { workspace = true }
+serde = { workspace = true }
+security_core = { package = "sunlit_security_core", version = "0.1.0", path = "../security_core" }
+time = { workspace = true }
+proptest = "1"
+ring = "0.17"
+base64 = "0.22"
+untrusted = "0.9"

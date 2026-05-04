@@ -1,0 +1,42 @@
+[package]
+name = "sunlit_secure_errors"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Secure error handling with public-safe responses, incident IDs, and panic boundaries."
+repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
+documentation = "https://docs.rs/sunlit_secure_errors"
+keywords = ["security", "errors", "incident", "axum", "actix"]
+
+[lib]
+name = "secure_errors"
+
+[features]
+default = ["axum"]
+axum = ["dep:axum-core", "dep:tower-layer"]
+actix-web = ["dep:actix-web"]
+
+[dependencies]
+security_core = { package = "sunlit_security_core", version = "0.1.0", path = "../security_core" }
+security_events = { package = "sunlit_security_events", version = "0.1.0", path = "../security_events" }
+thiserror = "2"
+axum-core = { version = "0.5", optional = true }
+tower-layer = { version = "0.3", optional = true }
+actix-web = { version = "4", optional = true }
+http = "1"
+serde = { workspace = true }
+serde_json = "1"
+tracing = "0.1"
+
+[dev-dependencies]
+serde_json = "1"
+axum = "0.8"
+actix-web = { version = "4" }
+http = "1"
+http-body-util = "0.1"
+tokio = { version = "1", features = ["full"] }
+tower = { version = "0.5", features = ["util"] }
+
+[[example]]
+name = "actix_error_minimal"
+required-features = ["actix-web"]

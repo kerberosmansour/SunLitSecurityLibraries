@@ -1,0 +1,205 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    name: Dependency Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
+
+  secret-pattern-scan:
+    name: Secret Pattern Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Scan committed tree for high-confidence secret patterns
+        shell: bash
+        run: |
+          set -euo pipefail
+          matches="$(
+            git grep -n -I -E \
+              'AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|(^|[^[:alnum:]_])gh[pousr]_[A-Za-z0-9_]{36,}|github_pat_[A-Za-z0-9_]{22,}_[A-Za-z0-9_]{59,}|xox[baprs]-[A-Za-z0-9-]{10,}|(^|[^[:alnum:]_])sk-[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{35}|BEGIN (RSA |DSA |EC |OPENSSH |PGP )?PRIVATE KEY' \
+              -- . ':!Cargo.lock' || true
+          )"
+          if [ -n "$matches" ]; then
+            printf '%s\n' "$matches"
+            exit 1
+          fi
+
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --workspace
+
+      - name: Doc
+        run: cargo doc --workspace --no-deps
+
+  # sg-gate-a M4: presubmit gate enforcing Google's "preventing backsliding"
+  # pattern. Every crate that gained a framework-feature matrix in M1/M2
+  # is built + tested under every supported feature combination on every
+  # PR, so a future edit that silently breaks one axis fails CI rather
+  # than shipping.
+  feature-matrix:
+    name: Feature matrix (${{ matrix.crate }} features=${{ matrix.features }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        crate: [sunlit_secure_boundary, sunlit_secure_authz, sunlit_secure_errors]
+        features:
+          - ""
+          - "axum"
+          - "actix-web"
+          - "axum actix-web"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: cargo check
+        run: |
+          if [ -z "${{ matrix.features }}" ]; then
+            cargo check -p ${{ matrix.crate }} --no-default-features
+          else
+            cargo check -p ${{ matrix.crate }} --no-default-features --features "${{ matrix.features }}"
+          fi
+
+      - name: cargo test
+        run: |
+          if [ -z "${{ matrix.features }}" ]; then
+            cargo test -p ${{ matrix.crate }} --no-default-features
+          else
+            cargo test -p ${{ matrix.crate }} --no-default-features --features "${{ matrix.features }}"
+          fi
+
+  rustdoc-warnings:
+    name: Rustdoc (zero warnings)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - name: cargo doc (deny warnings)
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: cargo doc --workspace --no-deps --all-features
+
+  crate-package:
+    name: Crate Packaging Preflight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Package publishable crates
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo package -p sunlit_security_core
+          for crate in \
+            sunlit_security_events sunlit_secure_output sunlit_secure_device_trust sunlit_secure_network \
+            sunlit_secure_errors sunlit_secure_boundary sunlit_secure_data sunlit_secure_resilience \
+            sunlit_secure_privacy sunlit_secure_identity sunlit_secure_authz
+          do
+            cargo package -p "$crate" --list > "/tmp/$crate.package-list"
+          done
+
+  supply-chain:
+    name: Supply-Chain Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Install audit tools
+        shell: bash
+        env:
+          OSV_SCANNER_VERSION: v2.3.6
+          OSV_SCANNER_SHA256: f689e183ef0d573d2459738aae457d411a26241ae58b5088de1af288b3355604
+        run: |
+          set -euo pipefail
+          cargo install --locked cargo-audit --version 0.22.1
+          cargo install --locked cargo-deny --version 0.19.0
+          cargo install --locked cargo-vet --version 0.10.2
+          install_dir="$RUNNER_TEMP/osv-scanner-bin"
+          mkdir -p "$install_dir"
+          curl -fsSL \
+            -o "$install_dir/osv-scanner" \
+            "https://github.com/google/osv-scanner/releases/download/${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          printf '%s  %s\n' "$OSV_SCANNER_SHA256" "$install_dir/osv-scanner" | sha256sum -c -
+          chmod 0755 "$install_dir/osv-scanner"
+          echo "$install_dir" >> "$GITHUB_PATH"
+
+      - name: Cargo audit
+        run: cargo audit
+
+      - name: Cargo deny
+        run: cargo deny --locked check
+
+      - name: Cargo vet
+        run: cargo vet --locked
+
+      - name: OSV Scanner
+        run: osv-scanner scan source -r .

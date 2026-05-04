@@ -1,0 +1,114 @@
+name: Release Artifact Signing
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      crate:
+        description: "Crate to package and sign, or all once internal dependencies are already published"
+        required: true
+        type: choice
+        default: sunlit_security_core
+        options:
+          - sunlit_security_core
+          - sunlit_security_events
+          - sunlit_secure_output
+          - sunlit_secure_device_trust
+          - sunlit_secure_network
+          - sunlit_secure_errors
+          - sunlit_secure_boundary
+          - sunlit_secure_data
+          - sunlit_secure_resilience
+          - sunlit_secure_privacy
+          - sunlit_secure_identity
+          - sunlit_secure_authz
+          - all
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package-and-sign:
+    name: Package and Sigstore-sign crates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+
+      - name: Package crates
+        shell: bash
+        env:
+          SELECTED_CRATE: ${{ github.event.inputs.crate || 'all' }}
+        run: |
+          set -euo pipefail
+          selected="$SELECTED_CRATE"
+          if [ "$selected" = "all" ]; then
+            crates=(
+              sunlit_security_core
+              sunlit_security_events
+              sunlit_secure_output
+              sunlit_secure_device_trust
+              sunlit_secure_network
+              sunlit_secure_errors
+              sunlit_secure_boundary
+              sunlit_secure_data
+              sunlit_secure_resilience
+              sunlit_secure_privacy
+              sunlit_secure_identity
+              sunlit_secure_authz
+            )
+          else
+            crates=("$selected")
+          fi
+          for crate in "${crates[@]}"; do
+            cargo package -p "$crate"
+          done
+
+      - name: Collect release artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p signed-artifacts
+          cp target/package/*.crate signed-artifacts/
+          cp declarations/cyclonedx-1.6-capabilities.json signed-artifacts/
+          (
+            cd signed-artifacts
+            mapfile -d '' files < <(find . -maxdepth 1 -type f ! -name SHA256SUMS -print0 | sort -z)
+            shasum -a 256 "${files[@]}" > SHA256SUMS
+          )
+
+      - name: Sign artifacts with Sigstore
+        shell: bash
+        run: |
+          set -euo pipefail
+          for artifact in signed-artifacts/*; do
+            [ -f "$artifact" ] || continue
+            cosign sign-blob --yes --bundle "${artifact}.sigstore.json" "$artifact"
+            cosign verify-blob \
+              --bundle "${artifact}.sigstore.json" \
+              --certificate-identity-regexp "https://github.com/kerberosmansour/SunLitSecurityLibraries/.github/workflows/release-sign.yml@refs/(heads|tags)/.*" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+              "$artifact"
+          done
+
+      - name: Upload signed artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: signed-release-artifacts
+          path: signed-artifacts/
+          if-no-files-found: error
+          retention-days: 30

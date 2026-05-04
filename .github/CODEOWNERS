@@ -1,0 +1,17 @@
+# Default ownership for public-release prep. Keep this file small so GitHub's
+# code-owner review routing stays predictable.
+
+* @kerberosmansour
+
+# Security-sensitive control planes.
+.github/ @kerberosmansour
+supply-chain/ @kerberosmansour
+scripts/audit.* @kerberosmansour
+osv-scanner.toml @kerberosmansour
+
+# Public security contract and release posture.
+SECURITY.md @kerberosmansour
+THREAT_MODEL.md @kerberosmansour
+docs/dev-guide/release-process.md @kerberosmansour
+docs/dev-guide/branch-protection.md @kerberosmansour
+docs/dev-guide/static-analysis.md @kerberosmansour

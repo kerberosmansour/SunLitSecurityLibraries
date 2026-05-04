@@ -1,0 +1,26 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/security_core",
+    "crates/secure_errors",
+    "crates/security_events",
+    "crates/secure_boundary",
+    "crates/secure_authz",
+    "crates/secure_data",
+    "crates/secure_output",
+    "crates/secure_identity",
+    "crates/secure_device_trust",
+    "crates/secure_reference_service",
+    "crates/secure_smoke_service",
+    "crates/secure_network",
+    "crates/secure_resilience",
+    "crates/secure_privacy",
+]
+
+[workspace.dependencies]
+uuid = { version = "1", features = ["v4", "serde"] }
+time = { version = "0.3", features = ["serde", "macros", "formatting", "parsing"] }
+serde = { version = "1", features = ["derive"] }
+smallvec = { version = "1", features = ["serde"] }
+derive_more = { version = "1", features = ["display", "from", "into"] }
+tokio = { version = "1", features = ["full"] }

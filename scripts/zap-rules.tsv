@@ -1,0 +1,70 @@
+# ZAP scan rule customisation for SunLit Security Libraries smoke service
+# Format: <rule_id>	<action>	<name>
+# Actions: IGNORE, WARN, FAIL
+# See: https://www.zaproxy.org/docs/docker/api-scan/#rule-configuration
+#
+# Rules are tuned based on the smoke service's security controls.
+# The service intentionally reflects input in some routes (for testing encoding),
+# so some rules need adjusted thresholds.
+#
+# Rule IDs reference: https://www.zaproxy.org/docs/alerts/
+10003	WARN	Vulnerable JS Library
+10010	WARN	Cookie No HttpOnly Flag
+10011	WARN	Cookie Without Secure Flag
+10015	WARN	Re-examine Cache-control Directives
+10017	WARN	Cross-Domain JavaScript Source File Inclusion
+10020	FAIL	X-Frame-Options Header
+10021	FAIL	X-Content-Type-Options Header
+10035	FAIL	Strict-Transport-Security Header
+10036	WARN	HTTP Server Response Header
+10037	WARN	Server Leaks Information via X-Powered-By
+10038	FAIL	Content Security Policy (CSP) Header Not Set
+10049	WARN	Storable and Cacheable Content
+10054	WARN	Cookie Without SameSite Attribute
+10055	WARN	CSP: Wildcard Directive
+10063	WARN	Permissions Policy Header Not Set
+10096	WARN	Timestamp Disclosure
+10098	FAIL	Cross-Domain Misconfiguration
+10109	WARN	Modern Web Application
+20012	FAIL	Anti-CSRF Tokens Check
+20019	FAIL	External Redirect
+30001	WARN	Buffer Overflow
+30002	WARN	Format String Error
+40003	FAIL	CRLF Injection
+40008	FAIL	Parameter Tampering
+40009	FAIL	Server Side Include
+40012	FAIL	Cross Site Scripting (Reflected)
+40014	FAIL	Cross Site Scripting (Persistent)
+40016	FAIL	Cross Site Scripting (Persistent) - Prime
+40017	FAIL	Cross Site Scripting (Persistent) - Spider
+40018	FAIL	SQL Injection
+40019	FAIL	SQL Injection - MySQL
+40020	FAIL	SQL Injection - Hypersonic SQL
+40021	FAIL	SQL Injection - Oracle
+40022	FAIL	SQL Injection - PostgreSQL
+40024	FAIL	SQL Injection - SQLite
+40026	IGNORE	Cross Site Scripting (DOM Based)
+40027	FAIL	SQL Injection - MsSQL
+40028	FAIL	ELMAH Information Leak
+40029	WARN	Trace.axd Information Leak
+40032	FAIL	.htaccess Information Leak
+40034	FAIL	.env Information Leak
+40035	FAIL	Hidden File Finder
+40038	FAIL	Bypassing 403
+40039	FAIL	Web Cache Deception
+40040	FAIL	CORS Misconfiguration
+40042	FAIL	Spring Actuator Information Leak
+40043	FAIL	Log4Shell
+90001	WARN	Insecure JSF ViewState
+90011	WARN	Charset Mismatch
+90019	FAIL	Server Side Code Injection
+90020	FAIL	Remote OS Command Injection
+90021	FAIL	XPath Injection
+90023	FAIL	XML External Entity Attack
+90024	FAIL	Generic Padding Oracle
+90025	FAIL	Expression Language Injection
+90028	FAIL	Insecure HTTP Method
+90029	FAIL	SOAP XML Injection
+90030	WARN	WSDL File Detection
+90033	FAIL	Loosely Scoped Cookie
+90034	FAIL	Cloud Metadata Potentially Exposed

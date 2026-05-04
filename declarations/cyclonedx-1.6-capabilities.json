@@ -1,0 +1,340 @@
+{
+  "$schema": "https://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-05-04T00:00:00Z",
+    "component": {
+      "type": "application",
+      "name": "SunLitSecurityLibraries"
+    }
+  },
+  "declarations": {
+    "targets": {
+      "components": [
+        {
+          "bom-ref": "component:security_core",
+          "type": "library",
+          "name": "security_core",
+          "properties": [
+            {
+              "name": "cdx:sunlit:controls",
+              "value": "C1"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "shared-security-types"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "identity-source-trait"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "correlation-context"
+            }
+          ]
+        },
+        {
+          "bom-ref": "component:secure_errors",
+          "type": "library",
+          "name": "secure_errors",
+          "properties": [
+            {
+              "name": "cdx:sunlit:controls",
+              "value": "C10"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "centralized-error-handling"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "incident-id-errors"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "panic-boundary"
+            }
+          ]
+        },
+        {
+          "bom-ref": "component:security_events",
+          "type": "library",
+          "name": "security_events",
+          "properties": [
+            {
+              "name": "cdx:sunlit:controls",
+              "value": "C9"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "security-telemetry"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "hmac-sealed-events"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "classification-redaction"
+            }
+          ]
+        },
+        {
+          "bom-ref": "component:secure_boundary",
+          "type": "library",
+          "name": "secure_boundary",
+          "properties": [
+            {
+              "name": "cdx:sunlit:controls",
+              "value": "C5,C8"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "input-validation"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "request-size-depth-limits"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "security-headers"
+            }
+          ]
+        },
+        {
+          "bom-ref": "component:secure_output",
+          "type": "library",
+          "name": "secure_output",
+          "properties": [
+            {
+              "name": "cdx:sunlit:controls",
+              "value": "C4"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "context-aware-output-encoding"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "uri-scheme-sanitization"
+            }
+          ]
+        },
+        {
+          "bom-ref": "component:secure_identity",
+          "type": "library",
+          "name": "secure_identity",
+          "properties": [
+            {
+              "name": "cdx:sunlit:controls",
+              "value": "C6"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "jwt-validation"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "oidc-discovery"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "step-up-auth"
+            }
+          ]
+        },
+        {
+          "bom-ref": "component:secure_authz",
+          "type": "library",
+          "name": "secure_authz",
+          "properties": [
+            {
+              "name": "cdx:sunlit:controls",
+              "value": "C7"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "deny-by-default-authorization"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "rbac-abac-policy-engine"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "tenant-isolation"
+            }
+          ]
+        },
+        {
+          "bom-ref": "component:secure_data",
+          "type": "library",
+          "name": "secure_data",
+          "properties": [
+            {
+              "name": "cdx:sunlit:controls",
+              "value": "C2,C7,C8"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "envelope-encryption"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "argon2id-password-hashing"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "kms-key-provider"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "fips-aead-backend"
+            },
+            {
+              "name": "cdx:sunlit:crypto:password:kdf",
+              "value": "argon2id"
+            },
+            {
+              "name": "cdx:sunlit:crypto:password:feature",
+              "value": "password"
+            }
+          ]
+        },
+        {
+          "bom-ref": "component:secure_network",
+          "type": "library",
+          "name": "secure_network",
+          "properties": [
+            {
+              "name": "cdx:sunlit:controls",
+              "value": "MASVS-NETWORK"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "tls-policy-validation"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "certificate-pinning"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "cleartext-traffic-detection"
+            }
+          ]
+        },
+        {
+          "bom-ref": "component:secure_resilience",
+          "type": "library",
+          "name": "secure_resilience",
+          "properties": [
+            {
+              "name": "cdx:sunlit:controls",
+              "value": "C10"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "resilience-patterns"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "timeout-budgeting"
+            }
+          ]
+        },
+        {
+          "bom-ref": "component:secure_privacy",
+          "type": "library",
+          "name": "secure_privacy",
+          "properties": [
+            {
+              "name": "cdx:sunlit:controls",
+              "value": "C8"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "privacy-redaction"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "data-classification-handling"
+            }
+          ]
+        }
+      ]
+    },
+    "claims": [
+      {
+        "bom-ref": "claim:security_core:capabilities",
+        "target": "component:security_core",
+        "predicate": "Advertises shared-security-types, identity-source-trait, correlation-context for control coverage C1.",
+        "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+      },
+      {
+        "bom-ref": "claim:secure_errors:capabilities",
+        "target": "component:secure_errors",
+        "predicate": "Advertises centralized-error-handling, incident-id-errors, panic-boundary for control coverage C10.",
+        "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+      },
+      {
+        "bom-ref": "claim:security_events:capabilities",
+        "target": "component:security_events",
+        "predicate": "Advertises security-telemetry, hmac-sealed-events, classification-redaction for control coverage C9.",
+        "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+      },
+      {
+        "bom-ref": "claim:secure_boundary:capabilities",
+        "target": "component:secure_boundary",
+        "predicate": "Advertises input-validation, request-size-depth-limits, security-headers for control coverage C5,C8.",
+        "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+      },
+      {
+        "bom-ref": "claim:secure_output:capabilities",
+        "target": "component:secure_output",
+        "predicate": "Advertises context-aware-output-encoding, uri-scheme-sanitization for control coverage C4.",
+        "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+      },
+      {
+        "bom-ref": "claim:secure_identity:capabilities",
+        "target": "component:secure_identity",
+        "predicate": "Advertises jwt-validation, oidc-discovery, step-up-auth for control coverage C6.",
+        "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+      },
+      {
+        "bom-ref": "claim:secure_authz:capabilities",
+        "target": "component:secure_authz",
+        "predicate": "Advertises deny-by-default-authorization, rbac-abac-policy-engine, tenant-isolation for control coverage C7.",
+        "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+      },
+      {
+        "bom-ref": "claim:secure_data:capabilities",
+        "target": "component:secure_data",
+        "predicate": "Advertises envelope-encryption, argon2id-password-hashing, kms-key-provider, fips-aead-backend for control coverage C2,C7,C8.",
+        "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+      },
+      {
+        "bom-ref": "claim:secure_network:capabilities",
+        "target": "component:secure_network",
+        "predicate": "Advertises tls-policy-validation, certificate-pinning, cleartext-traffic-detection for control coverage MASVS-NETWORK.",
+        "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+      },
+      {
+        "bom-ref": "claim:secure_resilience:capabilities",
+        "target": "component:secure_resilience",
+        "predicate": "Advertises resilience-patterns, timeout-budgeting for control coverage C10.",
+        "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+      },
+      {
+        "bom-ref": "claim:secure_privacy:capabilities",
+        "target": "component:secure_privacy",
+        "predicate": "Advertises privacy-redaction, data-classification-handling for control coverage C8.",
+        "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+      }
+    ]
+  }
+}

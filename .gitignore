@@ -1,0 +1,66 @@
+/target
+# Keep Cargo.lock tracked so CI supply-chain gates evaluate a pinned graph.
+*.swp
+*.swo
+*.pdb
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+output/
+
+# Fuzz testing artifacts (corpus, crashes, build artifacts)
+crates/*/fuzz/corpus/
+crates/*/fuzz/artifacts/
+crates/*/fuzz/target/
+
+# Environment files (secrets)
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Local config/secrets
+*.local
+*.secret
+*.secrets
+secrets.*
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.csr
+*.srl
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+node_modules/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# ZAP DAST scan reports
+output/zap-report.*
+
+# Dastardly (Burp Suite) scan reports
+output/dastardly-report.*
+/.claude/
+
+# TLA+ / TLC generated artifacts (keep specs and .cfg, ignore caches and traces)
+specs/**/*_TTrace_*.tla
+specs/**/*_TTrace_*.bin
+specs/**/states/
+specs/**/*-run.log
+specs/**/MC.out
+specs/**/MC.cfg
+specs/**/*.dot
+specs/**/*.toolbox/
+states/
