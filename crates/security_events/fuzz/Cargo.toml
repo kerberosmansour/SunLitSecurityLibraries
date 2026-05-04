@@ -8,8 +8,8 @@ publish = false
 
 [dependencies]
 libfuzzer-sys = "0.4"
-security_events = { package = "sunlit_security_events", path = ".." }
-security_core = { package = "sunlit_security_core", path = "../../security_core" }
+security_events = { package = "security_events", path = ".." }
+security_core = { package = "security_core", path = "../../security_core" }
 
 [[bin]]
 name = "fuzz_sanitize"

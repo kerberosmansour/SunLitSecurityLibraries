@@ -85,10 +85,10 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Device-trust authz tests
-        run: cargo test -p sunlit_secure_authz --test e2e_sunlit_ndt_m4 --all-features
+        run: cargo test -p secure_authz --test e2e_sunlit_ndt_m4 --all-features
 
       - name: Identity/authz/network integration
-        run: cargo test -p sunlit_secure_identity -p sunlit_secure_authz -p sunlit_secure_network --all-features
+        run: cargo test -p secure_identity -p secure_authz -p secure_network --all-features
 
   zero-trust-auth-external:
     name: ZeroTrustAuth external conformance

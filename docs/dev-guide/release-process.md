@@ -22,33 +22,33 @@ the Rust library target names stay stable for imports such as
 
 Recommended first-publish order:
 
-1. `sunlit_security_core`
-2. `sunlit_security_events`
-3. `sunlit_secure_output`
-4. `sunlit_secure_device_trust`
-5. `sunlit_secure_network`
-6. `sunlit_secure_errors`
-7. `sunlit_secure_boundary`
-8. `sunlit_secure_data`
-9. `sunlit_secure_resilience`
-10. `sunlit_secure_privacy`
-11. `sunlit_secure_identity`
-12. `sunlit_secure_authz`
+1. `security_core`
+2. `security_events`
+3. `secure_output`
+4. `secure_device_trust`
+5. `secure_network`
+6. `secure_errors`
+7. `secure_boundary`
+8. `secure_data`
+9. `secure_resilience`
+10. `secure_privacy`
+11. `secure_identity`
+12. `secure_authz`
 
 Before publishing, package every crate:
 
 ```bash
-cargo package -p sunlit_security_core
+cargo package -p security_core
 for crate in \
-  sunlit_security_events sunlit_secure_output sunlit_secure_device_trust sunlit_secure_network \
-  sunlit_secure_errors sunlit_secure_boundary sunlit_secure_data sunlit_secure_resilience \
-  sunlit_secure_privacy sunlit_secure_identity sunlit_secure_authz
+  security_events secure_output secure_device_trust secure_network \
+  secure_errors secure_boundary secure_data secure_resilience \
+  secure_privacy secure_identity secure_authz
 do
   cargo package -p "$crate" --list > "/tmp/$crate.package-list"
 done
 ```
 
-Only `sunlit_security_core` can fully package-verify before anything is
+Only `security_core` can fully package-verify before anything is
 published. The other first-release crates have versioned local path dependencies
 that Cargo resolves against crates.io during package verification, so package
 them and publish them one at a time after their prerequisite crates exist in the
@@ -65,7 +65,7 @@ When ready, publish in the order above:
 
 ```bash
 cargo login
-cargo publish -p sunlit_security_core
+cargo publish -p security_core
 ```
 
 Publishing to crates.io is permanent for a given version. If a secret ever
@@ -89,10 +89,10 @@ To produce signed artifacts without publishing:
 
 ```bash
 cosign verify-blob \
-  --bundle sunlit_secure_data-0.1.0.crate.sigstore.json \
+  --bundle secure_data-0.1.0.crate.sigstore.json \
   --certificate-identity-regexp 'https://github.com/kerberosmansour/SunLitSecurityLibraries/.github/workflows/release-sign.yml@refs/(heads|tags)/.*' \
   --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
-  sunlit_secure_data-0.1.0.crate
+  secure_data-0.1.0.crate
 ```
 
 ## GitHub hardening checklist

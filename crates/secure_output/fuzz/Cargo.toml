@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 libfuzzer-sys = "0.4"
-secure_output = { package = "sunlit_secure_output", path = ".." }
+secure_output = { package = "secure_output", path = ".." }
 
 [[bin]]
 name = "fuzz_html_encode"

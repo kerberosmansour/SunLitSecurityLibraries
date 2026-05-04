@@ -1,11 +1,11 @@
 [package]
-name = "sunlit_security_core"
+name = "security_core"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Shared security types, identity traits, correlation context, and data classification primitives."
 repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
-documentation = "https://docs.rs/sunlit_security_core"
+documentation = "https://docs.rs/security_core"
 keywords = ["security", "identity", "types", "audit"]
 
 [lib]

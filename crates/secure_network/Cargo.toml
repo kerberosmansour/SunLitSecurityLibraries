@@ -1,19 +1,19 @@
 [package]
-name = "sunlit_secure_network"
+name = "secure_network"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "TLS policy validation, SPKI certificate pinning, and cleartext traffic detection."
 repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
-documentation = "https://docs.rs/sunlit_secure_network"
+documentation = "https://docs.rs/secure_network"
 keywords = ["security", "tls", "pinning", "network"]
 
 [lib]
 name = "secure_network"
 
 [dependencies]
-security_core = { package = "sunlit_security_core", version = "0.1.0", path = "../security_core" }
-security_events = { package = "sunlit_security_events", version = "0.1.0", path = "../security_events" }
+security_core = { package = "security_core", version = "0.1.0", path = "../security_core" }
+security_events = { package = "security_events", version = "0.1.0", path = "../security_events" }
 serde = { workspace = true }
 sha2 = "0.10"
 x509-parser = "0.16"

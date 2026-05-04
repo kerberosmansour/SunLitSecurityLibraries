@@ -1,11 +1,11 @@
 [package]
-name = "sunlit_security_events"
+name = "security_events"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Security telemetry, redaction, HMAC-sealed events, and audit-friendly event sinks."
 repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
-documentation = "https://docs.rs/sunlit_security_events"
+documentation = "https://docs.rs/security_events"
 keywords = ["security", "audit", "telemetry", "logging"]
 
 [lib]
@@ -17,7 +17,7 @@ otel = ["dep:tracing-opentelemetry", "dep:opentelemetry"]
 http-sink = ["dep:reqwest"]
 
 [dependencies]
-security_core = { package = "sunlit_security_core", version = "0.1.0", path = "../security_core" }
+security_core = { package = "security_core", version = "0.1.0", path = "../security_core" }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
 serde = { workspace = true }
@@ -33,5 +33,5 @@ opentelemetry = { version = "0.27", optional = true }
 
 [dev-dependencies]
 serde_json = "1"
-secure_errors = { package = "sunlit_secure_errors", version = "0.1.0", path = "../secure_errors" }
+secure_errors = { package = "secure_errors", version = "0.1.0", path = "../secure_errors" }
 proptest = "1"

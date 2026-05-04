@@ -52,13 +52,12 @@ Compliance mappings: **NIST 800-53** (AC, AU, IA, SC, SI), **IEC 62443**, **SOC 
 | `secure_smoke_service` | smoke-test | 54-route security smoke-test service for DAST scanning (including 15 mobile MASVS routes) |
 
 The libraries are packaged as separate crates so applications can pull only the
-control surface they need. crates.io package names use the `sunlit_` prefix to
-avoid name collisions; Rust import names stay as shown in the table above. The
-reference and smoke services are not intended for crates.io publication.
+control surface they need. The reference and smoke services are not intended
+for crates.io publication.
 
 ```bash
-cargo add sunlit_secure_data --features password
-cargo add sunlit_secure_authz --features axum
+cargo add secure_data --features password
+cargo add secure_authz --features axum
 ```
 
 Release packaging and signing details live in
@@ -100,7 +99,7 @@ The production milestone plan lives in
 | `azure-kv` | — | Azure Key Vault key provider (wrap/unwrap only) |
 | `mobile-storage` | — | Mobile secure storage: `SensitiveBuffer`, `BackupExclusion`, `MobileStoragePolicy` (MASVS-STORAGE-1) |
 
-All features are off by default. Enable with `cargo build -p sunlit_secure_data --features vault,aws-kms`.
+All features are off by default. Enable with `cargo build -p secure_data --features vault,aws-kms`.
 
 ### `secure_identity` Feature Flags
 
@@ -110,7 +109,7 @@ All features are off by default. Enable with `cargo build -p sunlit_secure_data 
 | `session-redis` | `redis` | Redis-backed session management |
 | `biometric` | — | Biometric auth validation, device binding, step-up auth policy (MASVS-AUTH-2, MASVS-AUTH-3) |
 
-All features are off by default. Enable with `cargo build -p sunlit_secure_identity --features biometric`.
+All features are off by default. Enable with `cargo build -p secure_identity --features biometric`.
 
 ---
 

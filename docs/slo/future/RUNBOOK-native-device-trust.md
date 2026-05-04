@@ -26,8 +26,8 @@
 - **Default test commands**:
   - Format: `cargo fmt --all -- --check`
   - Workspace tests: `cargo test --workspace`
-  - Device trust crate: `cargo test -p sunlit_secure_device_trust --all-features`
-  - Identity/authz/network compatibility: `cargo test -p sunlit_secure_identity -p sunlit_secure_authz -p sunlit_secure_network --all-features`
+  - Device trust crate: `cargo test -p secure_device_trust --all-features`
+  - Identity/authz/network compatibility: `cargo test -p secure_identity -p secure_authz -p secure_network --all-features`
   - Feature matrix: `cargo check --workspace --all-features` and `cargo check --workspace --no-default-features`
   - Lints: `cargo clippy --workspace --all-targets --all-features -- -D warnings`
   - Conformance: run ZeroTrustAuth `make smoke` against local library-backed services
@@ -200,11 +200,11 @@ runbook so the conformance harness proves consumption of these supported APIs.
 | Repo hygiene | branch is not default/protected | branch before/after `native-device-trust-libraries`; origin default `origin/feature/milestone-automation`; dirty tree contains current S0-S3 docs/code work | Pass | no branch remediation needed |
 | Carry-forward check | prior retro items surfaced if present | `gh issue list --label retro-derived --search "ndt" --state open --json number,title,body,url` returned `[]` | Pass | no carry-forward scope candidates |
 | Baseline: `cargo test --workspace` | pass before M2 code changes | passed before M2 code changes | Pass | confirmed S2 workspace state was green |
-| BDD-first M2 tests | fail for expected behavior gaps | `cargo test -p sunlit_secure_device_trust --test e2e_sunlit_ndt_m2` failed 6 tests: issuance stub rejected valid CSR, CSR policy did not detect forbidden extension, refresh ignored revocation, mTLS validator accepted expired identity | Pass | failures were behavioral, not compile errors |
-| `cargo test -p sunlit_secure_device_trust --test e2e_sunlit_ndt_m2` | pass | passed 7 tests | Pass | issuance, CSR extension/SAN policy, revoked bootstrap, revoked session, denied trust, expired identity |
-| `cargo test -p sunlit_secure_network --test mtls_identity_tests` | pass | passed 3 tests | Pass | valid trusted edge, untrusted edge, revoked identity |
-| `cargo test -p sunlit_secure_device_trust --all-features` | pass | passed | Pass | M1 and M2 device trust tests |
-| `cargo test -p sunlit_secure_network` | pass | passed | Pass | existing network tests plus mTLS identity tests |
+| BDD-first M2 tests | fail for expected behavior gaps | `cargo test -p secure_device_trust --test e2e_sunlit_ndt_m2` failed 6 tests: issuance stub rejected valid CSR, CSR policy did not detect forbidden extension, refresh ignored revocation, mTLS validator accepted expired identity | Pass | failures were behavioral, not compile errors |
+| `cargo test -p secure_device_trust --test e2e_sunlit_ndt_m2` | pass | passed 7 tests | Pass | issuance, CSR extension/SAN policy, revoked bootstrap, revoked session, denied trust, expired identity |
+| `cargo test -p secure_network --test mtls_identity_tests` | pass | passed 3 tests | Pass | valid trusted edge, untrusted edge, revoked identity |
+| `cargo test -p secure_device_trust --all-features` | pass | passed | Pass | M1 and M2 device trust tests |
+| `cargo test -p secure_network` | pass | passed | Pass | existing network tests plus mTLS identity tests |
 | `cargo fmt --all -- --check && cargo test --workspace` | pass | passed | Pass | full workspace regression |
 | `cargo check --workspace --all-features && cargo check --workspace --no-default-features` | pass | passed | Pass | feature matrix |
 | `cargo clippy --workspace --all-targets --all-features -- -D warnings` | pass | passed | Pass | lint gate |
@@ -253,10 +253,10 @@ these supported APIs.
 | Repo hygiene | branch is not default/protected | branch before/after `native-device-trust-libraries`; origin default `origin/feature/milestone-automation`; dirty tree contains current S0-S6 docs/code work | Pass | no branch remediation needed |
 | Carry-forward check | prior retro items surfaced if present | `gh issue list --label retro-derived --search ndt --state open --json number,title,body,url` returned `[]` | Pass | no carry-forward scope candidates |
 | Baseline: `cargo test --workspace` | pass before M3 code changes | passed before M3 code changes | Pass | confirmed S5/S6 starting state was green |
-| BDD-first M3 tests | fail for expected behavior gaps | `cargo test -p sunlit_secure_identity --test e2e_sunlit_ndt_m3` failed 5 tests: challenge issuance returned `ProviderUnavailable`, no-cert and denied-device paths were not enforced yet | Pass | failures were behavioral after the API skeleton compiled |
-| `cargo test -p sunlit_secure_identity --test e2e_sunlit_ndt_m3` | pass | passed 6 tests | Pass | cert-bound challenge/session, replay rejection, deep-link fallback, no-cert rejection, denied trust rejection, Debug redaction |
-| `cargo test -p sunlit_secure_identity --all-features` | pass | passed | Pass | identity compatibility with biometric, OIDC, Redis-session features |
-| `cargo test -p sunlit_secure_identity -p sunlit_secure_authz -p sunlit_secure_network --all-features` | pass | passed | Pass | integration compatibility across identity, authz, and mTLS identity crates |
+| BDD-first M3 tests | fail for expected behavior gaps | `cargo test -p secure_identity --test e2e_sunlit_ndt_m3` failed 5 tests: challenge issuance returned `ProviderUnavailable`, no-cert and denied-device paths were not enforced yet | Pass | failures were behavioral after the API skeleton compiled |
+| `cargo test -p secure_identity --test e2e_sunlit_ndt_m3` | pass | passed 6 tests | Pass | cert-bound challenge/session, replay rejection, deep-link fallback, no-cert rejection, denied trust rejection, Debug redaction |
+| `cargo test -p secure_identity --all-features` | pass | passed | Pass | identity compatibility with biometric, OIDC, Redis-session features |
+| `cargo test -p secure_identity -p secure_authz -p secure_network --all-features` | pass | passed | Pass | integration compatibility across identity, authz, and mTLS identity crates |
 | `cargo fmt --all -- --check` | pass | passed | Pass | formatting gate |
 | `cargo test --workspace` | pass | passed | Pass | full workspace regression |
 | `cargo check --workspace --all-features` | pass | passed | Pass | all-feature matrix |
@@ -310,13 +310,13 @@ and now includes device-trust tier routes for conformance coverage.
 |---|---|---|---|---|
 | Repo hygiene | branch is not default/protected | branch before/after `native-device-trust-libraries`; origin default `origin/feature/milestone-automation`; dirty tree contains current S0-S8 docs/code work | Pass | no branch remediation needed |
 | Carry-forward check | prior retro items surfaced if present | `gh issue list --label retro-derived --search ndt --state open --json number,title,body,url` returned `[]` | Pass | no carry-forward scope candidates |
-| Baseline: `cargo test -p sunlit_secure_authz -p secure_reference_service --all-features` | pass before M4 code changes | passed before M4 code changes | Pass | confirmed S8 starting state was green |
-| BDD-first M4 authz tests | fail for expected behavior gaps | `cargo test -p sunlit_secure_authz --test e2e_sunlit_ndt_m4 --all-features` failed 7 tests with `Deny { reason: NoPolicyMatch }` after the skeleton compiled | Pass | failures were behavioral, not the final implementation |
+| Baseline: `cargo test -p secure_authz -p secure_reference_service --all-features` | pass before M4 code changes | passed before M4 code changes | Pass | confirmed S8 starting state was green |
+| BDD-first M4 authz tests | fail for expected behavior gaps | `cargo test -p secure_authz --test e2e_sunlit_ndt_m4 --all-features` failed 7 tests with `Deny { reason: NoPolicyMatch }` after the skeleton compiled | Pass | failures were behavioral, not the final implementation |
 | BDD-first M4 reference-service tests | fail until routes exist | initial reference-service integration failed before device-trust route implementation was complete | Pass | route and decision matching were added after the red phase |
-| `cargo test -p sunlit_secure_authz --test e2e_sunlit_ndt_m4 --all-features` | pass | passed 10 tests | Pass | hardware trust, CI/test trust, production guard, revoked context, untrusted edge spoofing, session binding mismatch, Actix adapter allow/deny |
+| `cargo test -p secure_authz --test e2e_sunlit_ndt_m4 --all-features` | pass | passed 10 tests | Pass | hardware trust, CI/test trust, production guard, revoked context, untrusted edge spoofing, session binding mismatch, Actix adapter allow/deny |
 | `cargo test -p secure_reference_service --test e2e_sunlit_ndt_m4` | pass | passed 5 tests | Pass | hardware and CI/test trust routes allow/deny as expected |
-| `cargo test -p sunlit_secure_authz -p secure_reference_service --all-features` | pass | passed | Pass | authz and reference-service regression suite |
-| `cargo test -p sunlit_secure_identity -p sunlit_secure_authz -p sunlit_secure_network --all-features` | pass | passed | Pass | Guardian-relevant identity/authz/network typed path |
+| `cargo test -p secure_authz -p secure_reference_service --all-features` | pass | passed | Pass | authz and reference-service regression suite |
+| `cargo test -p secure_identity -p secure_authz -p secure_network --all-features` | pass | passed | Pass | Guardian-relevant identity/authz/network typed path |
 | `cargo fmt --all -- --check` | pass | passed | Pass | formatting gate |
 | `cargo test --workspace` | pass | passed | Pass | full workspace regression |
 | `cargo check --workspace --all-features` | pass | passed | Pass | all-feature matrix |
@@ -375,7 +375,7 @@ external conformance artifact is uploaded.
 | Release workflow contract | library tests plus optional external ZeroTrustAuth workflow | `.github/workflows/native-device-trust-conformance.yml` added with `workflow_dispatch`, `workflow_call`, and `id-token: write` | Pass | external job is opt-in until staging exists |
 | Developer handoff docs | Guardian/SecurityLibraries release consumers know the gate shape | `docs/dev-guide/native-device-trust-release-gate.md` added and linked from `docs/dev-guide/README.md` | Pass | documents CDN/AWS/EKS/Istio/Actix path and no-production-key rule |
 | workflow YAML parse | pass | `native-device-trust-conformance.yml` parsed with Ruby YAML | Pass | syntax sanity check only; GitHub execution still required |
-| `cargo fmt --all -- --check && cargo test -p sunlit_secure_authz --test e2e_sunlit_ndt_m4 --all-features && cargo test -p sunlit_secure_identity -p sunlit_secure_authz -p sunlit_secure_network --all-features` | pass | passed | Pass | matches the release-gate library contract job |
+| `cargo fmt --all -- --check && cargo test -p secure_authz --test e2e_sunlit_ndt_m4 --all-features && cargo test -p secure_identity -p secure_authz -p secure_network --all-features` | pass | passed | Pass | matches the release-gate library contract job |
 | ZeroTrustAuth external dry-run | pass | ZeroTrustAuth contract and dry-run harness passed | Pass | proves reusable workflow shape before staging exists |
 | External non-dry-run artifact | uploaded for release | not run | Blocked | requires ZeroTrustAuth public test/staging endpoint and CI bootstrap issuer |
 

@@ -576,7 +576,7 @@ fn load_config() -> Result<(), Box<dyn std::error::Error>> {
 All features are off by default. Enable only what you need:
 
 ```sh
-cargo build -p sunlit_secure_data --features vault,aws-kms
+cargo build -p secure_data --features vault,aws-kms
 ```
 
 ---

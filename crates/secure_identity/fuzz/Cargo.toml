@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 libfuzzer-sys = "0.4"
-secure_identity = { package = "sunlit_secure_identity", path = ".." }
+secure_identity = { package = "secure_identity", path = ".." }
 tokio = { version = "1", features = ["rt", "macros", "rt-multi-thread"] }
 
 [[bin]]

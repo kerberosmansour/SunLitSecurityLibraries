@@ -10,20 +10,20 @@ on:
         description: "Crate to package and sign, or all once internal dependencies are already published"
         required: true
         type: choice
-        default: sunlit_security_core
+        default: security_core
         options:
-          - sunlit_security_core
-          - sunlit_security_events
-          - sunlit_secure_output
-          - sunlit_secure_device_trust
-          - sunlit_secure_network
-          - sunlit_secure_errors
-          - sunlit_secure_boundary
-          - sunlit_secure_data
-          - sunlit_secure_resilience
-          - sunlit_secure_privacy
-          - sunlit_secure_identity
-          - sunlit_secure_authz
+          - security_core
+          - security_events
+          - secure_output
+          - secure_device_trust
+          - secure_network
+          - secure_errors
+          - secure_boundary
+          - secure_data
+          - secure_resilience
+          - secure_privacy
+          - secure_identity
+          - secure_authz
           - all
 
 permissions:
@@ -58,18 +58,18 @@ jobs:
           selected="$SELECTED_CRATE"
           if [ "$selected" = "all" ]; then
             crates=(
-              sunlit_security_core
-              sunlit_security_events
-              sunlit_secure_output
-              sunlit_secure_device_trust
-              sunlit_secure_network
-              sunlit_secure_errors
-              sunlit_secure_boundary
-              sunlit_secure_data
-              sunlit_secure_resilience
-              sunlit_secure_privacy
-              sunlit_secure_identity
-              sunlit_secure_authz
+              security_core
+              security_events
+              secure_output
+              secure_device_trust
+              secure_network
+              secure_errors
+              secure_boundary
+              secure_data
+              secure_resilience
+              secure_privacy
+              secure_identity
+              secure_authz
             )
           else
             crates=("$selected")

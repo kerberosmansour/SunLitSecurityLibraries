@@ -1,11 +1,11 @@
 [package]
-name = "sunlit_secure_boundary"
+name = "secure_boundary"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Input validation, request limits, CORS, Fetch Metadata, and browser boundary protections."
 repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
-documentation = "https://docs.rs/sunlit_secure_boundary"
+documentation = "https://docs.rs/secure_boundary"
 keywords = ["security", "validation", "headers", "axum", "actix"]
 
 [lib]
@@ -19,9 +19,9 @@ html-sanitize = ["dep:ammonia"]
 mobile-platform = []
 
 [dependencies]
-security_core = { package = "sunlit_security_core", version = "0.1.0", path = "../security_core" }
-secure_errors = { package = "sunlit_secure_errors", version = "0.1.0", path = "../secure_errors" }
-security_events = { package = "sunlit_security_events", version = "0.1.0", path = "../security_events" }
+security_core = { package = "security_core", version = "0.1.0", path = "../security_core" }
+secure_errors = { package = "secure_errors", version = "0.1.0", path = "../secure_errors" }
+security_events = { package = "security_events", version = "0.1.0", path = "../security_events" }
 axum = { version = "0.8", optional = true }
 axum-core = { version = "0.5", optional = true }
 tower = { version = "0.5", optional = true }
@@ -50,7 +50,7 @@ axum = { version = "0.8", features = ["macros"] }
 tower = { version = "0.5", features = ["util"] }
 actix-web = { version = "4" }
 serde_json = "1"
-secure_output = { package = "sunlit_secure_output", version = "0.1.0", path = "../secure_output" }
+secure_output = { package = "secure_output", version = "0.1.0", path = "../secure_output" }
 tokio = { workspace = true, features = ["full"] }
 proptest = "1"
 
