@@ -15,7 +15,7 @@ name = "secure_privacy"
 security_core = { package = "sunlit_security_core", version = "0.1.0", path = "../security_core" }
 security_events = { package = "sunlit_security_events", version = "0.1.0", path = "../security_events" }
 serde = { workspace = true }
-sha2 = "0.10"
+sha2 = "0.11"
 hmac = "0.12"
 hex = "0.4"
 regex = "1"
