@@ -4,30 +4,15 @@
 [![docs.rs](https://docs.rs/secure_data/badge.svg)](https://docs.rs/secure_data)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-Data protection, secrets management, and FIPS readiness (OWASP C8). Part of the **SunLit Security Libraries** workspace.
+Secrets management, envelope encryption, password hashing, and FIPS-ready cryptography (OWASP C8). Part of the [SunLit Security Libraries](https://github.com/kerberosmansour/SunLitSecurityLibraries) workspace.
 
-## What this crate gives you
+## When to reach for this crate
 
-- Typed secret wrappers that suppress `Debug`, `Display`, and default `Serialize` output.
-- Pluggable `KeyProvider` abstraction with a `StaticDevKeyProvider` for tests.
-- Envelope encryption/decryption via AES-256-GCM (FIPS-ready `aws-lc-rs` behind the `fips` feature).
-- Key-ring lifecycle management with rotation and dual-read.
-- Secret reference parsing — `vault://`, `kms://`, `env://`.
-- `Zeroize` and `ReadOnce` memory helpers.
-- Argon2id password hashing and verification (OWASP C2/C7).
-
-## Feature flags
-
-| Flag | Dependency | Purpose |
-|---|---|---|
-| `vault` | `reqwest` | HashiCorp Vault Transit key provider + KV secret resolution. |
-| `aws-kms` | `aws-sdk-kms`, `aws-config` | AWS KMS `GenerateDataKey` / `Decrypt` provider. |
-| `fips` | `aws-lc-rs` | FIPS 140-2/3 validated AEAD backend. |
-| `password` | `argon2` | Argon2id password hashing and verification. |
-| `azure-kv` | — | Azure Key Vault key provider (wrap/unwrap only). |
-| `mobile-storage` | — | Mobile secure storage: `SensitiveBuffer`, `BackupExclusion`, `MobileStoragePolicy` (MASVS-STORAGE-1). |
-
-All features are off by default. Enable with e.g. `cargo add secure_data --features vault,aws-kms,password`.
+- You handle **secrets in-memory** (API tokens, DB passwords, signing keys) and want types that suppress `Debug`, `Display`, and default `Serialize` and that zero on drop.
+- You need **envelope encryption** with a pluggable KMS (Vault, AWS KMS, Azure Key Vault, or a static dev key).
+- You need **Argon2id password hashing** (OWASP C2/C7) without re-deriving parameters every release.
+- You want **FIPS 140-2/3 readiness** by toggling a feature flag (`aws-lc-rs` backend).
+- You want **mobile secure storage** primitives (`SensitiveBuffer`, `BackupExclusion`, MASVS-STORAGE-1).
 
 ## Install
 
@@ -36,14 +21,89 @@ All features are off by default. Enable with e.g. `cargo add secure_data --featu
 secure_data = { version = "0.1", features = ["password"] }
 ```
 
+## Quick examples
+
+### Typed secret wrappers
+
+```rust
+use secure_data::secret::SecretString;
+
+let token = SecretString::new("super-secret-api-key".to_owned());
+println!("{:?}", token);  // -> SecretString([REDACTED])
+// Only call expose_secret() at the boundary that actually needs the bytes.
+let bytes = token.expose_secret();
+```
+
+### Argon2id password hashing (`features = ["password"]`)
+
+```rust
+use secure_data::password::{hash_password, verify_password};
+use secure_data::secret::SecretString;
+
+let password = SecretString::new("correct-horse-battery".to_owned());
+let hash = hash_password(&password)?;
+assert!(verify_password(&password, &hash)?);
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+### Envelope encryption with a key provider
+
+```rust
+use secure_data::envelope::{encrypt_for_storage, decrypt_for_use};
+use secure_data::kms::StaticDevKeyProvider;
+use std::sync::Arc;
+
+let kms = Arc::new(StaticDevKeyProvider::with_dev_key());
+let plaintext = b"private medical record";
+
+let envelope = encrypt_for_storage(&*kms, "phi:patient:42", plaintext)?;
+// envelope.ciphertext is AES-256-GCM, envelope.wrapped_dek is the KMS-wrapped DEK.
+
+let recovered = decrypt_for_use(&*kms, &envelope)?;
+assert_eq!(recovered.as_slice(), plaintext);
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+## What's inside
+
+| Module | Use it for |
+|---|---|
+| `secret` | `SecretString`, `SecretBytes`, `ApiToken`, `DbPassword`, `SigningKeyRef` — types that won't leak via Debug/Display/Serialize and zero on drop. |
+| `envelope` | `encrypt_for_storage`, `decrypt_for_use` — AES-256-GCM envelope encryption. |
+| `kms` | `KeyProvider` trait + `StaticDevKeyProvider` for tests. |
+| `providers` | Real KMS providers (Vault, AWS KMS) gated by features. |
+| `keyring` | Logical key registry with aliases, versions, and lifecycle (`Active`, `RotatingFrom`, `Deprecated`). |
+| `rotation` | Re-encryption helpers for key rotation with dual-read. |
+| `algorithm` | `CryptoAlgorithm`, `AlgorithmPolicy` — algorithm selection and downgrade prevention. |
+| `password` | Argon2id `hash_password` / `verify_password` (feature `password`). |
+| `config` / `resolve` | `vault://`, `kms://`, `env://` reference parsing and resolution. |
+| `memory` | `Zeroize` and `ReadOnce` helpers. |
+| `serde` | Safe serializers for secret-bearing structs. |
+| `mobile_storage` | `SensitiveBuffer`, `BackupExclusion`, `MobileStoragePolicy` (feature `mobile-storage`, MASVS-STORAGE-1). |
+
+## Feature flags
+
+| Flag | Dependency | Purpose |
+|---|---|---|
+| `vault` | `reqwest` | HashiCorp Vault Transit key provider + KV secret resolution. |
+| `aws-kms` | `aws-sdk-kms`, `aws-config` | AWS KMS `GenerateDataKey` / `Decrypt` provider. |
+| `azure-kv` | — | Azure Key Vault key provider (wrap/unwrap only). |
+| `fips` | `aws-lc-rs` | FIPS 140-2/3 validated AEAD backend. |
+| `password` | `argon2` | Argon2id password hashing. |
+| `mobile-storage` | — | Mobile secure-storage primitives (MASVS-STORAGE). |
+
+All features are off by default. Combine freely: `cargo add secure_data --features vault,aws-kms,password`.
+
+## Compatibility
+
+- MSRV: 1.78
+- `#![forbid(unsafe_code)]`, `#![deny(missing_docs)]`
+- Zeroize-on-drop wherever a secret is held
+
 ## Status
 
 Alpha.
 
-## Links
-
-- Workspace: https://github.com/kerberosmansour/SunLitSecurityLibraries
-
 ## License
 
-Dual-licensed under MIT or Apache-2.0 at your option.
+Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-MIT) or [Apache-2.0](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-APACHE) at your option.
