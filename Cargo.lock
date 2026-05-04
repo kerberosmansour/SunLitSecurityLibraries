@@ -4262,7 +4262,7 @@ dependencies = [
  "base64 0.22.1",
  "chacha20poly1305",
  "proptest",
- "rand 0.8.6",
+ "rand 0.10.1",
  "reqwest",
  "secrecy",
  "serde",
