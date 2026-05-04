@@ -1,0 +1,73 @@
+name: Bug report
+description: Something in the crates, examples, docs, or workflows does not work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. For security vulnerabilities, do not file a public issue. Use SECURITY.md.
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One sentence describing the bug.
+      placeholder: secure_boundary accepts an input that should be rejected.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Include exact commands, feature flags, payloads, or minimal code.
+      placeholder: |
+        1. `cargo test -p sunlit_secure_boundary --features axum`
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include relevant logs or error messages in a fenced block.
+    validations:
+      required: true
+  - type: dropdown
+    id: crate
+    attributes:
+      label: Affected area
+      multiple: true
+      options:
+        - sunlit_security_core
+        - sunlit_secure_errors
+        - sunlit_security_events
+        - sunlit_secure_boundary
+        - sunlit_secure_output
+        - sunlit_secure_identity
+        - sunlit_secure_authz
+        - sunlit_secure_data
+        - sunlit_secure_network
+        - sunlit_secure_resilience
+        - sunlit_secure_privacy
+        - reference/smoke service
+        - docs
+        - CI / supply chain
+        - other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Crate version, tag, or output of `git rev-parse --short HEAD`.
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context

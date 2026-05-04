@@ -1,0 +1,103 @@
+name: Native Device Trust Conformance Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_external:
+        description: "Call the ZeroTrustAuth external conformance workflow"
+        required: true
+        type: boolean
+        default: false
+      dry_run:
+        description: "Validate the external workflow contract without network calls"
+        required: true
+        type: boolean
+        default: true
+      environment:
+        description: "Environment-protected staging/test target"
+        required: true
+        type: choice
+        options: [staging, test, ci]
+        default: staging
+      enrollment_url:
+        description: "Public mTLS enrollment URL"
+        required: false
+        type: string
+      api_url:
+        description: "Public mTLS protected API URL"
+        required: false
+        type: string
+      ci_bootstrap_issuer_url:
+        description: "Issuer URL that exchanges GitHub OIDC for CI bootstrap material"
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      run_external:
+        required: false
+        type: boolean
+        default: false
+      dry_run:
+        required: false
+        type: boolean
+        default: true
+      environment:
+        required: false
+        type: string
+        default: staging
+      enrollment_url:
+        required: false
+        type: string
+        default: ""
+      api_url:
+        required: false
+        type: string
+        default: ""
+      ci_bootstrap_issuer_url:
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  library-contract:
+    name: Library device-trust contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Device-trust authz tests
+        run: cargo test -p sunlit_secure_authz --test e2e_sunlit_ndt_m4 --all-features
+
+      - name: Identity/authz/network integration
+        run: cargo test -p sunlit_secure_identity -p sunlit_secure_authz -p sunlit_secure_network --all-features
+
+  zero-trust-auth-external:
+    name: ZeroTrustAuth external conformance
+    needs: library-contract
+    if: ${{ inputs.run_external }}
+    uses: kerberosmansour/ZeroTrustAuth/.github/workflows/zero-trust-auth-external.yml@5a24e4115074f30e2372835fea30806a897704c3 # main on 2026-05-04
+    with:
+      dry_run: ${{ inputs.dry_run }}
+      environment: ${{ inputs.environment }}
+      enrollment_url: ${{ inputs.enrollment_url }}
+      api_url: ${{ inputs.api_url }}
+      ci_bootstrap_issuer_url: ${{ inputs.ci_bootstrap_issuer_url }}

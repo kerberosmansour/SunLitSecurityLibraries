@@ -1,0 +1,13 @@
+# cargo-audit configuration.
+#
+# The source-of-truth for advisory decisions is `deny.toml` at the repo
+# root. This file mirrors the [advisories].ignore list so `cargo audit`
+# and `cargo deny check` agree on every PR. Update both when adding a
+# new advisory ignore.
+
+[advisories]
+ignore = [
+    # See deny.toml for justifications.
+    "RUSTSEC-2026-0002",  # lru IterMut
+    "RUSTSEC-2023-0071",  # rsa Marvin (signature-verification-only usage)
+]

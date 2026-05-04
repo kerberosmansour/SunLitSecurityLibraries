@@ -1,0 +1,57 @@
+name: Semgrep
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * 2"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: Semgrep Rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install Semgrep
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/semgrep-venv"
+          . "$RUNNER_TEMP/semgrep-venv/bin/activate"
+          python -m pip install --disable-pip-version-check --no-input semgrep==1.161.0
+
+      - name: Semgrep Rust scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          . "$RUNNER_TEMP/semgrep-venv/bin/activate"
+          semgrep scan \
+            --config p/rust \
+            --config p/owasp-top-ten \
+            --metrics=off \
+            --error \
+            --sarif \
+            --output semgrep.sarif \
+            --exclude target \
+            --exclude .git \
+            .
+
+      - uses: github/codeql-action/upload-sarif@e46ed2cbd01164d986452f91f178727624ae40d7 # v4
+        if: ${{ github.event.repository.private == false && github.event_name != 'pull_request' && always() && hashFiles('semgrep.sarif') != '' }}
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep-rust

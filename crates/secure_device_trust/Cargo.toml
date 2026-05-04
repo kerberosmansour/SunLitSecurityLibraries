@@ -1,0 +1,21 @@
+[package]
+name = "sunlit_secure_device_trust"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Native-client device trust decisions, attestation metadata, and trust-tier session policy."
+repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
+documentation = "https://docs.rs/sunlit_secure_device_trust"
+keywords = ["security", "device", "trust", "attestation"]
+
+[lib]
+name = "secure_device_trust"
+
+[dependencies]
+security_core = { package = "sunlit_security_core", version = "0.1.0", path = "../security_core" }
+serde = { workspace = true }
+time = { workspace = true }
+
+[dev-dependencies]
+secure_network = { package = "sunlit_secure_network", version = "0.1.0", path = "../secure_network" }
+serde_json = "1"

@@ -1,0 +1,23 @@
+[package]
+name = "secure_privacy-fuzz"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+secure_privacy = { package = "sunlit_secure_privacy", path = ".." }
+
+[[bin]]
+name = "fuzz_pii_classifier"
+path = "fuzz_targets/fuzz_pii_classifier.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "fuzz_pseudonymizer"
+path = "fuzz_targets/fuzz_pseudonymizer.rs"
+test = false
+bench = false

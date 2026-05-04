@@ -1,0 +1,56 @@
+[package]
+name = "secure_reference_service"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Reference service demonstrating SunLit secure middleware composition."
+repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
+publish = false
+
+[[bin]]
+name = "secure_reference_service"
+path = "src/main.rs"
+
+[lib]
+name = "secure_reference_service"
+path = "src/lib.rs"
+
+[dependencies]
+# Workspace library crates
+security_core = { package = "sunlit_security_core", version = "0.1.0", path = "../security_core" }
+secure_errors = { package = "sunlit_secure_errors", version = "0.1.0", path = "../secure_errors" }
+security_events = { package = "sunlit_security_events", version = "0.1.0", path = "../security_events" }
+secure_boundary = { package = "sunlit_secure_boundary", version = "0.1.0", path = "../secure_boundary" }
+secure_output = { package = "sunlit_secure_output", version = "0.1.0", path = "../secure_output" }
+secure_identity = { package = "sunlit_secure_identity", version = "0.1.0", path = "../secure_identity" }
+secure_authz = { package = "sunlit_secure_authz", version = "0.1.0", path = "../secure_authz" }
+secure_data = { package = "sunlit_secure_data", version = "0.1.0", path = "../secure_data" }
+
+# Axum / Tower / Tokio
+axum = "0.8"
+axum-core = "0.5"
+tower = { version = "0.5", features = ["limit", "timeout", "util"] }
+tower-http = { version = "0.6", features = ["request-id", "timeout", "catch-panic", "trace"] }
+tokio = { version = "1", features = ["full"] }
+hyper = { version = "1", features = ["full"] }
+
+# Serialisation
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Utilities
+uuid = { version = "1", features = ["v4"] }
+time = { version = "0.3" }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+http = "1"
+thiserror = "2"
+
+[dev-dependencies]
+axum = { version = "0.8", features = ["macros"] }
+secure_device_trust = { package = "sunlit_secure_device_trust", version = "0.1.0", path = "../secure_device_trust" }
+secure_network = { package = "sunlit_secure_network", version = "0.1.0", path = "../secure_network" }
+secure_identity = { package = "sunlit_secure_identity", version = "0.1.0", path = "../secure_identity" }
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+bytes = "1"

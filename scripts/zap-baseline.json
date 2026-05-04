@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/zaproxy/zaproxy/main/zap/src/main/resources/org/zaproxy/zap/resources/zap-baseline-schema.json",
+  "description": "ZAP baseline suppressions for SunLit Security Libraries smoke service. Each entry must have a written justification. Do not suppress high/critical findings without a fix plan.",
+  "suppressions": [
+    {
+      "pluginId": "10015",
+      "alertRef": "10015",
+      "justification": "Cache-Control headers are not set on smoke-test routes because this is a DAST test service, not a production application serving user content. No sensitive data is cached."
+    },
+    {
+      "pluginId": "10049",
+      "alertRef": "10049",
+      "justification": "Storable/cacheable content warnings are expected on health-check and read-only smoke routes that return static test data. No sensitive content."
+    },
+    {
+      "pluginId": "10109",
+      "alertRef": "10109",
+      "justification": "Modern Web Application alert is informational — the smoke service is an API, not a traditional web app. No action needed."
+    }
+  ]
+}

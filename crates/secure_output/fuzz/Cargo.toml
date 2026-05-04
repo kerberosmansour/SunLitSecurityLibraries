@@ -1,0 +1,23 @@
+[package]
+name = "secure_output-fuzz"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+secure_output = { package = "sunlit_secure_output", path = ".." }
+
+[[bin]]
+name = "fuzz_html_encode"
+path = "fuzz_targets/fuzz_html_encode.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "fuzz_url_encode"
+path = "fuzz_targets/fuzz_url_encode.rs"
+test = false
+bench = false

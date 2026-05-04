@@ -1,0 +1,16 @@
+.git
+.DS_Store
+target
+coverage
+logs
+.sldo-logs
+.copilot-logs
+output
+**/*.rs.bk
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.csr
+*.srl

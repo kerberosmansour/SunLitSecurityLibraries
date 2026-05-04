@@ -1,0 +1,35 @@
+[package]
+name = "secure_boundary-fuzz"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+secure_boundary = { package = "sunlit_secure_boundary", path = "..", features = ["mobile-platform"] }
+
+[[bin]]
+name = "fuzz_normalize"
+path = "fuzz_targets/fuzz_normalize.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "fuzz_validate"
+path = "fuzz_targets/fuzz_validate.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "fuzz_deep_link"
+path = "fuzz_targets/fuzz_deep_link.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "fuzz_webview_url"
+path = "fuzz_targets/fuzz_webview_url.rs"
+test = false
+bench = false
