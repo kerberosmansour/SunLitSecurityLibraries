@@ -16,7 +16,7 @@ security_core = { package = "sunlit_security_core", version = "0.1.0", path = ".
 security_events = { package = "sunlit_security_events", version = "0.1.0", path = "../security_events" }
 serde = { workspace = true }
 sha2 = "0.10"
-x509-parser = "0.16"
+x509-parser = "0.18"
 time = { workspace = true }
 
 [dev-dependencies]
