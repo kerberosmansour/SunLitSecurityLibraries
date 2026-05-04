@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Secure error handling with public-safe responses, incident IDs, and panic boundaries."
+readme = "README.md"
 repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/secure_errors"
 keywords = ["security", "errors", "incident", "axum", "actix"]

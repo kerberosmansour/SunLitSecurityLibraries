@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Authentication helpers for JWT, OIDC, MFA, API keys, sessions, and step-up policy."
+readme = "README.md"
 repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/secure_identity"
 keywords = ["security", "identity", "jwt", "oidc", "mfa"]

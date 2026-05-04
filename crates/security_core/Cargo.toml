@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Shared security types, identity traits, correlation context, and data classification primitives."
+readme = "README.md"
 repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/security_core"
 keywords = ["security", "identity", "types", "audit"]
