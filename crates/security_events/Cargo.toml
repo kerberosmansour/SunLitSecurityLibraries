@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Security telemetry, redaction, HMAC-sealed events, and audit-friendly event sinks."
+readme = "README.md"
 repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/security_events"
 keywords = ["security", "audit", "telemetry", "logging"]

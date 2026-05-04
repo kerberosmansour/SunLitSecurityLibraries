@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Security resilience helpers for environment checks, integrity signals, and timeout budgeting."
+readme = "README.md"
 repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/secure_resilience"
 keywords = ["security", "resilience", "integrity", "runtime"]
