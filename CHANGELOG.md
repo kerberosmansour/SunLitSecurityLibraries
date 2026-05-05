@@ -58,6 +58,12 @@ breaking API changes, but security fixes and migration notes should be explicit.
   `combiner_id == None`. Hybrid encryption returns `DataError::PqUnavailable`
   on builds without `--features pq`; v2 hybrid envelopes presented to a non-`pq` build return `DataError::PqFeatureRequired`
   with no silent fallback. Closes #7.
+- The Kani advisory CI lane is extended further (M3) to `secure_errors`,
+  with new harnesses on `secure_data` for per-algorithm nonce length
+  invariants. The `secure_errors` harnesses prove that
+  `into_response_parts(&err)` produces a 4xx/5xx status, a non-empty
+  static `code`, and a `code` drawn from a fixed whitelist — so no
+  internal error text can leak through `PublicError`. Closes #13.
 - The Kani advisory CI lane is extended (M2) to `secure_authz` and
   `secure_boundary`. New harnesses prove the deny-by-default discriminant
   invariants on `Decision`, mutual exclusivity of `Allow`/`Deny`, and the
