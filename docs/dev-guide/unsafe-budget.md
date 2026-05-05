@@ -1,6 +1,6 @@
 # Unsafe Code Budget
 
-> Status: M1 (regression-tested forbid posture) is complete. M2 (transitive `cargo-geiger` number + threshold) is the next milestone of the [`forbid-unsafe-and-geiger`](../slo/future/RUNBOOK-forbid-unsafe-and-geiger.md) runbook.
+> Status: M1 (regression-tested forbid posture) and M2 (`cargo-geiger` advisory CI lane + workspace number) are complete. Promotion of the threshold to a blocking gate is a separate, future runbook.
 
 ## Posture
 
@@ -39,23 +39,68 @@ Adding a new workspace crate requires updating the `CRATES_REQUIRING_FORBID` con
 
 The workspace root has no `[package]` block (it is a virtual manifest). Putting the test inside `security_core/tests/` gives it the same execution surface — every CI test run executes it — without the structural cost of converting the root into a hybrid root-package. `security_core` is the foundation crate every other crate depends on, so the test runs whenever any workspace test runs.
 
-## Planned: transitive `cargo-geiger` number (M2)
+## Transitive `cargo-geiger` number
 
 `cargo-geiger` measures the count of `unsafe` blocks in the *dependency tree* (transitive). SunLit's source code is `unsafe`-free; dependencies are not, so the published number is non-zero and the goal is to make the change *visible* on every PR.
 
-The M2 design (per the [runbook](../slo/future/RUNBOOK-forbid-unsafe-and-geiger.md#milestone-2--cargo-geiger-in-supply-chain-ci-published-workspace-number-documented-threshold)):
+### How the number is produced
 
-- Pin the geiger version in CI.
-- Run `cargo geiger --workspace --all-features --output-format Json` on every PR.
-- Upload `output/cargo-geiger.json` as a build artifact.
-- Publish the workspace number in this README section.
-- Document a threshold = current measured baseline + 10% headroom.
+| Field | Value |
+|---|---|
+| Tool | [`cargo-geiger`](https://github.com/rust-secure-code/cargo-geiger) |
+| Version (pinned) | `0.13.0` (per research dossier — active but partial maintenance; no drop-in successor; staying on it is the recommended posture) |
+| Root package | `secure_reference_service` (depends on every library crate; closest analogue to a downstream consumer's BOM) |
+| Invocation | `cd crates/secure_reference_service && cargo geiger --all-features --output-format Json --update-readme=false` |
+| CI lane | `.github/workflows/ci.yml` → `supply-chain` job → "Cargo geiger" step (advisory, `continue-on-error: true`, 10-minute timeout) |
+| Artifact | `output/cargo-geiger.json` uploaded by the `actions/upload-artifact` step (30-day retention) |
+| Local equivalent | `bash scripts/audit.sh` (or `pwsh scripts/audit.ps1`) runs the same invocation and writes the same path |
+
+`--all-features` is the deliberate choice: the number reflects the worst case across every published feature of the reference service. The reference service depends transitively on every published library; consumers who pull a narrower set of crates will encounter a smaller footprint.
+
+### Why not `--workspace`?
+
+`cargo-geiger` requires a single root package — it cannot consume a virtual manifest. The reference service is the chosen root for two reasons: (1) it depends on every library crate, so its dep graph is a superset of any other single library's dep graph; (2) it is the canonical "what does a downstream service look like" example shipped with the workspace, so the published number reflects what an integrator's audit would also report. A future enhancement could iterate per published library and report a max-of, but the reference-service number is the current published value.
+
+### Current measured baseline
+
+| Metric | Value (as of 2026-05-05, root = `secure_reference_service`, `--all-features`) |
+|---|---:|
+| Unsafe expressions used / available | **22 636 / 48 192** |
+| Unsafe items used / available | 242 / 1 200 |
+| Unsafe `fn` used / available | 582 / 745 |
+| Unsafe methods used / available | 74 / 82 |
+| Unsafe trait `impl` used / available | 828 / 1 274 |
+| SunLit crates with unsafe usage | 0 of 14 (every workspace crate is `:)` — `forbid(unsafe_code)` declared, no unsafe used) |
+
+The headline is **22 636 transitive unsafe expressions used**. Common offenders are core ecosystem crates (`tokio`, `time`, `serde_json`, `tracing-subscriber`, `hyper`) — all well-audited primitives. The CI artifact (`cargo-geiger.json`) is the source of truth on every main-branch run; this section is updated on a release-cycle cadence to track the long-term trend.
+
+### Threshold
+
+| Threshold | Value | Source of truth |
+|---|---:|---|
+| Baseline | 22 636 | CI artifact + this section |
+| Informational threshold | 24 900 (= baseline + 10 % headroom) | this section |
+| Action triggered when number exceeds threshold | reviewer downloads CI artifact and diffs against the previous main-branch run; classifies the new unsafe (acceptable / replaceable / questionable); posts the finding in the PR | (operator behavior) |
 
 ### Threshold semantics
 
 The threshold starts **informational** (advisory). It is a delta-detector, not a gate. A PR that pushes the number above the threshold means a transitive dependency introduced new unsafe code; the reviewer reads the artifact diff to decide whether the change is acceptable.
 
-Promotion to a blocking CI gate is a separate runbook, planned after the metric has been observed for at least one release cycle and false-positive patterns are understood.
+The advisory CI step uses `continue-on-error: true` so failures (e.g., new unsafe in a dep, or geiger itself failing) do not block merges. They surface as a yellow check on the PR, with the JSON artifact downloadable from the run summary for diff review.
+
+Promotion to a blocking CI gate is a separate runbook, planned after the metric has been observed for at least one release cycle and false-positive patterns are understood. Promotion criteria:
+
+1. The metric has been stable across ≥1 release cycle.
+2. Common transient noise sources (e.g., toolchain-version-driven changes in `proc-macro2` / `serde`) are characterised.
+3. A defined response procedure exists for "geiger went up" events (review artifact diff, classify, decide accept-or-revert).
+4. The release-process doc names cargo-geiger as a release gate.
+
+### Reviewing a PR that changed the number
+
+1. Click the cargo-geiger artifact on the PR's CI run.
+2. Compare against the artifact from main branch's last run.
+3. The diff identifies the dep that introduced new unsafe.
+4. Decide: accept (the dep is necessary; the unsafe is in a well-audited primitive), revert (the dep is replaceable), or escalate (the dep is questionable; open a discussion).
 
 ## When `unsafe` is genuinely needed
 

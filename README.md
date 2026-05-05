@@ -282,7 +282,8 @@ cargo vet                    # audit trail
 - **Unknown registries denied**: all deps must come from crates.io
 - **Unknown git sources denied**: no git dependencies allowed
 - **Advisory ignore list**: every entry requires a written justification (see `deny.toml`)
-- **Memory-safety attestation**: every workspace crate declares `#![forbid(unsafe_code)]` at lib-root. The posture is regression-tested by [`crates/security_core/tests/no_unsafe_code.rs`](./crates/security_core/tests/no_unsafe_code.rs) — removal fails the build with a named-crate error. The accompanying scan also asserts no `unsafe` keyword appears anywhere in `crates/*/src/`. See [`docs/dev-guide/unsafe-budget.md`](./docs/dev-guide/unsafe-budget.md) for the posture and the planned `cargo-geiger` transitive number.
+- **Memory-safety attestation**: every workspace crate declares `#![forbid(unsafe_code)]` at lib-root. The posture is regression-tested by [`crates/security_core/tests/no_unsafe_code.rs`](./crates/security_core/tests/no_unsafe_code.rs) — removal fails the build with a named-crate error. The accompanying scan also asserts no `unsafe` keyword appears anywhere in `crates/*/src/`.
+- **Transitive `unsafe` visibility**: every PR runs `cargo geiger --workspace --all-features` (advisory, 10-min cap) and uploads the JSON artifact. The number is the upper bound across all features; deltas are visible to reviewers via the artifact diff. See [`docs/dev-guide/unsafe-budget.md`](./docs/dev-guide/unsafe-budget.md) for the posture and threshold-promotion plan.
 
 ---
 

@@ -183,6 +183,7 @@ jobs:
           cargo install --locked cargo-audit --version 0.22.1
           cargo install --locked cargo-deny --version 0.19.0
           cargo install --locked cargo-vet --version 0.10.2
+          cargo install --locked cargo-geiger --version 0.13.0
           install_dir="$RUNNER_TEMP/osv-scanner-bin"
           mkdir -p "$install_dir"
           curl -fsSL \
@@ -203,3 +204,40 @@ jobs:
 
       - name: OSV Scanner
         run: osv-scanner scan source -r .
+
+      - name: Cargo geiger (transitive unsafe — advisory)
+        # Advisory-only: cargo-geiger surfaces transitive `unsafe` usage in the
+        # dependency tree. SunLit source is forbid(unsafe_code), so this measures
+        # what the deps bring in. Failure here does NOT block the build; the
+        # JSON artifact is the audit evidence. Promotion to blocking is a
+        # separate runbook after >=1 release cycle of stable signal.
+        #
+        # cargo-geiger requires a root package (it cannot consume a virtual
+        # manifest directly). We pick `secure_reference_service` because it
+        # depends on every library crate and is the closest analogue to what
+        # a downstream consumer's BOM looks like.
+        #
+        # See docs/dev-guide/unsafe-budget.md for the threshold posture.
+        continue-on-error: true
+        timeout-minutes: 10
+        shell: bash
+        working-directory: crates/secure_reference_service
+        run: |
+          set -euo pipefail
+          mkdir -p ../../output
+          cargo geiger \
+            --all-features \
+            --output-format Json \
+            --update-readme=false \
+            > ../../output/cargo-geiger.json || true
+          echo "--- geiger summary ---"
+          cargo geiger --all-features --update-readme=false || true
+
+      - name: Upload cargo-geiger artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cargo-geiger
+          path: output/cargo-geiger.json
+          if-no-files-found: warn
+          retention-days: 30
