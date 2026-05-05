@@ -513,6 +513,92 @@ For production key management with Azure Key Vault:
 
 ---
 
+## Post-Quantum Readiness (M1: reserved; M2+: implementation)
+
+`secure_data` ships a documented, executable post-quantum migration path. As of M1, the public surface is reserved so downstream consumers can pin against an envelope shape that will not break when the M2 hybrid KEM lands. The authoritative design is [`docs/slo/design/pq-migration-plan.md`](../slo/design/pq-migration-plan.md).
+
+### What's available today (M1)
+
+```rust,ignore
+use secure_data::algorithm::{AlgorithmPolicy, CryptoAlgorithm};
+use secure_data::envelope::encrypt_with_policy;
+use secure_data::error::DataError;
+use secure_data::pq;
+
+// 1. The enum slot exists. Constructing it is allowed; encrypting with it
+//    returns a structured `PqUnavailable` error in M1.
+let alg = CryptoAlgorithm::HybridX25519MlKem768;
+assert!(alg.is_post_quantum());
+assert_eq!(alg.as_str(), "X25519+ML-KEM-768/HKDF-SHA-256");
+assert_eq!(alg.nonce_len(), 12);   // AES-256-GCM nonce; the AEAD itself is unchanged
+
+// 2. The wire-format dimensions are public constants on every build.
+assert_eq!(pq::sizes::ML_KEM_768_CIPHERTEXT_LEN, 1088);   // FIPS 203
+assert_eq!(pq::sizes::HKDF_SHA256_OUTPUT_LEN, 32);
+
+// 3. Combiner identifiers are reserved.
+assert_eq!(pq::COMBINER_ID_X25519_ML_KEM_768, 0x01);
+assert_eq!(pq::COMBINER_ID_FAIL_CLOSED, 0xFF);
+
+// 4. Existing classical encrypt/decrypt is unchanged.
+//    `EncryptionEnvelope::combiner_id` is `None` for v1 envelopes; serde
+//    skips serialising it on the wire.
+```
+
+### What returns a structured error today (M1)
+
+```rust,ignore
+# async fn example(provider: &impl secure_data::kms::KeyProvider) -> Result<(), DataError> {
+let policy = AlgorithmPolicy::prefer(CryptoAlgorithm::HybridX25519MlKem768);
+let result = encrypt_with_policy(b"plaintext", "key", provider, &policy).await;
+
+match result {
+    Err(DataError::PqUnavailable) => {
+        // M1 reserved-only; M2 (issue #8) ships the implementation.
+        // No silent fallback to AES-256-GCM happens.
+    }
+    _ => unreachable!("M1 only"),
+}
+# Ok(())
+# }
+```
+
+### Decoding a v2 envelope on a non-PQ build
+
+A v2 hybrid envelope (produced by an M2-or-later build with `--features pq`) presented to a build without `--features pq` returns `DataError::PqFeatureRequired` — never silently downgrades and never panics:
+
+```rust,ignore
+# fn example(envelope: &secure_data::envelope::EnvelopeEncrypted) {
+match envelope.validate_structure() {
+    Err(DataError::PqFeatureRequired) => {
+        // Rebuild your binary with `--features pq` to decrypt this envelope.
+    }
+    Err(DataError::EnvelopeMalformed { reason }) => {
+        // Tampered metadata (e.g., a v1 envelope carrying a non-zero combiner_id).
+    }
+    Err(DataError::AlgorithmRejectedByPolicy { reason }) => {
+        // combiner_id is the fail-closed sentinel, or otherwise unrecognised.
+    }
+    Ok(()) => { /* proceed to decrypt_for_use */ }
+    Err(other) => { /* see DataError docs */ }
+}
+# }
+```
+
+### When does M2 ship?
+
+When [issue #8](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/8) closes. M2 adds the [RustCrypto `ml-kem`](https://github.com/RustCrypto/formats/tree/master/ml-kem) v0.3.0 dependency (gated on `pq`), the hybrid encrypt/decrypt path, KAT fixtures from FIPS 203, and the round-trip BDD scenarios. M3 (issue #9) lands the cross-version compatibility matrix and `AlgorithmPolicy::min_version`. M4 (issue #10) documents the FIPS-track posture honestly.
+
+### Why hybrid, not PQ-only?
+
+Three reasons (full discussion in the [migration plan](../slo/design/pq-migration-plan.md)):
+
+1. ML-KEM-768 is FIPS 203 (2024) but no FIPS 140-3 cryptographic module covers it as of 2026-05. Hybrid keeps the classical X25519 leg in the security argument so a hypothetical future ML-KEM cryptanalysis cannot retroactively compromise everything.
+2. Hybrid is a strict superset: an attacker must break **both** X25519 and ML-KEM-768 to recover the wrap key.
+3. Production deployments at AWS, Cloudflare, and Google in 2024–2025 followed this pattern. Adopting it puts SunLit on the same migration trajectory as those ecosystems.
+
+---
+
 ## Full Integration Example
 
 ```rust

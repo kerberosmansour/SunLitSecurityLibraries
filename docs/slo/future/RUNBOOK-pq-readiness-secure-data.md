@@ -42,7 +42,7 @@
 
 | # | Milestone | Status | Started | Completed | Lessons File | Completion Summary |
 |---|---|---|---|---|---|---|
-| 1 | Migration plan + reserved `CryptoAlgorithm::HybridX25519MlKem768` slot + envelope `version` field | `not_started` | | | | |
+| 1 | Migration plan + reserved `CryptoAlgorithm::HybridX25519MlKem768` slot + envelope `combiner_id` field | `done` | 2026-05-05 | 2026-05-05 | [`docs/slo/lessons/pqd-m1.md`](../lessons/pqd-m1.md) | [`docs/slo/completion/pqd-m1.md`](../completion/pqd-m1.md) — public surface reserved; `pq` feature flag (no deps yet); migration plan locks RustCrypto `ml-kem` v0.3.0, concat+HKDF wire format, monitor-only FIPS posture; 12 BDD scenarios green. Closes #7. |
 | 2 | Hybrid X25519+ML-KEM-768 KEM behind `pq` feature; envelope encryption end-to-end | `not_started` | | | | |
 | 3 | Backwards-compat decrypt + downgrade-attack regression tests + algorithm-policy enforcement | `not_started` | | | | |
 | 4 | FIPS-track readiness note + `fips` × `pq` interaction documentation | `not_started` | | | | |

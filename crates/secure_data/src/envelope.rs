@@ -59,6 +59,96 @@ pub struct EnvelopeEncrypted {
     pub ciphertext: Vec<u8>,
     /// Additional authenticated data bound to this ciphertext.
     pub aad: Vec<u8>,
+    /// Hybrid PQ KEM combiner identifier.
+    ///
+    /// `None` for classical (v1) envelopes — every existing `Aes256Gcm` and
+    /// `XChaCha20Poly1305` envelope serialized before pq-readiness M1 has
+    /// this field absent on the wire (default-deserialized to `None`).
+    ///
+    /// `Some(0x01)` for hybrid X25519 + ML-KEM-768 / HKDF-SHA-256 envelopes
+    /// produced by the pq-readiness M2 implementation. `Some(other)` is
+    /// rejected by [`Self::validate_structure`] until a future combiner is
+    /// explicitly added — fail-closed by design.
+    ///
+    /// See `docs/slo/design/pq-migration-plan.md` and [`crate::pq`] for the
+    /// full table of combiner identifiers and the wire-format reasoning.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub combiner_id: Option<u8>,
+}
+
+impl EnvelopeEncrypted {
+    /// Validates the envelope's structural invariants without performing
+    /// any cryptographic operation. Returns
+    /// [`DataError::EnvelopeMalformed`] if the metadata is internally
+    /// inconsistent, or [`DataError::PqFeatureRequired`] if a hybrid PQ
+    /// envelope was decoded on a build without `--features pq`, or
+    /// [`DataError::AlgorithmRejectedByPolicy`] if the combiner identifier
+    /// is reserved-future or the fail-closed sentinel.
+    ///
+    /// Called from [`decrypt_for_use`] before any AEAD work — fails fast
+    /// when an attacker has tampered with envelope metadata in a way that
+    /// would otherwise reach the cryptographic primitive.
+    ///
+    /// # Errors
+    ///
+    /// - [`DataError::EnvelopeMalformed`] — `combiner_id` is set on a
+    ///   classical (v1) envelope, or contains an unrecognised value.
+    /// - [`DataError::PqFeatureRequired`] — envelope's algorithm is the
+    ///   hybrid PQ KEM but this build does not have the `pq` feature.
+    /// - [`DataError::AlgorithmRejectedByPolicy`] — `combiner_id` is the
+    ///   `0xFF` fail-closed sentinel.
+    pub fn validate_structure(&self) -> Result<(), DataError> {
+        let algorithm = crate::algorithm::CryptoAlgorithm::from_envelope_str(&self.algorithm)?;
+
+        match (algorithm.is_post_quantum(), self.combiner_id) {
+            // Classical envelope with no combiner: v1; nothing to do.
+            (false, None) => Ok(()),
+            // Classical envelope with combiner_id present and zero: silently
+            // accept zero (some serialisers emit Some(0) instead of None).
+            (false, Some(0)) => Ok(()),
+            // Classical envelope with non-zero combiner: malformed.
+            (false, Some(id)) => Err(DataError::EnvelopeMalformed {
+                reason: format!(
+                    "classical envelope (algorithm={}) carries combiner_id=0x{:02x}; \
+                     classical envelopes must have combiner_id absent or zero",
+                    self.algorithm, id
+                ),
+            }),
+            // Post-quantum envelope but pq feature is off: refuse without
+            // attempting any crypto.
+            #[cfg(not(feature = "pq"))]
+            (true, _) => Err(DataError::PqFeatureRequired),
+            // Post-quantum envelope with pq feature on: validate combiner.
+            #[cfg(feature = "pq")]
+            (true, None) => Err(DataError::EnvelopeMalformed {
+                reason: format!(
+                    "post-quantum envelope (algorithm={}) is missing combiner_id; \
+                     hybrid envelopes must carry an explicit combiner_id",
+                    self.algorithm
+                ),
+            }),
+            #[cfg(feature = "pq")]
+            (true, Some(id)) => {
+                if id == crate::pq::COMBINER_ID_FAIL_CLOSED {
+                    return Err(DataError::AlgorithmRejectedByPolicy {
+                        reason: format!(
+                            "combiner_id=0x{:02x} is the permanent fail-closed sentinel",
+                            id
+                        ),
+                    });
+                }
+                if !crate::pq::is_recognised_combiner(id) {
+                    return Err(DataError::AlgorithmRejectedByPolicy {
+                        reason: format!(
+                            "combiner_id=0x{:02x} is not a recognised combiner in this build",
+                            id
+                        ),
+                    });
+                }
+                Ok(())
+            }
+        }
+    }
 }
 
 /// Encrypts `plaintext` under the key identified by `key_alias` using the provided `KeyProvider`.
@@ -119,6 +209,16 @@ pub async fn encrypt_with_policy<P: KeyProvider>(
 
     let algorithm = policy.preferred();
 
+    // Post-quantum dispatch: the hybrid KEM lands in pq-readiness M2 behind
+    // the `pq` feature flag. M1 reserves the enum slot but the encrypt path
+    // returns PqUnavailable on builds without the feature, and is similarly
+    // not yet implemented even with the feature on (M2 fills it). Fail-fast
+    // with a structured error — never silently fall through to the classical
+    // algorithm path.
+    if algorithm.is_post_quantum() {
+        return Err(DataError::PqUnavailable);
+    }
+
     // 1. Generate a fresh data-encryption key via the provider.
     let (dek, wrapped_data_key, key_version) = provider.generate_data_key(key_alias).await?;
 
@@ -147,6 +247,10 @@ pub async fn encrypt_with_policy<P: KeyProvider>(
         nonce: nonce_bytes,
         ciphertext,
         aad,
+        // M1: classical envelopes have no combiner. M2 will set
+        // `Some(crate::pq::COMBINER_ID_X25519_ML_KEM_768)` for hybrid
+        // envelopes via a separate hybrid encrypt path (not this function).
+        combiner_id: None,
     })
 }
 
@@ -162,8 +266,23 @@ pub async fn decrypt_for_use<P: KeyProvider>(
     envelope: &EnvelopeEncrypted,
     provider: &P,
 ) -> Result<Vec<u8>, DataError> {
+    // Pre-flight: validate envelope structural invariants before any
+    // cryptographic operation. Catches tampered metadata (e.g., a v1
+    // envelope carrying a non-zero combiner_id) and rejects v2 hybrid
+    // envelopes on a non-PQ build with a structured PqFeatureRequired error.
+    envelope.validate_structure()?;
+
     // 0. Parse the algorithm from the envelope.
     let algorithm = CryptoAlgorithm::from_envelope_str(&envelope.algorithm)?;
+
+    // Post-quantum dispatch: M2 will route hybrid envelopes through a
+    // dedicated PQ decrypt path. M1 reserves the slot — at this point
+    // `validate_structure` has already returned PqFeatureRequired on a
+    // non-PQ build, so reaching here with a PQ algorithm only happens on
+    // a `pq`-feature build, where M2 fills the path.
+    if algorithm.is_post_quantum() {
+        return Err(DataError::PqUnavailable);
+    }
 
     // 1. Unwrap the data-encryption key.
     let dek = provider
@@ -262,6 +381,12 @@ fn encrypt_with_algorithm(
                     reason: "XChaCha20-Poly1305 encryption failed".to_string(),
                 })
         }
+        // Defense-in-depth: hybrid PQ should be filtered out by the caller
+        // (`encrypt_with_policy` / `decrypt_for_use`) via `is_post_quantum()`
+        // before reaching this helper. Reaching here on any build means a
+        // future caller forgot the dispatch — fail closed with a structured
+        // error rather than panic.
+        CryptoAlgorithm::HybridX25519MlKem768 => Err(DataError::PqUnavailable),
     }
 }
 
@@ -296,6 +421,9 @@ fn decrypt_with_algorithm(
                 .decrypt(nonce, payload)
                 .map_err(|_| DataError::AuthenticationFailure)
         }
+        // Defense-in-depth: hybrid PQ should be filtered out by the caller
+        // before reaching this helper. See the encrypt-side comment.
+        CryptoAlgorithm::HybridX25519MlKem768 => Err(DataError::PqUnavailable),
     }
 }
 

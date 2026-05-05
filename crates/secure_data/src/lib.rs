@@ -30,6 +30,12 @@ pub mod memory;
 /// Password hashing and verification — Argon2id default (OWASP C2/C7).
 #[cfg(feature = "password")]
 pub mod password;
+/// Post-quantum primitives — size constants and combiner identifiers (M1).
+/// The hybrid X25519 + ML-KEM-768 KEM implementation lands behind the `pq`
+/// feature flag in M2; M1 reserves the public surface so downstream
+/// consumers can pin against an envelope shape that will not break when
+/// M2 ships. See `docs/slo/design/pq-migration-plan.md`.
+pub mod pq;
 /// Real key provider implementations (Vault, AWS KMS) behind feature flags.
 pub mod providers;
 /// Secret reference resolution — `resolve_secret()`.
