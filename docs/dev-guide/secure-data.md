@@ -574,6 +574,45 @@ Three reasons (full discussion in the [migration plan](../slo/design/pq-migratio
 2. Hybrid is a strict superset: an attacker must break **both** X25519 and ML-KEM-768 to recover the wrap key.
 3. Production deployments at AWS, Cloudflare, and Google in 2024–2025 followed this pattern. Adopting it puts SunLit on the same migration trajectory as those ecosystems.
 
+### `fips` × `pq` interaction (M4)
+
+A build with **both** `--features fips` and `--features pq` enabled is **not** FIPS-validated for the post-quantum portion of the pipeline. The interaction has three honest properties consumers must know:
+
+| Combination | What's validated | What's not |
+|---|---|---|
+| `fips` only (no `pq`) | AEAD via FIPS 140-2/3-track `aws-lc-rs` (when validated for the platform) | (PQ not requested; not relevant) |
+| `pq` only (no `fips`) | Nothing claims FIPS validation; pure-Rust `ml-kem` path | (FIPS not requested; not relevant) |
+| `fips` + `pq` | AEAD validated by the same FIPS module as `fips`-only | **The hybrid PQ KEM is validation-pending CMVP** |
+
+**No CMVP cert covers ML-KEM-768 as of 2026-05** (verified 2026-05-05 in the research dossier; AWS-LC FIPS 3.0 has been on the CMVP "modules in process" list since 2024-12-10 with no public ETA). A `--features fips,pq` build therefore reports `pq_fips_status: "pending_cmvp"` in `Debug` output of any envelope it produces — the runtime metadata field exists so downstream auditors can scan production binaries for the honest label.
+
+**Hard rule**: SunLit documentation, README, CHANGELOG, rustdoc, and dev-guide content **never** make a validation claim about the PQ path. The CI pipeline includes a grep-based lint (`scripts/lint-fips-pq-claims.sh`) that fails the build if any forbidden phrasing slips in. See the script for the exact forbidden patterns.
+
+#### Promotion criteria — when does the validated path ship?
+
+A future runbook adds a `pq-aws-lc` feature (or similar) that selects a CMVP-validated implementation. Promotion criteria:
+
+1. A CMVP cert exists for ML-KEM-768 in a Rust-callable cryptographic module.
+2. The validated module's version, OS support, and platform constraints are documented.
+3. The migration plan is updated to reference the validated path explicitly.
+4. The `pq_fips_status` runtime metadata field reports `"validated"` for the validated combination.
+
+Until those four conditions are met, `--features fips,pq` honestly reports `"pending_cmvp"`. Honest > aspirational.
+
+#### What `pq_fips_status` looks like in `Debug` output
+
+```rust,ignore
+let envelope = encrypt_with_policy(&policy, ...).await?;
+println!("{:?}", envelope);
+// EnvelopeEncrypted { version: "1", algorithm: "AES-256-GCM", ..., pq_fips_status: None }
+//
+// On a future M2 + `--features fips,pq` build:
+// EnvelopeEncrypted { version: "2", algorithm: "X25519+ML-KEM-768/HKDF-SHA-256", ...,
+//                     pq_fips_status: Some("pending_cmvp") }
+```
+
+Auditors / SBOM consumers can grep production binaries for the literal string `pending_cmvp` to verify the honest label is in place. The CI lint enforces it on the source side; the runtime field enforces it on the binary side.
+
 ---
 
 ## Full Integration Example

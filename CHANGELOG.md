@@ -29,6 +29,14 @@ breaking API changes, but security fixes and migration notes should be explicit.
   with `combiner_id = 0x01`; existing classical v1 envelopes continue to
   decrypt unchanged. The `pq` path is labelled `pending_cmvp` and makes no
   FIPS-validation claim. Closes #8.
+- `secure_data::pq::fips_status() -> Option<&'static str>` reports the
+  runtime FIPS posture of the PQ path. `None` when `pq` is not enabled;
+  `Some("pending_cmvp")` when `pq` is enabled (no CMVP cert covers
+  ML-KEM-768 as of 2026-05, so the honest label is validation-pending).
+  A future `pq-aws-lc` feature will return `Some("validated")` after a
+  CMVP cert lands. CI lint at `scripts/lint-fips-pq-claims.sh` blocks any
+  regression of the documentation posture by failing the build on
+  forbidden phrasings. Closes #10.
 - `secure_data` adds `AlgorithmPolicy::with_min_envelope_version(u8)` and
   `secure_data::envelope::decrypt_with_policy` for downgrade-attack
   defence on the decrypt side. A consumer that requires v2-or-higher

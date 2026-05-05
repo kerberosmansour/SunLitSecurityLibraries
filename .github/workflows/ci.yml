@@ -215,6 +215,15 @@ jobs:
         # See docs/slo/future/RUNBOOK-anssi-rust-compliance.md M3.
         run: bash scripts/anssi-mapping-lint.sh
 
+      - name: Lint forbidden FIPS-validated-PQ claims
+        # Honest-labelling gate: SunLit does NOT claim CMVP-validated PQ
+        # because no such cert exists for ML-KEM-768 as of 2026-05. This
+        # gate fails the build on any regression of that posture in
+        # docs/dev-guide, README, CHANGELOG, or crate sources.
+        # See docs/dev-guide/secure-data.md "fips × pq interaction" and
+        # docs/slo/design/pq-migration-plan.md §5.
+        run: bash scripts/lint-fips-pq-claims.sh
+
       - name: Cargo geiger (transitive unsafe — advisory)
         # Advisory-only: cargo-geiger surfaces transitive `unsafe` usage in the
         # dependency tree. SunLit source is forbid(unsafe_code), so this measures
