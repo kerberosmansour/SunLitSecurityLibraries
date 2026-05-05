@@ -18,12 +18,18 @@ Kani and TLA+ are **complementary, not redundant**:
 
 The value of *both* is that Kani catches "the implementation diverges from the design" while TLA+ catches "the design itself has a race." A bug in either layer would slip past the other.
 
-## What's proven today (M1)
+## What's proven today (M1 + M2)
 
 | Proof | File | Property | Kani CI |
 |---|---|---|---|
 | `nonce_non_zero` | [`crates/secure_data/src/proofs.rs`](../../crates/secure_data/src/proofs.rs) | A 12-byte AES-256-GCM nonce, modelled with a CSPRNG axiom that excludes the all-zero output, remains non-zero after the structural copies the `EnvelopeEncrypted` builder performs. Bootstrap proof — validates the toolchain end-to-end. | ✓ advisory |
-| `aes_256_gcm_nonce_len_is_12` | same file | Build-time invariant guard against accidental change of the AES-256-GCM nonce length constant. | ✓ advisory |
+| `aes_256_gcm_nonce_len_is_12` | same | Build-time invariant guard against accidental change of the AES-256-GCM nonce length constant. | ✓ advisory |
+| `deny_by_default_decision_is_deny` | [`crates/secure_authz/src/proofs.rs`](../../crates/secure_authz/src/proofs.rs) | `Decision::Deny { reason }` always reports `is_denied() == true` and `is_allowed() == false`, regardless of the symbolic `DenyReason`. M2. | ✓ advisory |
+| `allow_and_deny_are_mutually_exclusive` | same | `Decision::Allow` and `Decision::Deny` are mutually exclusive on every constructed Decision (catches a refactor that returns the wrong discriminant). M2. | ✓ advisory |
+| `depth_above_limit_is_rejected` | [`crates/secure_boundary/src/proofs.rs`](../../crates/secure_boundary/src/proofs.rs) | Within bounded ranges (configured ∈ [1, 16], actual ∈ [0, 32]), the comparison `actual > limits.max_nesting_depth` correctly drives the reject branch. M2. | ✓ advisory |
+| `field_count_above_limit_is_rejected` | same | Same shape, on `max_field_count`. M2. | ✓ advisory |
+| `body_size_above_limit_is_rejected` | same | Same shape, on `max_body_bytes` (within bounded ranges). M2. | ✓ advisory |
+| `default_limits_are_non_zero` | same | Catches a future copy-paste accident that initialises a default limit to zero (which would silently reject every request). M2. | ✓ advisory |
 
 The harness lives in `crates/secure_data/src/proofs.rs` under `#![cfg(kani)]` so it compiles **only** under `cargo kani`. Regular `cargo build` and `cargo test` runs exclude the file entirely; adding harnesses has zero impact on the production build.
 

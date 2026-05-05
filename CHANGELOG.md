@@ -58,6 +58,12 @@ breaking API changes, but security fixes and migration notes should be explicit.
   `combiner_id == None`. Hybrid encryption returns `DataError::PqUnavailable`
   on builds without `--features pq`; v2 hybrid envelopes presented to a non-`pq` build return `DataError::PqFeatureRequired`
   with no silent fallback. Closes #7.
+- The Kani advisory CI lane is extended (M2) to `secure_authz` and
+  `secure_boundary`. New harnesses prove the deny-by-default discriminant
+  invariants on `Decision`, mutual exclusivity of `Allow`/`Deny`, and the
+  request-limit comparison invariants on `RequestLimits` (depth, field
+  count, body size, plus a default-non-zero guard). All harnesses are
+  gated by `#![cfg(kani)]` so regular builds remain unaffected. Closes #12.
 - A new advisory CI lane runs `cargo kani` (pinned to `0.62.0`, 15-minute
   cap) against the workspace on every PR. M1 ships the bootstrap proof in
   `secure_data` (12-byte AES-256-GCM nonce remains non-zero through the

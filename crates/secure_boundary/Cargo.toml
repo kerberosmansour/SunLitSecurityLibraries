@@ -12,6 +12,12 @@ keywords = ["security", "validation", "headers", "axum", "actix"]
 [lib]
 name = "secure_boundary"
 
+# Recognise the `cfg(kani)` flag set by `cargo kani` so the proof module
+# does not trigger an `unexpected_cfgs` warning on regular builds.
+# See `crates/secure_boundary/src/proofs.rs` and `.github/workflows/kani.yml`.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
+
 [features]
 default = ["axum"]
 axum = ["dep:axum", "dep:axum-core", "dep:tower", "dep:tower-http", "dep:http-body-util"]

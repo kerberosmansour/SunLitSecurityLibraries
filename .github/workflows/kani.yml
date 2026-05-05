@@ -43,7 +43,7 @@ jobs:
         # `secure_authz` and `secure_boundary`; M3 extends to `secure_errors`.
         # Each new harness adds a row here; keep the matrix small so the
         # 15-min cap is per-crate, not per-proof.
-        crate: [secure_data]
+        crate: [secure_data, secure_authz, secure_boundary]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
