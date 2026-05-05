@@ -55,6 +55,29 @@ The libraries are packaged as separate crates so applications can pull only the
 control surface they need. The reference and smoke services are not intended
 for crates.io publication.
 
+### Cargo package and import names
+
+The current `Cargo.toml` manifests use unprefixed package names. Each published
+package name matches its Rust import name exactly, so consumers should use the
+same identifier in `[dependencies]`, `cargo add`, and `use` paths.
+
+| Cargo package | Rust import | crates.io |
+|---|---|---|
+| `security_core` | `security_core` | published |
+| `security_events` | `security_events` | published |
+| `secure_errors` | `secure_errors` | published |
+| `secure_boundary` | `secure_boundary` | published |
+| `secure_output` | `secure_output` | published |
+| `secure_identity` | `secure_identity` | published |
+| `secure_device_trust` | `secure_device_trust` | published |
+| `secure_authz` | `secure_authz` | published |
+| `secure_data` | `secure_data` | published |
+| `secure_network` | `secure_network` | published |
+| `secure_resilience` | `secure_resilience` | published |
+| `secure_privacy` | `secure_privacy` | published |
+| `secure_reference_service` | `secure_reference_service` | private workspace crate |
+| `secure_smoke_service` | `secure_smoke_service` | private workspace crate |
+
 ```bash
 cargo add secure_data --features password
 cargo add secure_authz --features axum
