@@ -40,7 +40,7 @@
 |---|---|---|---|---|---|---|
 | 1 | Bootstrap mapping doc with rule index (61 rows from pinned ANSSI commit `84e6ae18`) | `done` | 2026-05-05 | 2026-05-05 | [`docs/slo/lessons/anssi-m1.md`](../lessons/anssi-m1.md) | [`docs/slo/completion/anssi-m1.md`](../completion/anssi-m1.md) — 61-row mapping at `docs/compliance/anssi-rust.md`; family counts match (8/5/16/10/21/1); pin = `84e6ae18`. Closes #18. |
 | 2 | Fill evidence pointers; document waivers with compensating controls; cross-link from THREAT_MODEL.md | `not_started` | | | | |
-| 3 | CI lint that catches dead evidence pointers | `not_started` | | | | |
+| 3 | CI lint that catches dead evidence pointers | `done` | 2026-05-06 | 2026-05-06 | (small script milestone) | `scripts/anssi-mapping-lint.sh` validates commit pin, rule count = 61, populated Status, and every `compliant` row's Evidence pointer; wired into supply-chain CI. No-op while rows are `unfilled` (M1 state); gating once M2 lands. Closes #20. |
 
 ---
 

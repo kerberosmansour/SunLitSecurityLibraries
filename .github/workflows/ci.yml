@@ -205,6 +205,16 @@ jobs:
       - name: OSV Scanner
         run: osv-scanner scan source -r .
 
+      - name: ANSSI mapping lint
+        # Gates the ANSSI Rust compliance mapping at docs/compliance/anssi-rust.md:
+        # commit pin matches, rule count is exactly 61, every Status column is
+        # populated, and every `compliant` row's Evidence pointer resolves to
+        # a real artifact (file:line / clippy lint / docs path / test name).
+        # The lint is no-op while rows remain `unfilled` (M1 placeholder) and
+        # becomes gating once M2 populates evidence.
+        # See docs/slo/future/RUNBOOK-anssi-rust-compliance.md M3.
+        run: bash scripts/anssi-mapping-lint.sh
+
       - name: Cargo geiger (transitive unsafe — advisory)
         # Advisory-only: cargo-geiger surfaces transitive `unsafe` usage in the
         # dependency tree. SunLit source is forbid(unsafe_code), so this measures
