@@ -94,6 +94,17 @@ breaking API changes, but security fixes and migration notes should be explicit.
   `specs/CircuitBreaker.trace.md`). Verified-design doc at
   `docs/slo/design/circuit-breaker-verified.md`. 7 BDD scenarios
   including a live concurrent-double-probe rejection. Closes #14.
+- New advisory CI lane `.github/workflows/tla.yml` runs TLC (pinned to
+  TLA+ Tools v1.8.0, 10-min cap) on every PR. M5 ships the
+  `secure_identity` session+step-up TLA+ spec — three safety properties
+  (no privileged action without step-up, no expired-session reuse, the
+  step-up window is bounded) verified at bound `MaxSessionTicks=5,
+  MaxStepUpTicks=2`. The Naive variant deliberately omits the step-up
+  gate; TLC must find the documented counterexample (verified per
+  `specs/SessionStepUp.trace.md`). Verified-design doc at
+  `docs/slo/design/session-step-up-verified.md`. The lane already lists
+  a CircuitBreaker matrix entry for fv M4 (#14) — when that PR lands,
+  the entry activates without workflow changes. Closes #15.
 - The supply-chain CI lane now runs `cargo-geiger` (pinned to `0.13.0`) on
   every PR and uploads the JSON artifact (30-day retention). The advisory step
   surfaces transitive `unsafe` usage in the dependency tree; deltas are
