@@ -100,6 +100,40 @@ if (-not $osvScanner) {
 }
 Write-Host ""
 
+# ── Step 5: cargo geiger (advisory) ──────────────────────────────────────────
+# Surfaces transitive `unsafe` usage in the dependency tree. SunLit source is
+# forbid(unsafe_code), so this measures what deps bring in. Advisory: failure
+# does not count toward $Errors. JSON artifact is the audit evidence.
+#
+# cargo-geiger requires a root package (it cannot consume a virtual manifest).
+# We use secure_reference_service because it depends on every library crate
+# and is the closest analogue to a downstream consumer's BOM.
+#
+# See docs/dev-guide/unsafe-budget.md.
+Write-Host "--- cargo geiger (advisory) ---"
+$cargoGeiger = Get-Command cargo-geiger -ErrorAction SilentlyContinue
+if (-not $cargoGeiger) {
+    Write-Warn "cargo-geiger not installed. Run: cargo install --locked cargo-geiger --version 0.13.0"
+} else {
+    New-Item -ItemType Directory -Force -Path output | Out-Null
+    Push-Location crates/secure_reference_service
+    try {
+        cargo geiger `
+            --all-features `
+            --output-format Json `
+            --update-readme=false `
+            | Out-File -FilePath ../../output/cargo-geiger.json -Encoding utf8
+        if ($LASTEXITCODE -eq 0) {
+            Write-Pass "cargo geiger — JSON artifact written to output/cargo-geiger.json"
+        } else {
+            Write-Warn "cargo geiger — non-zero exit (advisory); see output/cargo-geiger.json for details"
+        }
+    } finally {
+        Pop-Location
+    }
+}
+Write-Host ""
+
 # ── Summary ──────────────────────────────────────────────────────────────────
 Write-Host "=== Audit Summary ===" -ForegroundColor Cyan
 if ($Errors -eq 0) {
