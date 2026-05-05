@@ -166,6 +166,13 @@ impl fmt::Display for CryptoAlgorithm {
 pub struct AlgorithmPolicy {
     preferred: CryptoAlgorithm,
     min_algorithm: Option<CryptoAlgorithm>,
+    /// Minimum acceptable envelope wire-format version on the **decrypt**
+    /// side. `None` accepts every version; `Some(n)` requires the
+    /// envelope's `version` field (parsed as a `u8`) to be ≥ `n`. Set to
+    /// `Some(2)` to reject classical (v1) envelopes — the
+    /// downgrade-attack defence per `tm-pqd-abuse-6` in the
+    /// pq-readiness M3 BDD.
+    min_envelope_version: Option<u8>,
 }
 
 impl AlgorithmPolicy {
@@ -187,6 +194,7 @@ impl AlgorithmPolicy {
         Self {
             preferred,
             min_algorithm,
+            min_envelope_version: None,
         }
     }
 
@@ -205,13 +213,81 @@ impl AlgorithmPolicy {
         Self {
             preferred: algorithm,
             min_algorithm: None,
+            min_envelope_version: None,
         }
+    }
+
+    /// Sets the minimum envelope wire-format version this policy will
+    /// accept on the decrypt side.
+    ///
+    /// `Some(2)` rejects classical (v1) envelopes — the downgrade-attack
+    /// defence (`tm-pqd-abuse-6`). Mismatched envelopes trip
+    /// [`super::error::DataError::AlgorithmRejectedByPolicy`] before any
+    /// AEAD work in `decrypt_for_use`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use secure_data::algorithm::{AlgorithmPolicy, CryptoAlgorithm};
+    ///
+    /// let strict = AlgorithmPolicy::prefer(CryptoAlgorithm::HybridX25519MlKem768)
+    ///     .with_min_envelope_version(2);
+    /// assert_eq!(strict.min_envelope_version(), Some(2));
+    /// ```
+    #[must_use]
+    pub fn with_min_envelope_version(mut self, version: u8) -> Self {
+        self.min_envelope_version = Some(version);
+        self
+    }
+
+    /// Returns the configured minimum envelope wire-format version, if any.
+    #[must_use]
+    pub fn min_envelope_version(&self) -> Option<u8> {
+        self.min_envelope_version
     }
 
     /// Returns the preferred algorithm.
     #[must_use]
     pub fn preferred(&self) -> CryptoAlgorithm {
         self.preferred
+    }
+
+    /// Validates that the envelope's wire-format version meets the
+    /// configured `min_envelope_version` (if any).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DataError::AlgorithmRejectedByPolicy`] when
+    /// `min_envelope_version` is set and the envelope's version parses
+    /// to a value below it.
+    pub fn validate_envelope_version(&self, envelope_version_str: &str) -> Result<(), DataError> {
+        let Some(min) = self.min_envelope_version else {
+            return Ok(());
+        };
+
+        // Existing wire format uses semver-ish strings ("1", "2"). Parse
+        // strictly: a non-numeric version under a min-version policy is
+        // a structural-mismatch and should fail closed.
+        let actual: u8 =
+            envelope_version_str
+                .parse()
+                .map_err(|_| DataError::AlgorithmRejectedByPolicy {
+                    reason: format!(
+                        "envelope_version=\"{envelope_version_str}\" cannot be parsed as a u8 \
+                     under a min-envelope-version policy",
+                    ),
+                })?;
+
+        if actual < min {
+            return Err(DataError::AlgorithmRejectedByPolicy {
+                reason: format!(
+                    "envelope_version={actual} is below the configured \
+                     min_envelope_version={min}; refuse to decrypt"
+                ),
+            });
+        }
+
+        Ok(())
     }
 
     /// Validates that the preferred algorithm meets the minimum requirement.
