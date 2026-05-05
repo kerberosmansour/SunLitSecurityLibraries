@@ -40,7 +40,7 @@
 
 | # | Milestone | Status | Started | Completed | Lessons File | Completion Summary |
 |---|---|---|---|---|---|---|
-| 1 | Verify forbid(unsafe_code) on every published crate; add to `secure_smoke_service`; add regression test | `not_started` | | | | |
+| 1 | Verify forbid(unsafe_code) on every published crate; add to `secure_smoke_service`; add regression test | `done` | 2026-05-05 | 2026-05-05 | [`docs/slo/lessons/fug-m1.md`](../lessons/fug-m1.md) | [`docs/slo/completion/fug-m1.md`](../completion/fug-m1.md) — all workspace crates `forbid(unsafe_code)`; regression-tested in `crates/security_core/tests/no_unsafe_code.rs`. Closes #16. |
 | 2 | Add `cargo-geiger` to supply-chain CI lane; publish workspace unsafe number; document threshold | `not_started` | | | | |
 
 ---

@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 //! `secure_smoke_service` — Security smoke-test microservice.
 //!
 //! A purpose-built axum microservice with 35+ routes, each exercising a specific
