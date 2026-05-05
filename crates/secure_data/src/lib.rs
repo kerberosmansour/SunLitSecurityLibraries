@@ -50,3 +50,12 @@ pub mod serde;
 /// Mobile storage extensions — `SensitiveBuffer` and `MobileStoragePolicy` (MASVS-STORAGE).
 #[cfg(feature = "mobile-storage")]
 pub mod mobile_storage;
+
+/// Kani proof harnesses (compiled only under `cargo kani`).
+///
+/// Excluded from regular builds via `#![cfg(kani)]` at the module root —
+/// adding harnesses has zero impact on the production crate. See
+/// `docs/dev-guide/formal-verification.md` for the proof catalogue and
+/// `.github/workflows/kani.yml` for the advisory CI lane.
+#[cfg(kani)]
+mod proofs;

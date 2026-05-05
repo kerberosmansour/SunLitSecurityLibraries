@@ -285,6 +285,7 @@ cargo vet                    # audit trail
 - **Advisory ignore list**: every entry requires a written justification (see `deny.toml`)
 - **Memory-safety attestation**: every workspace crate declares `#![forbid(unsafe_code)]` at lib-root. The posture is regression-tested by [`crates/security_core/tests/no_unsafe_code.rs`](./crates/security_core/tests/no_unsafe_code.rs) — removal fails the build with a named-crate error. The accompanying scan also asserts no `unsafe` keyword appears anywhere in `crates/*/src/`.
 - **Transitive `unsafe` visibility**: every PR runs `cargo geiger --workspace --all-features` (advisory, 10-min cap) and uploads the JSON artifact. The number is the upper bound across all features; deltas are visible to reviewers via the artifact diff. See [`docs/dev-guide/unsafe-budget.md`](./docs/dev-guide/unsafe-budget.md) for the posture and threshold-promotion plan.
+- **Formal verification** (advisory, in flight): every PR runs `cargo kani` (15-min cap) against the workspace's proof harnesses. M1 ships a bootstrap proof in `secure_data` (nonce non-zero); M2–M5 extend to `secure_authz`, `secure_boundary`, `secure_errors`, plus TLA+ specs for a new `secure_resilience::circuit_breaker` module and the existing `secure_identity` session+step-up flow. See [`docs/dev-guide/formal-verification.md`](./docs/dev-guide/formal-verification.md).
 
 ---
 

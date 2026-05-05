@@ -58,6 +58,17 @@ breaking API changes, but security fixes and migration notes should be explicit.
   `combiner_id == None`. Hybrid encryption returns `DataError::PqUnavailable`
   on builds without `--features pq`; v2 hybrid envelopes presented to a non-`pq` build return `DataError::PqFeatureRequired`
   with no silent fallback. Closes #7.
+- A new advisory CI lane runs `cargo kani` (pinned to `0.62.0`, 15-minute
+  cap) against the workspace on every PR. M1 ships the bootstrap proof in
+  `secure_data` (12-byte AES-256-GCM nonce remains non-zero through the
+  envelope-builder pipeline; AEAD primitive itself axiomatised per the
+  research synthesis). The harness lives in `crates/secure_data/src/proofs.rs`
+  under `#![cfg(kani)]` so it has zero impact on regular builds. Promotion
+  of the lane to a blocking gate is a separate runbook after at least one
+  release cycle of stable signal. See `docs/dev-guide/formal-verification.md`
+  for the proof catalogue, planned M2–M5 proofs, and the TLA+ specs landing
+  for `secure_resilience::circuit_breaker` (M4) and `secure_identity`
+  session+step-up (M5). Closes #11.
 - The supply-chain CI lane now runs `cargo-geiger` (pinned to `0.13.0`) on
   every PR and uploads the JSON artifact (30-day retention). The advisory step
   surfaces transitive `unsafe` usage in the dependency tree; deltas are
