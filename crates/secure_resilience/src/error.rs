@@ -9,6 +9,9 @@ pub enum ResilienceError {
     InvalidSignal(String),
     /// An integrity check failed to initialize.
     InvalidIntegrityConfig(String),
+    /// An internal invariant was violated (e.g., a poisoned mutex).
+    /// Used by the circuit-breaker for non-recoverable internal errors.
+    Internal(String),
 }
 
 impl fmt::Display for ResilienceError {
@@ -16,6 +19,7 @@ impl fmt::Display for ResilienceError {
         match self {
             Self::InvalidSignal(msg) => write!(f, "invalid signal: {msg}"),
             Self::InvalidIntegrityConfig(msg) => write!(f, "invalid integrity config: {msg}"),
+            Self::Internal(msg) => write!(f, "internal resilience error: {msg}"),
         }
     }
 }

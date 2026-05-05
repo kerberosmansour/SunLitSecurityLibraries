@@ -7,11 +7,15 @@
 //! It is a pure policy engine — the consuming application implements platform-specific detection
 //! and feeds signals into this crate for policy evaluation.
 
+pub mod circuit_breaker;
 pub mod environment;
 pub mod error;
 pub mod integrity;
 pub mod rasp;
 
+pub use circuit_breaker::{
+    CircuitBreaker, CircuitBreakerError, CircuitBreakerPolicy, CircuitBreakerState,
+};
 pub use environment::{Confidence, EnvironmentSignal, ThreatLevel};
 pub use error::ResilienceError;
 pub use integrity::{IntegrityCheck, IntegrityCheckResult, IntegrityResult};

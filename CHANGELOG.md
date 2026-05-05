@@ -81,6 +81,19 @@ breaking API changes, but security fixes and migration notes should be explicit.
   for the proof catalogue, planned M2–M5 proofs, and the TLA+ specs landing
   for `secure_resilience::circuit_breaker` (M4) and `secure_identity`
   session+step-up (M5). Closes #11.
+- `secure_resilience` now ships a TLA+-verified circuit breaker
+  (`CircuitBreaker`, `CircuitBreakerPolicy`, `CircuitBreakerState`,
+  `CircuitBreakerError`). Closed/open/half-open state machine with the
+  load-bearing **single-probe rule**: in HalfOpen, exactly one probe
+  call may be in flight at a time; concurrent callers receive
+  `CircuitBreakerError::ProbeInFlight`. Configurable failure threshold
+  (default 5) and open duration (default 30s). The design is verified
+  by `specs/CircuitBreaker.tla` (Hardened) and shown to be
+  load-bearing by `specs/CircuitBreakerNaive.tla`, which TLC must
+  reject (`NoDoubleProbe` counterexample documented in
+  `specs/CircuitBreaker.trace.md`). Verified-design doc at
+  `docs/slo/design/circuit-breaker-verified.md`. 7 BDD scenarios
+  including a live concurrent-double-probe rejection. Closes #14.
 - The supply-chain CI lane now runs `cargo-geiger` (pinned to `0.13.0`) on
   every PR and uploads the JSON artifact (30-day retention). The advisory step
   surfaces transitive `unsafe` usage in the dependency tree; deltas are
