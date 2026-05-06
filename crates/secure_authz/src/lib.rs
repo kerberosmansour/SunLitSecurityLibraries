@@ -56,6 +56,11 @@ pub mod testkit;
 #[cfg(feature = "actix-web")]
 pub mod actix;
 
+/// Kani proof harnesses (compiled only under `cargo kani`).
+/// See `docs/dev-guide/formal-verification.md`.
+#[cfg(kani)]
+mod proofs;
+
 pub use action::Action;
 pub use decision::{Decision, DenyReason};
 pub use enforcer::{Authorizer, DefaultAuthorizer};

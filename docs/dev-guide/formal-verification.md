@@ -1,6 +1,6 @@
 # Formal Verification
 
-> **Status:** M1 of the [`formal-verification-kani-tla` runbook](../slo/future/RUNBOOK-formal-verification-kani-tla.md) — Kani toolchain bootstrapped with one nonce-non-zero proof and an advisory CI lane. M2 adds proofs in `secure_authz` and `secure_boundary`; M3 adds proofs in `secure_data` and `secure_errors`; M4 ships a new `secure_resilience::circuit_breaker` module with a TLA+-verified design; M5 lands the TLA+ spec for the existing `secure_identity` session+step-up flow.
+> **Status:** M1 + M2 of the [`formal-verification-kani-tla` runbook](../slo/future/RUNBOOK-formal-verification-kani-tla.md) — Kani toolchain bootstrapped with nonce and discriminant/limit proofs plus an advisory CI lane. M3 adds proofs in `secure_data` and `secure_errors`; M4 ships a new `secure_resilience::circuit_breaker` module with a TLA+-verified design; M5 lands the TLA+ spec for the existing `secure_identity` session+step-up flow.
 
 SunLit ships proof-grade evidence for safety-critical invariants alongside its property-based and fuzz tests. Two tools, two layers:
 
@@ -18,20 +18,25 @@ Kani and TLA+ are **complementary, not redundant**:
 
 The value of *both* is that Kani catches "the implementation diverges from the design" while TLA+ catches "the design itself has a race." A bug in either layer would slip past the other.
 
-## What's proven today (M1)
+## What's proven today (M1 + M2)
 
 | Proof | File | Property | Kani CI |
 |---|---|---|---|
 | `nonce_non_zero` | [`crates/secure_data/src/proofs.rs`](../../crates/secure_data/src/proofs.rs) | A 12-byte AES-256-GCM nonce, modelled with a CSPRNG axiom that excludes the all-zero output, remains non-zero after the structural copies the `EnvelopeEncrypted` builder performs. Bootstrap proof — validates the toolchain end-to-end. | ✓ advisory |
-| `aes_256_gcm_nonce_len_is_12` | same file | Build-time invariant guard against accidental change of the AES-256-GCM nonce length constant. | ✓ advisory |
+| `aes_256_gcm_nonce_len_is_12` | same | Build-time invariant guard against accidental change of the AES-256-GCM nonce length constant. | ✓ advisory |
+| `deny_by_default_decision_is_deny` | [`crates/secure_authz/src/proofs.rs`](../../crates/secure_authz/src/proofs.rs) | `Decision::Deny { reason }` always reports `is_deny() == true` and `is_allow() == false`. M2. | ✓ advisory |
+| `allow_and_deny_are_mutually_exclusive` | same | `Decision::Allow` and `Decision::Deny` are mutually exclusive on every constructed Decision (catches a refactor that returns the wrong discriminant). M2. | ✓ advisory |
+| `depth_above_limit_is_rejected` | [`crates/secure_boundary/src/proofs.rs`](../../crates/secure_boundary/src/proofs.rs) | Within bounded ranges (configured ∈ [1, 16], actual ∈ [0, 32]), the comparison `actual > limits.max_nesting_depth` correctly drives the reject branch. M2. | ✓ advisory |
+| `field_count_above_limit_is_rejected` | same | Same shape, on `max_field_count`. M2. | ✓ advisory |
+| `body_size_above_limit_is_rejected` | same | Same shape, on `max_body_bytes` (within bounded ranges). M2. | ✓ advisory |
+| `default_limits_are_non_zero` | same | Catches a future copy-paste accident that initialises a default limit to zero (which would silently reject every request). M2. | ✓ advisory |
 
-The harness lives in `crates/secure_data/src/proofs.rs` under `#![cfg(kani)]` so it compiles **only** under `cargo kani`. Regular `cargo build` and `cargo test` runs exclude the file entirely; adding harnesses has zero impact on the production build.
+Each harness lives in its crate's `src/proofs.rs` under `#![cfg(kani)]` so it compiles **only** under `cargo kani`. Regular `cargo build` and `cargo test` runs exclude these files entirely; adding harnesses has zero impact on the production build.
 
-## What's planned (M2–M5)
+## What's planned (M3–M5)
 
 | Milestone | Issue | Proofs / specs | Tool |
 |---|---|---|---|
-| fv M2 | [#12](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/12) | `secure_authz` deny-by-default + `secure_boundary` depth/size/field limits | Kani |
 | fv M3 | [#13](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/13) | `secure_data` nonce-uniqueness within path + `secure_errors` no-internal-detail-leak | Kani |
 | fv M4 | [#14](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/14) | Add `secure_resilience::circuit_breaker` module + TLA+ spec proving no-double-probe / no-stuck-half-open / no-silent-close | TLA+ + Rust |
 | fv M5 | [#15](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/15) | TLA+ spec for `secure_identity` session+step-up: no privileged action from unauthenticated state, expired sessions never reusable, step-up window enforced | TLA+ |
@@ -53,7 +58,7 @@ Promotion is itself a runbook — not a one-line CI flip — so the criteria are
 
 ```bash
 # One-time install — pin the version to match CI
-cargo install --locked kani-verifier --version 0.62.0
+cargo install --locked kani-verifier --version 0.67.0
 cargo kani setup
 
 # Run all secure_data harnesses

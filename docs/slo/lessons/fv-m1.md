@@ -4,7 +4,7 @@
 - `crates/secure_data/src/proofs.rs` (NEW) — `#![cfg(kani)]`-gated module with two harnesses: `nonce_non_zero` (the bootstrap proof: a CSPRNG-axiom 12-byte nonce remains non-zero through structural copies) and `aes_256_gcm_nonce_len_is_12` (build-time invariant guard).
 - `crates/secure_data/src/lib.rs` — `#[cfg(kani)] mod proofs;` declaration; harnesses excluded from regular builds.
 - `crates/secure_data/Cargo.toml` — `[lints.rust] unexpected_cfgs = { check-cfg = ['cfg(kani)'] }` so the `cfg(kani)` flag does not trigger an `unexpected_cfgs` warning on regular builds.
-- `.github/workflows/kani.yml` (NEW) — advisory Kani CI lane (`continue-on-error: true`, `timeout-minutes: 15`); pinned `kani-verifier 0.62.0`; runs `cargo kani -p secure_data` on every PR; matrix designed to extend per-crate as M2/M3 land.
+- `.github/workflows/kani.yml` (NEW) — advisory Kani CI lane (`continue-on-error: true`, `timeout-minutes: 15`); pinned `kani-verifier` in workflow env; runs `cargo kani -p secure_data` on every PR; matrix designed to extend per-crate as M2/M3 land.
 - `docs/dev-guide/formal-verification.md` (NEW) — consumer-facing dev guide explaining what's proven today, what's planned, the local-run procedure, the promotion-criteria for advisory → blocking, and the anti-patterns disallowed under the project's formal-verification posture.
 - `README.md` — Supply-Chain Security policy summary gains a "Formal verification" bullet citing the Kani lane and the planned TLA+ specs.
 - `CHANGELOG.md` — Unreleased entry in user-facing language.
@@ -14,7 +14,7 @@
 - **Harness lives in `src/proofs.rs` (gated by `#![cfg(kani)]`), not in `tests/` or a separate `proofs/` directory.** Three reasons: (1) `cargo kani` discovers `#[kani::proof]` annotations in the regular crate source tree by default; putting them in `src/` matches Kani's expected layout. (2) Co-locating the proof with the source it proves makes the dependency obvious. (3) The `#![cfg(kani)]` gate means regular `cargo build` and `cargo test` runs exclude the file entirely — zero impact on the production crate.
 - **Hard-coded `AES_256_GCM_NONCE_LEN = 12` in `proofs.rs` rather than importing from `pq::sizes`.** The `pq::sizes` module is on the unmerged pq M1 PR (#24); fv M1 must be independently mergeable. Documented in the file with a TODO-equivalent comment that says: "once both PRs merge, future fv proofs can import `pq::sizes::AES_256_GCM_NONCE_LEN`."
 - **The bootstrap proof models the CSPRNG with `kani::assume(nonce != [0u8; 12])`, then proves a structural copy preserves the property.** This is intentionally minimal — the runbook says "trivial proof to validate the pipeline." The CSPRNG itself is not within Kani's verification surface (it's FFI-backed via `OsRng`); modelling its non-all-zero output as an axiom is the standard approach. M3 will add the more meaningful `nonce-uniqueness within path` proof.
-- **Pinned `kani-verifier 0.62.0`.** Per the research dossier, Kani's Rust-feature coverage moves; pinning prevents version drift from changing what compiles. Bumping the pin is a deliberate runbook change.
+- **Pinned `kani-verifier` in CI.** Per the research dossier, Kani's Rust-feature coverage moves; pinning prevents version drift from changing what compiles. Bumping the pin is a deliberate runbook change.
 - **Matrix dimension on `crate` rather than `harness`.** The 15-min cap is per-crate; a future crate that has 5 harnesses uses one CI run, not 5. M2 adds `secure_authz` and `secure_boundary` rows; M3 adds `secure_errors`.
 - **`continue-on-error: true` makes the lane advisory.** A failing proof shows yellow on the PR but does not block merge. Promotion to blocking is a separate runbook with explicit criteria (≥1 release cycle stable, false-positive rate characterised, runtime reproducible).
 - **Two harnesses in M1, not one.** `aes_256_gcm_nonce_len_is_12` is a build-time invariant guard against accidental constant change; cheap to prove under Kani; serves as a regression test for the pq M2 wire-format dimensions. Keeping the proof catalogue at 2 from day one establishes "more than one harness per file is the norm."
@@ -26,7 +26,7 @@
 - The Kani CI workflow is structured to fail-soft (advisory) — even if `cargo kani` exits non-zero, the merge gate is not blocked.
 
 ## Assumptions still unresolved
-- Whether `kani-verifier 0.62.0` is the latest stable as of 2026-05; the runbook authoring authored against this version. M2 will revalidate.
+- Whether the pinned `kani-verifier` remains compatible with the full FV matrix as M2/M3 add crates. M2 will revalidate.
 - Whether `cargo kani setup` is idempotent (cache-friendly) under Swatinem/rust-cache; the workflow assumes it is. First CI run will show; if not, a second cache-key dimension on the Kani version is the fix.
 - Whether the `nonce_non_zero` harness will produce a counterexample when Kani is run locally. The CSPRNG axiom is sound; the structural copy is trivial; expectation is "passes" on first run.
 
@@ -46,7 +46,7 @@
 
 ## Resource bounds established or verified
 - CI runtime cap: 15 minutes per crate (matrix dimension). Bootstrap harness runs in milliseconds locally; M2/M3 proofs will be larger but should stay well under the cap.
-- Pinned Kani version: 0.62.0. Pinned via `cargo install --locked kani-verifier --version 0.62.0`.
+- Pinned Kani version: workflow env `KANI_VERSION`, installed via `cargo install --locked kani-verifier --version`.
 - `target/kani` artifacts excluded from artifacts upload in M1 (M5's `tla.yml` will set the artifact pattern; mirror it then).
 
 ## Debugging / inspection notes

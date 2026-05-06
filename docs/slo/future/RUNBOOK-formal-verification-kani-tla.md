@@ -41,8 +41,8 @@
 
 | # | Milestone | Status | Started | Completed | Lessons File | Completion Summary |
 |---|---|---|---|---|---|---|
-| 1 | Kani toolchain bootstrap + first proof (`secure_data` non-zero nonce) + advisory CI lane | `done` | 2026-05-06 | 2026-05-06 | [`docs/slo/lessons/fv-m1.md`](../lessons/fv-m1.md) | [`docs/slo/completion/fv-m1.md`](../completion/fv-m1.md) — Kani 0.62.0 pinned; `crates/secure_data/src/proofs.rs` (`#[cfg(kani)]`) ships `nonce_non_zero` + `aes_256_gcm_nonce_len_is_12`; advisory CI lane (15-min cap). Closes #11. |
-| 2 | Kani proofs for `secure_authz` deny-by-default + `secure_boundary` depth/size/field limits | `not_started` | | | | |
+| 1 | Kani toolchain bootstrap + first proof (`secure_data` non-zero nonce) + advisory CI lane | `done` | 2026-05-06 | 2026-05-06 | [`docs/slo/lessons/fv-m1.md`](../lessons/fv-m1.md) | [`docs/slo/completion/fv-m1.md`](../completion/fv-m1.md) — `crates/secure_data/src/proofs.rs` (`#[cfg(kani)]`) ships `nonce_non_zero` + `aes_256_gcm_nonce_len_is_12`; advisory CI lane (15-min cap). Closes #11. |
+| 2 | Kani proofs for `secure_authz` deny-by-default + `secure_boundary` depth/size/field limits | `done` | 2026-05-06 | 2026-05-06 | [`docs/slo/lessons/fv-m2.md`](../lessons/fv-m2.md) | [`docs/slo/completion/fv-m2.md`](../completion/fv-m2.md) — discriminant + limit-rejection invariants proven within bounds; matrix extended to authz+boundary; Kani pin bumped to 0.67.0 for current dependency compatibility. Closes #12. |
 | 3 | Kani proofs for `secure_data` nonce-uniqueness within path + `secure_errors` public-body-no-leak | `not_started` | | | | |
 | 4 | Add `secure_resilience::circuit_breaker` module + TLA+ spec + verified-design doc | `not_started` | | | | |
 | 5 | TLA+ spec for `secure_identity` session+step-up + verified-design doc + `tla.yml` CI lane | `not_started` | | | | |

@@ -84,6 +84,11 @@ pub mod platform;
 #[cfg(feature = "actix-web")]
 pub mod actix;
 
+/// Kani proof harnesses (compiled only under `cargo kani`).
+/// See `docs/dev-guide/formal-verification.md`.
+#[cfg(kani)]
+mod proofs;
+
 pub use attack_signal::{BoundaryViolation, ViolationKind};
 #[cfg(feature = "axum")]
 pub use cors::{secure_cors_defaults, CorsConfigError, SecureCorsBuilder};
