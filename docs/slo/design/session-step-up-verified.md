@@ -1,7 +1,7 @@
 ---
 name: session-step-up-verified
 verified_at: 2026-05-06
-tlc_bound: "MaxSessionTicks=5, MaxStepUpTicks=2"
+tlc_bound: "MaxSessionTicks=5, MaxStepUpTicks=2, MaxPrivActionAttempts=3"
 tool: "TLC (TLA+ Tools)"
 runbook: formal-verification-kani-tla
 runbook_milestone: M5
@@ -22,8 +22,8 @@ A single user's session in `secure_identity` proceeds through a small finite-sta
 | `state` | `{Anon, Auth, StepReq, StepOk, Expired}` | The lifecycle that must not skip |
 | `sessionTick` | `0..MaxSessionTicks` | Total session age; drives expiration |
 | `stepUpTick` | `0..MaxStepUpTicks` | Time since entering `StepOk`; drives step-up window expiration |
-| `privActionAttempts` | `Nat` | Bookkeeping — how many privileged actions were attempted |
-| `privActionAccepted` | `Nat` | Bookkeeping — how many were accepted; drives the safety property |
+| `privActionAttempts` | `0..MaxPrivActionAttempts` | Bookkeeping — how many privileged actions were attempted; bounded for finite TLC exploration |
+| `privActionAccepted` | `0..MaxPrivActionAttempts` | Bookkeeping — how many were accepted; drives the safety property |
 
 ## Actions
 
@@ -32,7 +32,7 @@ A single user's session in `secure_identity` proceeds through a small finite-sta
 | `Login` | `state = Anon` | `state' = Auth`; `sessionTick' = stepUpTick' = 0` |
 | `StepUpChallenge` | `state = Auth` | `state' = StepReq` |
 | `StepUpAck` | `state = StepReq` | `state' = StepOk`; `stepUpTick' = 0` |
-| `PrivActionAttempt` | `state ≠ Expired` | `privActionAttempts' = privActionAttempts + 1`; if `state = StepOk` then `privActionAccepted' = privActionAccepted + 1` |
+| `PrivActionAttempt` | `state ≠ Expired`, `privActionAttempts < MaxPrivActionAttempts` | `privActionAttempts' = privActionAttempts + 1`; if `state = StepOk` then `privActionAccepted' = privActionAccepted + 1` |
 | `Tick` | `state ∉ {Anon, Expired}`, `sessionTick < MaxSessionTicks` | `sessionTick' = sessionTick + 1`; on session-window expiry → `Expired`; on step-up-window expiry → `Auth` |
 
 ## Safety properties (TLC verifies these in `SessionStepUp.cfg`)
@@ -44,11 +44,11 @@ A single user's session in `secure_identity` proceeds through a small finite-sta
 | `NoExpiredReuse` | `state = Expired ⇒ sessionTick = MaxSessionTicks` (no further state changes after expiry) | PASS at bound |
 | `StepUpWindowEnforced` | `stepUpTick ≤ MaxStepUpTicks` | PASS at bound |
 
-## Liveness properties checked (with fairness)
+## Liveness properties stated (not part of the default CI config)
 
 | Property | Fairness | Status |
 |---|---|---|
-| `EventuallyProgressOrExpire` | Weak fairness on `Tick` | PASS at bound (in `LiveSpec`) |
+| `EventuallyProgressOrExpire` | Weak fairness on `Tick` | Stated in `LiveSpec`; deferred from the default safety-only `SessionStepUp.cfg` |
 
 ## Bound and rationale
 
@@ -56,8 +56,9 @@ A single user's session in `secure_identity` proceeds through a small finite-sta
 |---|---:|---|
 | `MaxSessionTicks` | 5 | Long enough to exhibit `Auth → StepReq → StepOk → Auth → Expired`; short enough to stay under the 10-min CI cap |
 | `MaxStepUpTicks` | 2 | One step-up window can expire within a session; tightens `StepUpWindowEnforced` |
+| `MaxPrivActionAttempts` | 3 | Keeps the state space finite while still exercising rejected attempts, accepted attempts, and the Naive counterexample |
 
-State-space size at this bound is small (sub-1000 reachable states). Increasing the bound is sound but adds runtime; the proof is established at the smallest model that exhibits the lifecycle.
+State-space size at this bound is small (180 distinct states in the hardened model). Increasing the bound is sound but adds runtime; the proof is established at the smallest model that exhibits the lifecycle.
 
 ## Simplifications from the real design
 

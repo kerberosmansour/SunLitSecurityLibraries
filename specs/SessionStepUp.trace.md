@@ -45,7 +45,7 @@ PrivActionAttempt ==
     /\ UNCHANGED <<state, sessionTick, stepUpTick>>
 ```
 
-The Hardened spec runs against `SessionStepUp.cfg` and TLC reports no violation at the declared bound (5 session ticks, 2 step-up ticks).
+The Hardened spec runs against `SessionStepUp.cfg` and TLC reports no violation at the declared bound (5 session ticks, 2 step-up ticks, 3 privileged-action attempts).
 
 ## Status
 
@@ -61,5 +61,6 @@ The Hardened spec runs against `SessionStepUp.cfg` and TLC reports no violation 
 |---|---:|---|
 | `MaxSessionTicks` | 5 | Long enough to exhibit the lifecycle (Auth → StepReq → StepOk → Auth → Expired); short enough to keep TLC under the 10-min cap |
 | `MaxStepUpTicks` | 2 | One step-up window expires within a session; tightens the Hardened proof |
+| `MaxPrivActionAttempts` | 3 | Keeps TLC finite while still allowing rejected attempts, accepted attempts, and the Naive counterexample |
 
-State-space size at this bound is small (under 1 000 reachable states); within the runtime budget.
+State-space size at this bound is small (180 distinct states in the hardened model); within the runtime budget.

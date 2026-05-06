@@ -103,7 +103,7 @@ jobs:
           # config exercises it.
           # The expected outcome is in matrix.variant.expect.
           set +e
-          java -Xmx2g -jar "$HOME/.sldo/tla/tla2tools.jar" tlc2.TLC \
+          java -Xmx2g -cp "$HOME/.sldo/tla/tla2tools.jar" tlc2.TLC \
               -workers auto \
               -config "${{ matrix.variant.cfg }}" \
               "${{ matrix.variant.tla }}" \

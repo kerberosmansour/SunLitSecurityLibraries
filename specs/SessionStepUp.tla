@@ -34,12 +34,14 @@
 EXTENDS Naturals, FiniteSets, Sequences, TLC
 
 CONSTANTS
-    MaxSessionTicks,     \* Total session lifetime, in ticks
-    MaxStepUpTicks       \* Maximum step-up window, in ticks
+    MaxSessionTicks,       \* Total session lifetime, in ticks
+    MaxStepUpTicks,        \* Maximum step-up window, in ticks
+    MaxPrivActionAttempts  \* Bound privileged-action attempts for TLC
 
 ASSUME MaxSessionTicks \in Nat /\ MaxSessionTicks > 0
 ASSUME MaxStepUpTicks \in Nat /\ MaxStepUpTicks > 0
 ASSUME MaxStepUpTicks < MaxSessionTicks
+ASSUME MaxPrivActionAttempts \in Nat /\ MaxPrivActionAttempts > 0
 
 VARIABLES
     state,               \* {Anon, Auth, StepReq, StepOk, Expired}
@@ -56,8 +58,8 @@ TypeOK ==
     /\ state \in States
     /\ sessionTick \in 0..MaxSessionTicks
     /\ stepUpTick \in 0..MaxStepUpTicks
-    /\ privActionAttempts \in Nat
-    /\ privActionAccepted \in Nat
+    /\ privActionAttempts \in 0..MaxPrivActionAttempts
+    /\ privActionAccepted \in 0..MaxPrivActionAttempts
 
 Init ==
     /\ state = "Anon"
@@ -91,6 +93,7 @@ StepUpAck ==
 \* the session is in StepOk — every other state is rejected.
 PrivActionAttempt ==
     /\ state \notin {"Expired"}     \* Expired sessions accept nothing.
+    /\ privActionAttempts < MaxPrivActionAttempts
     /\ privActionAttempts' = privActionAttempts + 1
     /\ IF state = "StepOk"
        THEN privActionAccepted' = privActionAccepted + 1

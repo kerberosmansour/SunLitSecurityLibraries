@@ -1,6 +1,7 @@
 ------------------------- MODULE SessionStepUpNaive -------------------------
 (* NAIVE variant of SessionStepUp.tla — accepts privileged actions from
- * any non-Expired state (i.e., the step-up gate is effectively removed).
+ * any authenticated, non-Expired state (i.e., the step-up gate is effectively
+ * removed while the login gate remains).
  *
  * TLC must FIND a counterexample on the NoPrivWithoutStepUp invariant
  * under this module. If TLC reports "no error", the spec is too
@@ -16,10 +17,11 @@
 
 EXTENDS Naturals, FiniteSets, Sequences, TLC
 
-CONSTANTS MaxSessionTicks, MaxStepUpTicks
+CONSTANTS MaxSessionTicks, MaxStepUpTicks, MaxPrivActionAttempts
 
 ASSUME MaxSessionTicks \in Nat /\ MaxSessionTicks > 0
 ASSUME MaxStepUpTicks \in Nat /\ MaxStepUpTicks > 0
+ASSUME MaxPrivActionAttempts \in Nat /\ MaxPrivActionAttempts > 0
 
 VARIABLES state, sessionTick, stepUpTick, privActionAttempts, privActionAccepted
 
@@ -31,8 +33,8 @@ TypeOK ==
     /\ state \in States
     /\ sessionTick \in 0..MaxSessionTicks
     /\ stepUpTick \in 0..MaxStepUpTicks
-    /\ privActionAttempts \in Nat
-    /\ privActionAccepted \in Nat
+    /\ privActionAttempts \in 0..MaxPrivActionAttempts
+    /\ privActionAccepted \in 0..MaxPrivActionAttempts
 
 Init ==
     /\ state = "Anon"
@@ -48,10 +50,11 @@ Login ==
     /\ stepUpTick' = 0
     /\ UNCHANGED <<privActionAttempts, privActionAccepted>>
 
-\* NAIVE: accept privileged actions from any non-Expired state.
+\* NAIVE: accept privileged actions from any authenticated, non-Expired state.
 \* This is the design-without-the-gate that the spec must reject.
 NaivePrivActionAttempt ==
-    /\ state \notin {"Expired"}
+    /\ state \notin {"Anon", "Expired"}
+    /\ privActionAttempts < MaxPrivActionAttempts
     /\ privActionAttempts' = privActionAttempts + 1
     /\ privActionAccepted' = privActionAccepted + 1   \* WRONG: no StepOk check
     /\ UNCHANGED <<state, sessionTick, stepUpTick>>

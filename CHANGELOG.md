@@ -99,8 +99,8 @@ breaking API changes, but security fixes and migration notes should be explicit.
   `secure_identity` session+step-up TLA+ spec — three safety properties
   (no privileged action without step-up, no expired-session reuse, the
   step-up window is bounded) verified at bound `MaxSessionTicks=5,
-  MaxStepUpTicks=2`. The Naive variant deliberately omits the step-up
-  gate; TLC must find the documented counterexample (verified per
+  MaxStepUpTicks=2, MaxPrivActionAttempts=3`. The Naive variant deliberately
+  omits the step-up gate; TLC must find the documented counterexample (verified per
   `specs/SessionStepUp.trace.md`). Verified-design doc at
   `docs/slo/design/session-step-up-verified.md`. The lane already lists
   a CircuitBreaker matrix entry for fv M4 (#14) — when that PR lands,
