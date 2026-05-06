@@ -12,6 +12,12 @@ keywords = ["security", "crypto", "secrets", "kms", "argon2"]
 [lib]
 name = "secure_data"
 
+# Recognise the `cfg(kani)` flag set by `cargo kani` so the proof module
+# does not trigger an `unexpected_cfgs` warning on regular builds.
+# See `crates/secure_data/src/proofs.rs` and the kani.yml advisory CI lane.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
+
 [features]
 fips = ["aws-lc-rs"]
 vault = ["dep:reqwest"]

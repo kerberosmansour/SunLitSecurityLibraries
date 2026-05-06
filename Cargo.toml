@@ -19,7 +19,7 @@ members = [
 
 [workspace.dependencies]
 uuid = { version = "1", features = ["v4", "serde"] }
-time = { version = "0.3", features = ["serde", "macros", "formatting", "parsing"] }
+time = { version = "0.3", features = ["serde", "formatting", "parsing"] }
 serde = { version = "1", features = ["derive"] }
 smallvec = { version = "1", features = ["serde"] }
 derive_more = { version = "1", features = ["display", "from", "into"] }
