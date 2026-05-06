@@ -10,15 +10,17 @@
 //! | v1       | OFF (M1+M3, no `--features pq`)  | round-trip   |
 //! | v1       | ON (M1+M3 + `--features pq`)     | round-trip   |
 //! | v2       | OFF (M1+M3, no `--features pq`)  | PqFeatureRequired (no AEAD work) |
-//! | v2       | ON (M1+M3 + `--features pq`)     | PqUnavailable (M2 fills the encrypt path) |
+//! | v2       | ON (M1+M2+M3 + `--features pq`)  | round-trip |
 //!
 //! Plus abuse cases:
 //! - `tm-pqd-abuse-6`: downgrade — v1 envelope under a `min_envelope_version=2` policy → AlgorithmRejectedByPolicy.
 //! - `tm-pqd-abuse-7`: version-byte tamper — fail at deserialise/validate_structure boundary.
 
 use secure_data::algorithm::{AlgorithmPolicy, CryptoAlgorithm};
+#[cfg(not(feature = "pq"))]
+use secure_data::envelope::EnvelopeEncrypted;
 use secure_data::envelope::{
-    decrypt_for_use, decrypt_with_policy, encrypt_for_storage, EnvelopeEncrypted,
+    decrypt_for_use, decrypt_with_policy, encrypt_for_storage, encrypt_with_policy,
 };
 use secure_data::error::DataError;
 use secure_data::kms::StaticDevKeyProvider;
@@ -96,36 +98,28 @@ async fn cell_v2_producer_consumer_no_pq_returns_pq_feature_required() {
     }
 }
 
-// ── Cell 4: v2 producer × consumer-with-pq → PqUnavailable (M2 fills) ───────
+// ── Cell 4: v2 producer × consumer-with-pq → round-trip ─────────────────────
 
 #[tokio::test]
 #[cfg(feature = "pq")]
-async fn cell_v2_producer_consumer_with_pq_returns_pq_unavailable_until_m2() {
-    let v2_json = serde_json::json!({
-        "version": "2",
-        "algorithm": "X25519+ML-KEM-768/HKDF-SHA-256",
-        "key_alias": "default",
-        "key_version": "1",
-        "wrapped_data_key": vec![0u8; 32],
-        "nonce": vec![0u8; 12],
-        "ciphertext": vec![0u8; 16],
-        "aad": vec![0u8; 16],
-        "combiner_id": 1,
-    });
-    let envelope: EnvelopeEncrypted = serde_json::from_value(v2_json).unwrap();
+async fn cell_v2_producer_consumer_with_pq_round_trips() {
     let provider = StaticDevKeyProvider::new();
+    let policy = AlgorithmPolicy::prefer(CryptoAlgorithm::HybridX25519MlKem768);
+    let plaintext = b"v2 producer, consumer with pq feature";
 
-    let result = decrypt_for_use(&envelope, &provider).await;
-    // M2 will route this to a real hybrid decrypt path. Until then,
-    // M3 exercises the dispatch — `is_post_quantum()` short-circuits
-    // to `PqUnavailable` before any AEAD work.
-    match result {
-        Err(DataError::PqUnavailable) => {}
-        other => panic!(
-            "expected PqUnavailable on v2-with-pq build (M3 — M2 fills the path), got: {:?}",
-            other
-        ),
-    }
+    let envelope = encrypt_with_policy(plaintext, "default", &provider, &policy)
+        .await
+        .expect("v2 hybrid encrypt must succeed");
+    let recovered = decrypt_for_use(&envelope, &provider)
+        .await
+        .expect("v2 hybrid decrypt must succeed");
+
+    assert_eq!(recovered, plaintext);
+    assert_eq!(envelope.version, "2");
+    assert_eq!(
+        envelope.combiner_id,
+        Some(secure_data::pq::COMBINER_ID_X25519_ML_KEM_768)
+    );
 }
 
 // ── Abuse case tm-pqd-abuse-6: downgrade attack ─────────────────────────────
