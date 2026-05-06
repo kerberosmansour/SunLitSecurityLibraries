@@ -9,6 +9,14 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ## Unreleased
 
+- New CI lint at `scripts/anssi-mapping-lint.sh` gates the ANSSI Rust
+  compliance mapping at `docs/compliance/anssi-rust.md`. Validates that
+  the ANSSI commit pin matches, the rule count is exactly 61, every
+  Status column is populated, and every `compliant` row's Evidence
+  pointer resolves to a real artifact (file:line, clippy lint, docs
+  path, or test name). The lint is no-op while rows remain `unfilled`
+  (M1 placeholder) and becomes gating once M2 populates evidence. Wired
+  into the supply-chain CI job. Closes #20.
 - `secure_data` reserves a post-quantum migration path. The crate now exposes a
   `CryptoAlgorithm::HybridX25519MlKem768` enum slot, an optional
   `EncryptionEnvelope::combiner_id: Option<u8>` wire-format field, a `pq`
