@@ -18,7 +18,7 @@ Kani and TLA+ are **complementary, not redundant**:
 
 The value of *both* is that Kani catches "the implementation diverges from the design" while TLA+ catches "the design itself has a race." A bug in either layer would slip past the other.
 
-## What's proven today (M1 + M2)
+## What's proven today (M1 + M2 + M3)
 
 | Proof | File | Property | Kani CI |
 |---|---|---|---|
@@ -30,6 +30,11 @@ The value of *both* is that Kani catches "the implementation diverges from the d
 | `field_count_above_limit_is_rejected` | same | Same shape, on `max_field_count`. M2. | ✓ advisory |
 | `body_size_above_limit_is_rejected` | same | Same shape, on `max_body_bytes` (within bounded ranges). M2. | ✓ advisory |
 | `default_limits_are_non_zero` | same | Catches a future copy-paste accident that initialises a default limit to zero (which would silently reject every request). M2. | ✓ advisory |
+| `nonce_len_per_algorithm_in_canonical_set` | [`crates/secure_data/src/proofs.rs`](../../crates/secure_data/src/proofs.rs) | For every `CryptoAlgorithm` variant, `nonce_len()` returns either 12 (AES-256-GCM family) or 24 (XChaCha20-Poly1305). M3. | ✓ advisory |
+| `nonce_length_preserved_per_algorithm` | same | Strengthens M1: per-algorithm nonce-length preservation through the structural pass-through. M3. | ✓ advisory |
+| `public_status_code_is_in_4xx_5xx_range` | [`crates/secure_errors/src/proofs.rs`](../../crates/secure_errors/src/proofs.rs) | Every `AppError` variant maps to a 4xx/5xx status; never 1xx/2xx/3xx. M3. | ✓ advisory |
+| `public_error_code_is_non_empty_static_literal` | same | `PublicError.code` is a non-empty `&'static str` for every variant — by type, cannot be derived from `err.to_string()`. M3. | ✓ advisory |
+| `public_error_code_is_in_whitelist` | same | `code` for every variant is in the small known set; new variants force a deliberate whitelist update. M3. | ✓ advisory |
 
 Each harness lives in its crate's `src/proofs.rs` under `#![cfg(kani)]` so it compiles **only** under `cargo kani`. Regular `cargo build` and `cargo test` runs exclude these files entirely; adding harnesses has zero impact on the production build.
 

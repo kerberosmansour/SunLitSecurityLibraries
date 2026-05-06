@@ -67,6 +67,11 @@ jobs:
           components: clippy, rustfmt
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          # Windows cache saves have repeatedly failed after format, clippy,
+          # tests, and docs all passed. Restore remains useful, but saving is
+          # not allowed to turn a green test lane red.
+          save-if: ${{ runner.os != 'Windows' }}
 
       - name: Check formatting
         run: cargo fmt --all -- --check

@@ -5,6 +5,46 @@
 
 use crate::{kind::AppError, public::PublicError};
 
+/// Stable public error-code identifiers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PublicErrorCode {
+    InvalidRequest,
+    Forbidden,
+    NotFound,
+    Conflict,
+    TemporarilyUnavailable,
+    InternalError,
+    RateLimited,
+}
+
+impl PublicErrorCode {
+    #[must_use]
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Self::InvalidRequest => "invalid_request",
+            Self::Forbidden => "forbidden",
+            Self::NotFound => "not_found",
+            Self::Conflict => "conflict",
+            Self::TemporarilyUnavailable => "temporarily_unavailable",
+            Self::InternalError => "internal_error",
+            Self::RateLimited => "rate_limited",
+        }
+    }
+}
+
+#[must_use]
+pub(crate) fn public_error_code_for(err: &AppError) -> PublicErrorCode {
+    match err {
+        AppError::Validation { .. } => PublicErrorCode::InvalidRequest,
+        AppError::Forbidden { .. } => PublicErrorCode::Forbidden,
+        AppError::NotFound => PublicErrorCode::NotFound,
+        AppError::Conflict => PublicErrorCode::Conflict,
+        AppError::Dependency { .. } => PublicErrorCode::TemporarilyUnavailable,
+        AppError::Crypto | AppError::Internal => PublicErrorCode::InternalError,
+        AppError::RateLimit { .. } => PublicErrorCode::RateLimited,
+    }
+}
+
 /// Maps an `AppError` to an HTTP status code and a safe `PublicError` response body.
 ///
 /// This function is the single source of truth for all error-to-HTTP mappings.
@@ -22,47 +62,33 @@ use crate::{kind::AppError, public::PublicError};
 /// assert_eq!(body.code, "not_found");
 /// ```
 pub fn into_response_parts(err: &AppError) -> (u16, PublicError) {
+    let code = public_error_code_for(err).as_str();
+
     match err {
         AppError::Validation { .. } => (
             400,
-            PublicError::new(
-                "invalid_request",
-                "The request contains invalid data.",
-                None,
-            ),
+            PublicError::new(code, "The request contains invalid data.", None),
         ),
-        AppError::Forbidden { .. } => (403, PublicError::new("forbidden", "Access denied.", None)),
+        AppError::Forbidden { .. } => (403, PublicError::new(code, "Access denied.", None)),
         AppError::NotFound => (
             404,
-            PublicError::new("not_found", "The requested resource was not found.", None),
+            PublicError::new(code, "The requested resource was not found.", None),
         ),
         AppError::Conflict => (
             409,
-            PublicError::new(
-                "conflict",
-                "The request conflicts with the current state.",
-                None,
-            ),
+            PublicError::new(code, "The request conflicts with the current state.", None),
         ),
         AppError::Dependency { .. } => (
             503,
-            PublicError::new(
-                "temporarily_unavailable",
-                "A required service is temporarily unavailable.",
-                None,
-            ),
+            PublicError::new(code, "A required service is temporarily unavailable.", None),
         ),
         AppError::Crypto | AppError::Internal => (
             500,
-            PublicError::new("internal_error", "An internal error occurred.", None),
+            PublicError::new(code, "An internal error occurred.", None),
         ),
         AppError::RateLimit { .. } => (
             429,
-            PublicError::new(
-                "rate_limited",
-                "Too many requests. Please retry later.",
-                None,
-            ),
+            PublicError::new(code, "Too many requests. Please retry later.", None),
         ),
     }
 }
