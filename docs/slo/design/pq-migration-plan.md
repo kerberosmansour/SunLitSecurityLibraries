@@ -2,14 +2,16 @@
 name: pq-migration-plan
 authored: 2026-05-05
 runbook: pq-readiness-secure-data
-runbook_milestone: M1
+runbook_milestone: M2
 research_basis: docs/slo/research/pq-readiness-secure-data/synthesis.md
-status: locked-in (M1) — implementation lands in M2
+status: locked-in (M1); implemented through M2
 ---
 
 # Post-Quantum Migration Plan — `secure_data`
 
-> **One-line summary.** `secure_data` will gain a hybrid X25519 + ML-KEM-768 / HKDF-SHA-256 KEM behind a `pq` feature flag. M1 reserves the public surface (enum slot, envelope `combiner_id` field, error variants, size constants); M2 ships the implementation; M3 lands the cross-version compatibility matrix; M4 documents the FIPS-track posture honestly.
+**Status (2026-05-06):** M2 is implemented behind `--features pq`; the locked X25519 + ML-KEM-768 / HKDF-SHA-256 v2 envelope wrap is now executable.
+
+> **One-line summary.** `secure_data` has gained a hybrid X25519 + ML-KEM-768 / HKDF-SHA-256 KEM behind a `pq` feature flag. M1 reserved the public surface (enum slot, envelope `combiner_id` field, error variants, size constants); M2 ships the implementation; M3 lands the cross-version compatibility matrix; M4 documents the FIPS-track posture honestly.
 
 ---
 

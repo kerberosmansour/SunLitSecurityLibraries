@@ -8,10 +8,19 @@ use aes_gcm::{
     aead::{Aead, KeyInit, Payload},
     Aes256Gcm, Key, Nonce,
 };
+#[cfg(feature = "pq")]
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use chacha20poly1305::XChaCha20Poly1305;
+#[cfg(feature = "pq")]
+use hkdf::Hkdf;
+#[cfg(feature = "pq")]
+use rand::rngs::OsRng;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "pq")]
+use sha2::Sha256;
+#[cfg(feature = "pq")]
+use zeroize::Zeroizing;
 
 use crate::algorithm::{AlgorithmPolicy, CryptoAlgorithm};
 use crate::error::DataError;
@@ -19,6 +28,10 @@ use crate::kms::KeyProvider;
 
 /// The current envelope format version.
 const ENVELOPE_VERSION: &str = "1";
+#[cfg(feature = "pq")]
+const HYBRID_ENVELOPE_VERSION: &str = "2";
+#[cfg(feature = "pq")]
+const PQ_KEY_VERSION_PREFIX: &str = "pq-seed-v1";
 
 /// Encrypted data blob with all metadata required for decryption.
 ///
@@ -129,6 +142,14 @@ impl EnvelopeEncrypted {
             }),
             #[cfg(feature = "pq")]
             (true, Some(id)) => {
+                if self.version != HYBRID_ENVELOPE_VERSION {
+                    return Err(DataError::EnvelopeMalformed {
+                        reason: format!(
+                            "post-quantum envelope version must be {}, got {}",
+                            HYBRID_ENVELOPE_VERSION, self.version
+                        ),
+                    });
+                }
                 if id == crate::pq::COMBINER_ID_FAIL_CLOSED {
                     return Err(DataError::AlgorithmRejectedByPolicy {
                         reason: format!(
@@ -209,12 +230,29 @@ pub async fn encrypt_with_policy<P: KeyProvider>(
 
     let algorithm = policy.preferred();
 
-    // Post-quantum dispatch: the hybrid KEM lands in pq-readiness M2 behind
-    // the `pq` feature flag. M1 reserves the enum slot but the encrypt path
-    // returns PqUnavailable on builds without the feature, and is similarly
-    // not yet implemented even with the feature on (M2 fills it). Fail-fast
-    // with a structured error — never silently fall through to the classical
-    // algorithm path.
+    // Post-quantum dispatch: the hybrid KEM is only available when the
+    // optional `pq` dependencies are compiled in. Builds without the feature
+    // fail fast with a structured error and never silently fall back to v1.
+    if algorithm.is_post_quantum() {
+        #[cfg(feature = "pq")]
+        {
+            return encrypt_hybrid(plaintext, key_alias, provider).await;
+        }
+        #[cfg(not(feature = "pq"))]
+        {
+            return Err(DataError::PqUnavailable);
+        }
+    }
+
+    encrypt_classical(plaintext, key_alias, provider, algorithm).await
+}
+
+async fn encrypt_classical<P: KeyProvider>(
+    plaintext: &[u8],
+    key_alias: &str,
+    provider: &P,
+    algorithm: CryptoAlgorithm,
+) -> Result<EnvelopeEncrypted, DataError> {
     if algorithm.is_post_quantum() {
         return Err(DataError::PqUnavailable);
     }
@@ -233,6 +271,7 @@ pub async fn encrypt_with_policy<P: KeyProvider>(
         algorithm.as_str(),
         key_alias,
         &key_version,
+        None,
     );
 
     // 4. Encrypt with the selected algorithm.
@@ -247,9 +286,8 @@ pub async fn encrypt_with_policy<P: KeyProvider>(
         nonce: nonce_bytes,
         ciphertext,
         aad,
-        // M1: classical envelopes have no combiner. M2 will set
-        // `Some(crate::pq::COMBINER_ID_X25519_ML_KEM_768)` for hybrid
-        // envelopes via a separate hybrid encrypt path (not this function).
+        // Classical envelopes have no combiner. Hybrid v2 envelopes use the
+        // separate `encrypt_hybrid` path.
         combiner_id: None,
     })
 }
@@ -275,13 +313,18 @@ pub async fn decrypt_for_use<P: KeyProvider>(
     // 0. Parse the algorithm from the envelope.
     let algorithm = CryptoAlgorithm::from_envelope_str(&envelope.algorithm)?;
 
-    // Post-quantum dispatch: M2 will route hybrid envelopes through a
-    // dedicated PQ decrypt path. M1 reserves the slot — at this point
-    // `validate_structure` has already returned PqFeatureRequired on a
-    // non-PQ build, so reaching here with a PQ algorithm only happens on
-    // a `pq`-feature build, where M2 fills the path.
+    // Post-quantum dispatch: at this point `validate_structure` has already
+    // returned PqFeatureRequired on a non-PQ build, so reaching this branch
+    // with the feature enabled routes through the hybrid unwrap path.
     if algorithm.is_post_quantum() {
-        return Err(DataError::PqUnavailable);
+        #[cfg(feature = "pq")]
+        {
+            return decrypt_hybrid(envelope, provider).await;
+        }
+        #[cfg(not(feature = "pq"))]
+        {
+            return Err(DataError::PqFeatureRequired);
+        }
     }
 
     // 1. Unwrap the data-encryption key.
@@ -310,6 +353,7 @@ pub async fn decrypt_for_use<P: KeyProvider>(
         &envelope.algorithm,
         &envelope.key_alias,
         &envelope.key_version,
+        normalise_classical_combiner(envelope.combiner_id),
     );
 
     // 4. Decrypt with the correct algorithm using the original AAD bound during encryption.
@@ -321,6 +365,128 @@ pub async fn decrypt_for_use<P: KeyProvider>(
 
     decrypt_with_algorithm(
         algorithm,
+        &dek,
+        &envelope.nonce,
+        &envelope.ciphertext,
+        &envelope.aad,
+    )
+}
+
+#[cfg(feature = "pq")]
+async fn encrypt_hybrid<P: KeyProvider>(
+    plaintext: &[u8],
+    key_alias: &str,
+    provider: &P,
+) -> Result<EnvelopeEncrypted, DataError> {
+    let (recipient_seed, wrapped_recipient_seed, provider_key_version) =
+        provider.generate_data_key(key_alias).await?;
+    let recipient = derive_hybrid_recipient_material(&recipient_seed)?;
+
+    let mut dek = Zeroizing::new(vec![0u8; 32]);
+    OsRng.fill_bytes(&mut dek);
+
+    let mut nonce_bytes = vec![0u8; CryptoAlgorithm::HybridX25519MlKem768.nonce_len()];
+    OsRng.fill_bytes(&mut nonce_bytes);
+
+    let key_version = encode_hybrid_key_version(&provider_key_version, &wrapped_recipient_seed);
+    let combiner_id = crate::pq::COMBINER_ID_X25519_ML_KEM_768;
+    let aad = build_aad(
+        HYBRID_ENVELOPE_VERSION,
+        CryptoAlgorithm::HybridX25519MlKem768.as_str(),
+        key_alias,
+        &key_version,
+        Some(combiner_id),
+    );
+
+    let encapsulation =
+        crate::pq::hybrid_encapsulate(&recipient.ml_kem_public_key, &recipient.x25519_public_key)?;
+    let wrapped_dek =
+        wrap_data_key_with_hybrid(&encapsulation.derived_key, &nonce_bytes, &dek, &aad)?;
+
+    let mut wrapped_data_key = Vec::with_capacity(
+        encapsulation.kem_ciphertext.len() + encapsulation.x25519_share.len() + wrapped_dek.len(),
+    );
+    wrapped_data_key.extend_from_slice(&encapsulation.kem_ciphertext);
+    wrapped_data_key.extend_from_slice(&encapsulation.x25519_share);
+    wrapped_data_key.extend_from_slice(&wrapped_dek);
+
+    let ciphertext = encrypt_with_algorithm(
+        CryptoAlgorithm::Aes256Gcm,
+        &dek,
+        &nonce_bytes,
+        plaintext,
+        &aad,
+    )?;
+
+    Ok(EnvelopeEncrypted {
+        version: HYBRID_ENVELOPE_VERSION.to_string(),
+        algorithm: CryptoAlgorithm::HybridX25519MlKem768.as_str().to_string(),
+        key_alias: key_alias.to_string(),
+        key_version,
+        wrapped_data_key,
+        nonce: nonce_bytes,
+        ciphertext,
+        aad,
+        combiner_id: Some(combiner_id),
+    })
+}
+
+#[cfg(feature = "pq")]
+async fn decrypt_hybrid<P: KeyProvider>(
+    envelope: &EnvelopeEncrypted,
+    provider: &P,
+) -> Result<Vec<u8>, DataError> {
+    let expected_nonce_len = CryptoAlgorithm::HybridX25519MlKem768.nonce_len();
+    if envelope.nonce.len() != expected_nonce_len {
+        return Err(DataError::InvalidNonce {
+            expected: expected_nonce_len,
+            actual: envelope.nonce.len(),
+        });
+    }
+
+    let combiner_id = envelope
+        .combiner_id
+        .ok_or_else(|| DataError::EnvelopeMalformed {
+            reason: "post-quantum envelope missing combiner_id".to_string(),
+        })?;
+    let recomputed_aad = build_aad(
+        &envelope.version,
+        &envelope.algorithm,
+        &envelope.key_alias,
+        &envelope.key_version,
+        Some(combiner_id),
+    );
+    if recomputed_aad != envelope.aad {
+        return Err(DataError::AuthenticationFailure);
+    }
+
+    let (provider_key_version, wrapped_recipient_seed) =
+        decode_hybrid_key_version(&envelope.key_version)?;
+    let recipient_seed = provider
+        .unwrap_data_key(
+            &wrapped_recipient_seed,
+            &envelope.key_alias,
+            &provider_key_version,
+        )
+        .await?;
+    let recipient = derive_hybrid_recipient_material(&recipient_seed)?;
+
+    let parts = split_hybrid_wrapped_data_key(&envelope.wrapped_data_key)?;
+    let derived_key = crate::pq::hybrid_decapsulate(
+        parts.kem_ciphertext,
+        parts.x25519_share,
+        &recipient.ml_kem_secret_seed,
+        &recipient.x25519_secret_key,
+    )?;
+    let dek = unwrap_data_key_with_hybrid(
+        &derived_key,
+        &envelope.nonce,
+        parts.wrapped_dek,
+        &envelope.aad,
+    )?;
+
+    decrypt_with_algorithm(
+        CryptoAlgorithm::Aes256Gcm,
         &dek,
         &envelope.nonce,
         &envelope.ciphertext,
@@ -427,13 +593,185 @@ fn decrypt_with_algorithm(
     }
 }
 
-/// Builds deterministic AAD bytes from envelope header fields.
-fn build_aad(version: &str, algorithm: &str, key_alias: &str, key_version: &str) -> Vec<u8> {
-    format!("v={version};alg={algorithm};alias={key_alias};kver={key_version}").into_bytes()
+#[cfg(feature = "pq")]
+struct HybridRecipientMaterial {
+    ml_kem_public_key: Vec<u8>,
+    ml_kem_secret_seed: [u8; 64],
+    x25519_public_key: [u8; 32],
+    x25519_secret_key: [u8; 32],
 }
 
-// Keep base64 import used in potential future public API (suppress dead_code)
-#[allow(dead_code)]
-fn to_b64(bytes: &[u8]) -> String {
-    B64.encode(bytes)
+#[cfg(feature = "pq")]
+struct HybridWrappedDataKeyParts<'a> {
+    kem_ciphertext: &'a [u8],
+    x25519_share: &'a [u8],
+    wrapped_dek: &'a [u8],
+}
+
+#[cfg(feature = "pq")]
+fn derive_hybrid_recipient_material(
+    seed_material: &[u8],
+) -> Result<HybridRecipientMaterial, DataError> {
+    if seed_material.is_empty() {
+        return Err(DataError::EnvelopeMalformed {
+            reason: "provider returned empty hybrid recipient seed".to_string(),
+        });
+    }
+
+    let hk = Hkdf::<Sha256>::new(None, seed_material);
+    let mut material = [0u8; 96];
+    hk.expand(b"sunlit-pq-recipient-key-material/v1", &mut material)
+        .map_err(|_| DataError::EncryptionFailed {
+            reason: "HKDF-SHA-256 recipient key derivation failed".to_string(),
+        })?;
+
+    let (ml_kem_public_key, ml_kem_secret_seed) =
+        crate::pq::kem::ml_kem_keypair_from_seed(&material[..64])?;
+    let (x25519_secret_key, x25519_public_key) =
+        crate::pq::kem::x25519_keypair_from_seed(&material[64..])?;
+
+    Ok(HybridRecipientMaterial {
+        ml_kem_public_key,
+        ml_kem_secret_seed,
+        x25519_public_key,
+        x25519_secret_key,
+    })
+}
+
+#[cfg(feature = "pq")]
+fn encode_hybrid_key_version(provider_key_version: &str, wrapped_recipient_seed: &[u8]) -> String {
+    format!(
+        "{}:{}:{}",
+        PQ_KEY_VERSION_PREFIX,
+        B64.encode(provider_key_version.as_bytes()),
+        B64.encode(wrapped_recipient_seed)
+    )
+}
+
+#[cfg(feature = "pq")]
+fn decode_hybrid_key_version(key_version: &str) -> Result<(String, Vec<u8>), DataError> {
+    let mut parts = key_version.splitn(3, ':');
+    let prefix = parts.next().ok_or_else(|| DataError::EnvelopeMalformed {
+        reason: "hybrid key_version missing prefix".to_string(),
+    })?;
+    if prefix != PQ_KEY_VERSION_PREFIX {
+        return Err(DataError::EnvelopeMalformed {
+            reason: "hybrid key_version has unsupported prefix".to_string(),
+        });
+    }
+
+    let provider_version_b64 = parts.next().ok_or_else(|| DataError::EnvelopeMalformed {
+        reason: "hybrid key_version missing provider version".to_string(),
+    })?;
+    let wrapped_seed_b64 = parts.next().ok_or_else(|| DataError::EnvelopeMalformed {
+        reason: "hybrid key_version missing wrapped recipient seed".to_string(),
+    })?;
+
+    let provider_version =
+        B64.decode(provider_version_b64)
+            .map_err(|_| DataError::EnvelopeMalformed {
+                reason: "hybrid provider key version is not valid base64".to_string(),
+            })?;
+    let provider_version =
+        String::from_utf8(provider_version).map_err(|_| DataError::EnvelopeMalformed {
+            reason: "hybrid provider key version is not UTF-8".to_string(),
+        })?;
+    let wrapped_seed = B64
+        .decode(wrapped_seed_b64)
+        .map_err(|_| DataError::EnvelopeMalformed {
+            reason: "hybrid wrapped recipient seed is not valid base64".to_string(),
+        })?;
+
+    Ok((provider_version, wrapped_seed))
+}
+
+#[cfg(feature = "pq")]
+fn split_hybrid_wrapped_data_key(
+    wrapped: &[u8],
+) -> Result<HybridWrappedDataKeyParts<'_>, DataError> {
+    let kem_len = crate::pq::sizes::ML_KEM_768_CIPHERTEXT_LEN;
+    let x25519_len = crate::pq::sizes::X25519_SHARE_LEN;
+    let min_len = kem_len + x25519_len + 16;
+    if wrapped.len() < min_len {
+        return Err(DataError::EnvelopeMalformed {
+            reason: format!(
+                "hybrid wrapped_data_key too short: expected at least {}, got {}",
+                min_len,
+                wrapped.len()
+            ),
+        });
+    }
+
+    let (kem_ciphertext, rest) = wrapped.split_at(kem_len);
+    let (x25519_share, wrapped_dek) = rest.split_at(x25519_len);
+    Ok(HybridWrappedDataKeyParts {
+        kem_ciphertext,
+        x25519_share,
+        wrapped_dek,
+    })
+}
+
+#[cfg(feature = "pq")]
+fn wrap_data_key_with_hybrid(
+    wrap_key: &[u8; 32],
+    nonce_bytes: &[u8],
+    dek: &[u8],
+    aad: &[u8],
+) -> Result<Vec<u8>, DataError> {
+    let cipher = aes_cipher_from_dek(wrap_key)?;
+    let nonce = Nonce::from_slice(nonce_bytes);
+    let payload = Payload { msg: dek, aad };
+    cipher
+        .encrypt(nonce, payload)
+        .map_err(|_| DataError::EncryptionFailed {
+            reason: "hybrid AES-256-GCM data-key wrap failed".to_string(),
+        })
+}
+
+#[cfg(feature = "pq")]
+fn unwrap_data_key_with_hybrid(
+    wrap_key: &[u8; 32],
+    nonce_bytes: &[u8],
+    wrapped_dek: &[u8],
+    aad: &[u8],
+) -> Result<Zeroizing<Vec<u8>>, DataError> {
+    let cipher = aes_cipher_from_dek(wrap_key)?;
+    let nonce = Nonce::from_slice(nonce_bytes);
+    let payload = Payload {
+        msg: wrapped_dek,
+        aad,
+    };
+    let dek = cipher
+        .decrypt(nonce, payload)
+        .map_err(|_| DataError::AuthenticationFailure)?;
+    if dek.len() != 32 {
+        return Err(DataError::WrappedKeyLengthMismatch);
+    }
+    Ok(Zeroizing::new(dek))
+}
+
+/// Builds deterministic AAD bytes from envelope header fields.
+fn build_aad(
+    version: &str,
+    algorithm: &str,
+    key_alias: &str,
+    key_version: &str,
+    combiner_id: Option<u8>,
+) -> Vec<u8> {
+    let mut aad =
+        format!("v={version};alg={algorithm};alias={key_alias};kver={key_version}").into_bytes();
+    if let Some(id) = combiner_id {
+        #[cfg(feature = "pq")]
+        crate::pq::combiner::bind_combiner_id_to_aad(&mut aad, id);
+        #[cfg(not(feature = "pq"))]
+        aad.extend_from_slice(format!(";combiner=0x{id:02x}").as_bytes());
+    }
+    aad
+}
+
+fn normalise_classical_combiner(combiner_id: Option<u8>) -> Option<u8> {
+    match combiner_id {
+        Some(0) | None => None,
+        Some(id) => Some(id),
+    }
 }

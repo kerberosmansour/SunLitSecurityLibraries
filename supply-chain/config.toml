@@ -25,6 +25,42 @@ url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
 [imports.zcash]
 url = "https://raw.githubusercontent.com/zcash/rust-ecosystem/main/supply-chain/audits.toml"
 
+[policy.secure_authz]
+audit-as-crates-io = false
+
+[policy.secure_boundary]
+audit-as-crates-io = false
+
+[policy.secure_data]
+audit-as-crates-io = false
+
+[policy.secure_device_trust]
+audit-as-crates-io = false
+
+[policy.secure_errors]
+audit-as-crates-io = false
+
+[policy.secure_identity]
+audit-as-crates-io = false
+
+[policy.secure_network]
+audit-as-crates-io = false
+
+[policy.secure_output]
+audit-as-crates-io = false
+
+[policy.secure_privacy]
+audit-as-crates-io = false
+
+[policy.secure_resilience]
+audit-as-crates-io = false
+
+[policy.security_core]
+audit-as-crates-io = false
+
+[policy.security_events]
+audit-as-crates-io = false
+
 [[exemptions.actix-http]]
 version = "3.12.1"
 criteria = "safe-to-deploy"
@@ -665,6 +701,14 @@ criteria = "safe-to-deploy"
 version = "10.3.0"
 criteria = "safe-to-deploy"
 
+[[exemptions.keccak]]
+version = "0.2.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.kem]]
+version = "0.3.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.language-tags]]
 version = "0.3.2"
 criteria = "safe-to-deploy"
@@ -735,6 +779,10 @@ criteria = "safe-to-deploy"
 
 [[exemptions.mio]]
 version = "1.2.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.module-lattice]]
+version = "0.2.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.native-tls]]
@@ -1106,6 +1154,10 @@ version = "0.11.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.sha2]]
+version = "0.11.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.sha3]]
 version = "0.11.0"
 criteria = "safe-to-deploy"
 

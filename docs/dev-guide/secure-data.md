@@ -513,55 +513,32 @@ For production key management with Azure Key Vault:
 
 ---
 
-## Post-Quantum Readiness (M1: reserved; M2+: implementation)
+## Post-Quantum Readiness (M2: hybrid envelope wrap)
 
-`secure_data` ships a documented, executable post-quantum migration path. As of M1, the public surface is reserved so downstream consumers can pin against an envelope shape that will not break when the M2 hybrid KEM lands. The authoritative design is [`docs/slo/design/pq-migration-plan.md`](../slo/design/pq-migration-plan.md).
+`secure_data` ships an opt-in hybrid post-quantum envelope key wrap behind `--features pq`. The authoritative design is [`docs/slo/design/pq-migration-plan.md`](../slo/design/pq-migration-plan.md), and the dedicated implementation guide is [`secure-data-pq.md`](secure-data-pq.md).
 
-### What's available today (M1)
+### What round-trips today (M2)
 
 ```rust,ignore
 use secure_data::algorithm::{AlgorithmPolicy, CryptoAlgorithm};
-use secure_data::envelope::encrypt_with_policy;
-use secure_data::error::DataError;
-use secure_data::pq;
+use secure_data::envelope::{decrypt_for_use, encrypt_with_policy};
+use secure_data::kms::StaticDevKeyProvider;
 
-// 1. The enum slot exists. Constructing it is allowed; encrypting with it
-//    returns a structured `PqUnavailable` error in M1.
-let alg = CryptoAlgorithm::HybridX25519MlKem768;
-assert!(alg.is_post_quantum());
-assert_eq!(alg.as_str(), "X25519+ML-KEM-768/HKDF-SHA-256");
-assert_eq!(alg.nonce_len(), 12);   // AES-256-GCM nonce; the AEAD itself is unchanged
-
-// 2. The wire-format dimensions are public constants on every build.
-assert_eq!(pq::sizes::ML_KEM_768_CIPHERTEXT_LEN, 1088);   // FIPS 203
-assert_eq!(pq::sizes::HKDF_SHA256_OUTPUT_LEN, 32);
-
-// 3. Combiner identifiers are reserved.
-assert_eq!(pq::COMBINER_ID_X25519_ML_KEM_768, 0x01);
-assert_eq!(pq::COMBINER_ID_FAIL_CLOSED, 0xFF);
-
-// 4. Existing classical encrypt/decrypt is unchanged.
-//    `EncryptionEnvelope::combiner_id` is `None` for v1 envelopes; serde
-//    skips serialising it on the wire.
-```
-
-### What returns a structured error today (M1)
-
-```rust,ignore
-# async fn example(provider: &impl secure_data::kms::KeyProvider) -> Result<(), DataError> {
+# async fn example() -> Result<(), secure_data::error::DataError> {
+let provider = StaticDevKeyProvider::new();
 let policy = AlgorithmPolicy::prefer(CryptoAlgorithm::HybridX25519MlKem768);
-let result = encrypt_with_policy(b"plaintext", "key", provider, &policy).await;
 
-match result {
-    Err(DataError::PqUnavailable) => {
-        // M1 reserved-only; M2 (issue #8) ships the implementation.
-        // No silent fallback to AES-256-GCM happens.
-    }
-    _ => unreachable!("M1 only"),
-}
+let envelope = encrypt_with_policy(b"plaintext", "default", &provider, &policy).await?;
+assert_eq!(envelope.version, "2");
+assert_eq!(envelope.combiner_id, Some(0x01));
+
+let plaintext = decrypt_for_use(&envelope, &provider).await?;
+assert_eq!(plaintext, b"plaintext");
 # Ok(())
 # }
 ```
+
+Hybrid envelopes use `wrapped_data_key = ML-KEM-768 ciphertext || X25519 share || AES-GCM-wrapped DEK`. Existing AES-256-GCM and XChaCha20-Poly1305 envelopes remain v1 and continue to decrypt with or without the `pq` feature.
 
 ### Decoding a v2 envelope on a non-PQ build
 
@@ -585,9 +562,9 @@ match envelope.validate_structure() {
 # }
 ```
 
-### When does M2 ship?
+### What comes next?
 
-When [issue #8](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/8) closes. M2 adds the [RustCrypto `ml-kem`](https://github.com/RustCrypto/formats/tree/master/ml-kem) v0.3.0 dependency (gated on `pq`), the hybrid encrypt/decrypt path, KAT fixtures from FIPS 203, and the round-trip BDD scenarios. M3 (issue #9) lands the cross-version compatibility matrix and `AlgorithmPolicy::min_version`. M4 (issue #10) documents the FIPS-track posture honestly.
+M3 (issue #9) lands the cross-version compatibility matrix and `AlgorithmPolicy::min_version`. M4 (issue #10) documents the `fips` x `pq` posture honestly.
 
 ### Why hybrid, not PQ-only?
 

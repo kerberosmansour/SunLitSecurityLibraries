@@ -22,10 +22,16 @@ breaking API changes, but security fixes and migration notes should be explicit.
   path, or test name). The lint is no-op while rows remain `unfilled`
   (M1 placeholder) and becomes gating once M2 populates evidence. Wired
   into the supply-chain CI job. Closes #20.
+- You can now opt into hybrid X25519 + ML-KEM-768 envelope key wrap in
+  `secure_data` with `--features pq`. New writes that select
+  `CryptoAlgorithm::HybridX25519MlKem768` produce v2 envelopes whose data key
+  is wrapped as `ML-KEM-768 ciphertext || X25519 share || AES-GCM-wrapped DEK`
+  with `combiner_id = 0x01`; existing classical v1 envelopes continue to
+  decrypt unchanged. The `pq` path is labelled `pending_cmvp` and makes no
+  FIPS-validation claim. Closes #8.
 - `secure_data` reserves a post-quantum migration path. The crate now exposes a
   `CryptoAlgorithm::HybridX25519MlKem768` enum slot, an optional
-  `EncryptionEnvelope::combiner_id: Option<u8>` wire-format field, a `pq`
-  feature flag (no new runtime deps until M2), and a public `pq` module with
+  `EncryptionEnvelope::combiner_id: Option<u8>` wire-format field, and a public `pq` module with
   size constants and combiner identifiers. The migration plan
   (`docs/slo/design/pq-migration-plan.md`) is the authoritative source for the
   wire format, the hybrid-KEM design (X25519 ⊕ ML-KEM-768 / HKDF-SHA-256 per
@@ -34,9 +40,8 @@ breaking API changes, but security fixes and migration notes should be explicit.
   Existing classical envelopes continue to encrypt and decrypt unchanged;
   `combiner_id` is omitted from the wire for classical envelopes (serde
   `skip_serializing_if`). Pre-M1 envelopes deserialize cleanly with
-  `combiner_id == None`. The hybrid encrypt path returns
-  `DataError::PqUnavailable` until M2 lands the implementation; v2 hybrid
-  envelopes presented to a non-`pq` build return `DataError::PqFeatureRequired`
+  `combiner_id == None`. Hybrid encryption returns `DataError::PqUnavailable`
+  on builds without `--features pq`; v2 hybrid envelopes presented to a non-`pq` build return `DataError::PqFeatureRequired`
   with no silent fallback. Closes #7.
 - The supply-chain CI lane now runs `cargo-geiger` (pinned to `0.13.0`) on
   every PR and uploads the JSON artifact (30-day retention). The advisory step

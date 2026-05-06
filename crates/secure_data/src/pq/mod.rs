@@ -15,6 +15,17 @@
 /// builds without `--features pq`.
 pub mod sizes;
 
+/// HKDF-SHA-256 combiner implementation for the M2 hybrid KEM.
+#[cfg(feature = "pq")]
+pub mod combiner;
+
+/// Hybrid X25519 + ML-KEM-768 KEM implementation.
+#[cfg(feature = "pq")]
+pub mod kem;
+
+#[cfg(feature = "pq")]
+pub use kem::{hybrid_decapsulate, hybrid_encapsulate, HybridEncapsulation};
+
 /// Combiner identifier for envelopes produced by the M2 hybrid KEM
 /// (X25519 || ML-KEM-768 → HKDF-SHA-256). M1 reserves the value;
 /// `EncryptionEnvelope::combiner_id == Some(COMBINER_ID_X25519_ML_KEM_768)`
@@ -42,4 +53,20 @@ pub const COMBINER_ID_FAIL_CLOSED: u8 = 0xFF;
 #[must_use]
 pub fn is_recognised_combiner(id: u8) -> bool {
     id == COMBINER_ID_X25519_ML_KEM_768
+}
+
+/// Returns the FIPS-track status of the post-quantum path.
+///
+/// This is an honest status label only. As of this runbook, no CMVP
+/// certificate covers ML-KEM-768 for this crate's PQ path.
+#[must_use]
+pub fn fips_status() -> Option<&'static str> {
+    #[cfg(feature = "pq")]
+    {
+        Some("pending_cmvp")
+    }
+    #[cfg(not(feature = "pq"))]
+    {
+        None
+    }
 }
