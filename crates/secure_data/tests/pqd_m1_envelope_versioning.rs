@@ -88,6 +88,7 @@ fn pre_m1_envelope_without_combiner_id_field_deserializes_with_none() {
 // ── Abuse case tm-pqd-abuse-1: PqUnavailable on hybrid request ──────────────
 
 #[tokio::test]
+#[cfg(not(feature = "pq"))]
 async fn hybrid_kem_request_returns_pq_unavailable_in_m1() {
     // Given: a policy that prefers the new hybrid PQ algorithm
     let provider = StaticDevKeyProvider::new();

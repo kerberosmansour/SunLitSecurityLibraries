@@ -1,4 +1,26 @@
 
 # cargo-vet audits file
 
-[audits]
+[[audits.hkdf]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.12.4"
+notes = "Direct pq feature dependency for HKDF-SHA-256 combiner reviewed for pqd M2. Pure Rust implementation; Apache-2.0 OR MIT license accepted by deny policy."
+
+[[audits.ml-kem]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.3.0"
+notes = "Direct pq feature dependency for ML-KEM-768 reviewed for pqd M2. RustCrypto pure-Rust implementation; Apache-2.0 OR MIT license accepted by deny policy."
+
+[[audits.sha2]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.10.9"
+notes = "Direct pq feature dependency for HKDF-SHA-256 reviewed for pqd M2. Pure Rust implementation; Apache-2.0 OR MIT license accepted by deny policy."
+
+[[audits.x25519-dalek]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "2.0.1"
+notes = "Direct pq feature dependency for X25519 key agreement reviewed for pqd M2. Pure Rust implementation; BSD-3-Clause license is accepted by deny policy."

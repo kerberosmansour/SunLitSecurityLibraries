@@ -20,12 +20,8 @@ password = ["dep:argon2"]
 azure-kv = []
 mobile-storage = []
 # pq: post-quantum hybrid X25519 + ML-KEM-768 KEM behind a feature flag.
-# M1 reserves the flag with no dependencies — the hybrid implementation
-# (RustCrypto/ml-kem 0.3.0, x25519-dalek 2, hkdf 0.12, sha2 0.10) lands in
-# pq-readiness M2 (issue #8). M1 builds with `--features pq` are valid but
-# the encrypt path returns `DataError::PqUnavailable` because the KEM is
-# not yet implemented. See `docs/slo/design/pq-migration-plan.md`.
-pq = []
+# See `docs/slo/design/pq-migration-plan.md` for the locked wire format.
+pq = ["dep:ml-kem", "dep:x25519-dalek", "dep:hkdf", "dep:sha2"]
 
 [dependencies]
 security_core = { package = "security_core", version = "0.1.0", path = "../security_core" }
@@ -46,6 +42,10 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], optional = true
 aws-sdk-kms = { version = "1", default-features = false, features = ["default-https-client", "rt-tokio"], optional = true }
 aws-config = { version = "1", default-features = false, features = ["credentials-process", "default-https-client", "rt-tokio"], optional = true }
 argon2 = { version = "0.5", optional = true }
+ml-kem = { version = "0.3.0", features = ["getrandom", "zeroize"], optional = true }
+x25519-dalek = { version = "2", features = ["static_secrets"], optional = true }
+hkdf = { version = "0.12", optional = true }
+sha2 = { version = "0.10", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "macros", "rt-multi-thread"] }

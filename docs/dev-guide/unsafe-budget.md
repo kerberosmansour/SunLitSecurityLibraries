@@ -74,6 +74,20 @@ The workspace root has no `[package]` block (it is a virtual manifest). Putting 
 
 The headline is **22 636 transitive unsafe expressions used**. Common offenders are core ecosystem crates (`tokio`, `time`, `serde_json`, `tracing-subscriber`, `hyper`) — all well-audited primitives. The CI artifact (`cargo-geiger.json`) is the source of truth on every main-branch run; this section is updated on a release-cycle cadence to track the long-term trend.
 
+### M2 `secure_data` + `pq` attempt
+
+M2 adds the opt-in `secure_data` `pq` feature (`ml-kem`, `x25519-dalek`, `hkdf`, `sha2`). The milestone attempted to measure the feature-local dependency tree directly:
+
+| Field | Value |
+|---|---|
+| Invocation | `cd crates/secure_data && timeout 60 cargo geiger --features pq --update-readme=false` |
+| Result | timed out with exit 124 before producing a count |
+| Tool behavior | `cargo-geiger` v0.13.0 repeatedly emitted `Failed to match (ignoring source)` lines for registry packages in the resolved workspace graph |
+| Retry evidence | a second `--output-format Json` run with a 180-second timeout also exited 124 and left a zero-byte JSON artifact |
+| Follow-up | keep the reference-service advisory lane as the tracked workspace metric; retry this feature-local measurement when cargo-geiger can complete on the current graph |
+
+This is recorded as an evidence caveat, not as a changed threshold. The project source posture is unchanged: every SunLit crate still declares `#![forbid(unsafe_code)]`, and the PQ implementation adds no application-layer `unsafe`.
+
 ### Threshold
 
 | Threshold | Value | Source of truth |

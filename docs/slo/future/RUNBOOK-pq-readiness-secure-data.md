@@ -43,7 +43,7 @@
 | # | Milestone | Status | Started | Completed | Lessons File | Completion Summary |
 |---|---|---|---|---|---|---|
 | 1 | Migration plan + reserved `CryptoAlgorithm::HybridX25519MlKem768` slot + envelope `combiner_id` field | `done` | 2026-05-05 | 2026-05-05 | [`docs/slo/lessons/pqd-m1.md`](../lessons/pqd-m1.md) | [`docs/slo/completion/pqd-m1.md`](../completion/pqd-m1.md) — public surface reserved; `pq` feature flag (no deps yet); migration plan locks RustCrypto `ml-kem` v0.3.0, concat+HKDF wire format, monitor-only FIPS posture; 12 BDD scenarios green. Closes #7. |
-| 2 | Hybrid X25519+ML-KEM-768 KEM behind `pq` feature; envelope encryption end-to-end | `not_started` | | | | |
+| 2 | Hybrid X25519+ML-KEM-768 KEM behind `pq` feature; envelope encryption end-to-end | `done` | 2026-05-06 | 2026-05-06 | [`docs/slo/lessons/pqd-m2.md`](../lessons/pqd-m2.md) | [`docs/slo/completion/pqd-m2.md`](../completion/pqd-m2.md) — v2 hybrid envelopes round-trip behind `--features pq`; KAT and abuse scenarios green. Closes #8. |
 | 3 | Backwards-compat decrypt + downgrade-attack regression tests + algorithm-policy enforcement | `not_started` | | | | |
 | 4 | FIPS-track readiness note + `fips` × `pq` interaction documentation | `not_started` | | | | |
 
