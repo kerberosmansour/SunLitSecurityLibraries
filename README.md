@@ -28,7 +28,7 @@ The threat model ([`THREAT_MODEL.md`](./THREAT_MODEL.md)) covers:
 | **Denial of Service** | JSON bombs, regex DoS, resource exhaustion | `secure_boundary`, `security_events` |
 | **Elevation of Privilege** | Authz bypass, tenant escape, IDOR, supply chain | `secure_authz`, `secure_boundary` |
 
-Compliance mappings: **NIST 800-53** (AC, AU, IA, SC, SI), **IEC 62443**, **SOC 2 Type II**.
+Compliance mappings: **NIST 800-53** (AC, AU, IA, SC, SI), **IEC 62443**, **SOC 2 Type II**, and an evidence-backed **ANSSI Rust Secure Coding Guidelines** mapping for French-market and IEC 62443-4-1 SD-3 audits.
 
 ---
 
