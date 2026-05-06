@@ -17,11 +17,11 @@
 //! - `tm-pqd-abuse-7`: version-byte tamper — fail at deserialise/validate_structure boundary.
 
 use secure_data::algorithm::{AlgorithmPolicy, CryptoAlgorithm};
+#[cfg(feature = "pq")]
+use secure_data::envelope::encrypt_with_policy;
 #[cfg(not(feature = "pq"))]
 use secure_data::envelope::EnvelopeEncrypted;
-use secure_data::envelope::{
-    decrypt_for_use, decrypt_with_policy, encrypt_for_storage, encrypt_with_policy,
-};
+use secure_data::envelope::{decrypt_for_use, decrypt_with_policy, encrypt_for_storage};
 use secure_data::error::DataError;
 use secure_data::kms::StaticDevKeyProvider;
 
