@@ -1,13 +1,13 @@
 # Completion Summary — fv Milestone 1
 
 ## Goal completed
-Kani is wired into the workspace as an advisory CI lane (15-minute cap, `continue-on-error: true`). The `secure_data` crate ships two bootstrap proof harnesses in `src/proofs.rs` (gated by `#![cfg(kani)]` so regular builds are unaffected): `nonce_non_zero` and `aes_256_gcm_nonce_len_is_12`. The `kani-verifier` version is pinned to `0.62.0`. A consumer-facing dev-guide explains the proof catalogue, planned M2–M5 proofs, the local-run procedure, and the promotion criteria for advisory → blocking. Formal-verification status is now visible in the README.
+Kani is wired into the workspace as an advisory CI lane (15-minute cap, `continue-on-error: true`). The `secure_data` crate ships two bootstrap proof harnesses in `src/proofs.rs` (gated by `#![cfg(kani)]` so regular builds are unaffected): `nonce_non_zero` and `aes_256_gcm_nonce_len_is_12`. A consumer-facing dev-guide explains the proof catalogue, planned M2–M5 proofs, the local-run procedure, and the promotion criteria for advisory → blocking. Formal-verification status is now visible in the README.
 
 ## Files changed
 - `crates/secure_data/src/proofs.rs` (NEW; `#![cfg(kani)]`).
 - `crates/secure_data/src/lib.rs` — `#[cfg(kani)] mod proofs;`.
 - `crates/secure_data/Cargo.toml` — `[lints.rust] unexpected_cfgs` for `cfg(kani)`.
-- `.github/workflows/kani.yml` (NEW; advisory; pinned Kani 0.62.0).
+- `.github/workflows/kani.yml` (NEW; advisory; Kani pin managed in the workflow env).
 - `docs/dev-guide/formal-verification.md` (NEW).
 - `README.md` — Supply-Chain Security policy summary.
 - `CHANGELOG.md` — Unreleased entry.
@@ -40,7 +40,7 @@ Kani is wired into the workspace as an advisory CI lane (15-minute cap, `continu
 
 ## Resource bounds added or verified
 - CI runtime cap: 15 minutes per matrix-dim (per crate).
-- Pinned Kani version: 0.62.0.
+- Pinned Kani version: workflow env `KANI_VERSION`.
 
 ## Documentation updated
 - `docs/dev-guide/formal-verification.md` (NEW; load-bearing for fv M2–M5).

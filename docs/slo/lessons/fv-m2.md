@@ -11,7 +11,7 @@
 - Runbook tracker — M2 marked done.
 
 ## Design decisions and why
-- **Discriminant-level proofs for `Decision`, not full-engine proofs.** `Authorizer::authorize` is async (`Pin<Box<dyn Future>>`); Kani's async support is limited. The discriminant property — `Decision::Deny` always reports `is_denied()` — is meaningful (a refactor that flips the `match` arm trips it) and Kani-tractable. Full-engine proofs land in M3+ when the policy-engine surface is large enough to warrant the extra modelling.
+- **Discriminant-level proofs for `Decision`, not full-engine proofs.** `Authorizer::authorize` is async (`Pin<Box<dyn Future>>`); Kani's async support is limited. The discriminant property — `Decision::Deny` always reports `is_deny()` — is meaningful (a refactor that flips the `match` arm trips it) and Kani-tractable. Full-engine proofs land in M3+ when the policy-engine surface is large enough to warrant the extra modelling.
 - **Bounded inputs on the boundary proofs.** `actual > 32` for nesting depth, `actual > 32` for field count, `actual > 4096` bytes for body size — outside the bounds the same monotonicity argument applies, so verifying within bounds is sound. Documented in the harness rustdoc.
 - **`#[kani::unwind(2)]` on the boundary proofs.** No loops in the comparison logic; `unwind(2)` is the minimum that satisfies Kani's bounded-loop requirement without runtime explosion.
 - **`default_limits_are_non_zero` as a regression guard.** If a future contributor changes a default to `0` (silently rejecting every request), Kani fails on this proof. Cheap, sound, catches a real footgun.
@@ -19,7 +19,7 @@
 
 ## Assumptions verified
 - The `cfg(kani)` gate keeps `proofs.rs` out of regular builds — workspace tests still pass after adding both new modules.
-- Kani's symbolic enum support handles `DenyReason` (verified at runbook authoring time by the research dossier; runbook authoring referenced `kani::any::<DenyReason>()` as supported).
+- Kani handles explicit `DenyReason` variants cleanly; the proof avoids deriving arbitrary values for the non-exhaustive enum.
 
 ## Assumptions still unresolved
 - Whether the per-crate matrix dimension on `kani.yml` will run within the 15-min cap when M3 lands its larger proofs on `secure_data`. M3 will revalidate.
@@ -31,15 +31,16 @@
 - N/A.
 
 ## What was harder than expected
-- Nothing material — the M2 proofs were the smallest meaningful proofs in their respective crates, by design.
+- The initial authz mutual-exclusion proof asked Kani to reason through `Vec<String>` drop paths for `Decision::Allow`; the final harness enumerates both variants explicitly and forgets the empty obligation vector after checking the discriminant.
 
 ## Invariants/assertions added or strengthened
-- **Discriminant invariant** on `secure_authz::decision::Decision`: every constructed Decision has exactly one of `is_allowed()`/`is_denied()` true.
+- **Discriminant invariant** on `secure_authz::decision::Decision`: every constructed Decision has exactly one of `is_allow()`/`is_deny()` true.
 - **Limit-rejection invariant** on `secure_boundary::limits::RequestLimits`: the comparison `actual > configured` correctly drives the reject branch (within bounded ranges).
 - **Default-limits-non-zero invariant**: every default in `RequestLimits` is > 0.
 
 ## Resource bounds established or verified
 - Per-crate Kani matrix dim: `[secure_data, secure_authz, secure_boundary]`. 15-min cap is per-crate.
+- Pinned Kani version: 0.67.0, bumped during M2 so the advisory lane compiles the current `time-macros` dependency chain.
 - Symbolic input bounds documented in each harness.
 
 ## Debugging / inspection notes

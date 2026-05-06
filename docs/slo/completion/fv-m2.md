@@ -1,7 +1,7 @@
 # Completion Summary — fv Milestone 2
 
 ## Goal completed
-Kani harnesses on `secure_authz` and `secure_boundary` land. The `Decision` discriminant invariants (deny-by-default, mutual exclusivity) are proven; the `RequestLimits` comparison invariants (depth, field count, body size, default-non-zero) are proven within bounded ranges. CI matrix extended from one crate to three.
+Kani harnesses on `secure_authz` and `secure_boundary` land. The `Decision` discriminant invariants (deny-by-default, mutual exclusivity) are proven; the `RequestLimits` comparison invariants (depth, field count, body size, default-non-zero) are proven within bounded ranges. CI matrix extended from one crate to three, and the pinned verifier is bumped to 0.67.0 for current dependency compatibility.
 
 ## Files changed
 - `crates/secure_authz/src/proofs.rs`, `crates/secure_authz/src/lib.rs`, `crates/secure_authz/Cargo.toml`.
@@ -20,6 +20,8 @@ Kani harnesses on `secure_authz` and `secure_boundary` land. The `Decision` disc
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings` — clean.
 - `cargo test --workspace` — green.
 - `cargo build -p secure_authz -p secure_boundary` — clean (no `unexpected_cfgs` warnings after the lints config).
+- `cargo kani -p secure_authz --output-format old --no-assertion-reach-checks` — clean.
+- `cargo kani -p secure_boundary --output-format old --no-assertion-reach-checks` — clean.
 
 ## Compatibility checks performed
 - All existing `secure_authz` and `secure_boundary` tests pass; the `#![cfg(kani)]` gate excludes the new modules from regular builds.

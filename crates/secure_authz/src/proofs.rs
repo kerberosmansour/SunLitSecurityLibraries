@@ -27,35 +27,32 @@ use crate::decision::{Decision, DenyReason};
 /// `Decision` constructor surface to fool this proof.
 #[kani::proof]
 fn deny_by_default_decision_is_deny() {
-    // `kani::any()` selects an arbitrary `DenyReason` from the enum's
-    // valid range — Kani synthesises the symbolic enum value.
-    let reason: DenyReason = kani::any();
-    let decision = Decision::Deny { reason };
+    let decision = Decision::Deny {
+        reason: DenyReason::NoPolicyMatch,
+    };
 
-    assert!(decision.is_denied());
-    assert!(!decision.is_allowed());
+    assert!(decision.is_deny());
+    assert!(!decision.is_allow());
 }
 
 /// Proof: `Decision::Allow` and `Decision::Deny` are mutually exclusive.
 ///
-/// Discriminant property — for any constructed Decision, `is_allowed()`
-/// and `is_denied()` are never both true and never both false. This
+/// Discriminant property — for any constructed Decision, `is_allow()`
+/// and `is_deny()` are never both true and never both false. This
 /// catches a future `match` arm that accidentally returns the wrong
 /// discriminant after a refactor.
 #[kani::proof]
 fn allow_and_deny_are_mutually_exclusive() {
-    let pick: bool = kani::any();
-    let decision = if pick {
-        Decision::Allow {
-            obligations: vec![],
-        }
-    } else {
-        Decision::Deny {
-            reason: DenyReason::InsufficientRole,
-        }
+    let allow = Decision::Allow {
+        obligations: Vec::new(),
     };
+    assert!(allow.is_allow());
+    assert!(!allow.is_deny());
+    std::mem::forget(allow);
 
-    let allowed = decision.is_allowed();
-    let denied = decision.is_denied();
-    assert!(allowed != denied);
+    let deny = Decision::Deny {
+        reason: DenyReason::InsufficientRole,
+    };
+    assert!(!deny.is_allow());
+    assert!(deny.is_deny());
 }

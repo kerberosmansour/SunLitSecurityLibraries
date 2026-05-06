@@ -10,7 +10,7 @@ name: Kani
 # Runtime cap: 15 minutes per the research dossier
 # (`docs/slo/research/formal-verification-kani-tla/synthesis.md`).
 #
-# Pin: cargo install --locked kani-verifier --version 0.62.0. Bumping the
+# Pin: cargo install --locked kani-verifier --version 0.67.0. Bumping the
 # pin is a deliberate runbook change so CI behaviour is reproducible
 # from the workspace's pinned version.
 
@@ -56,7 +56,7 @@ jobs:
       - name: Install Kani (pinned)
         shell: bash
         env:
-          KANI_VERSION: "0.62.0"
+          KANI_VERSION: "0.67.0"
         run: |
           set -euo pipefail
           cargo install --locked kani-verifier --version "${KANI_VERSION}"
@@ -71,8 +71,8 @@ jobs:
           echo "--- Kani version ---"
           cargo kani --version
           echo "--- harnesses for ${{ matrix.crate }} ---"
-          # Kani 0.62's assertion reachability checks report the bootstrap
-          # invariant assertions as unreachable on this pinned toolchain.
+          # Assertion reachability can report these small invariant harnesses
+          # as unreachable on the pinned verifier/toolchain combination.
           cargo kani -p "${{ matrix.crate }}" --output-format old --no-assertion-reach-checks
 
       - name: Surface result regardless of pass/fail
