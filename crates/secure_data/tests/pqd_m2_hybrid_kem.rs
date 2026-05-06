@@ -60,7 +60,7 @@ async fn tm_pqd_abuse_3_tampered_ml_kem_ciphertext_fails_cleanly() {
             result,
             Err(DataError::AuthenticationFailure) | Err(DataError::EnvelopeMalformed { .. })
         ),
-        "tampered ML-KEM ciphertext must not decrypt; got {result:?}"
+        "tampered ML-KEM ciphertext must not decrypt"
     );
 }
 
