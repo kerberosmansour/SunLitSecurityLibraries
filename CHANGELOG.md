@@ -9,6 +9,11 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ## Unreleased
 
+- Published the per-rule ANSSI Rust Secure Coding Guidelines mapping. All 61
+  pinned rules now carry a posture (`compliant`, `partial`, `waived`, or
+  `N/A`) with concrete evidence pointers or named compensating controls, so EU
+  consumers can cite the mapping in procurement reviews and IEC 62443-4-1 SD-3
+  audit support.
 - New CI lint at `scripts/anssi-mapping-lint.sh` gates the ANSSI Rust
   compliance mapping at `docs/compliance/anssi-rust.md`. Validates that
   the ANSSI commit pin matches, the rule count is exactly 61, every

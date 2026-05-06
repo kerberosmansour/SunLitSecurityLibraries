@@ -750,6 +750,12 @@ Applicable to energy and industrial deployments of SunLit Security Libraries.
 | **CC8.1** Change management | THREAT-E-04, THREAT-T-03 | M10 Hardening |
 | **C1.1** Confidentiality of information | THREAT-I-01, THREAT-I-03, THREAT-I-04 | `secure_errors` (M2), `secure_output` (M5), `secure_data` (M8) |
 
+Additional secure-coding evidence:
+
+| Evidence Set | Mapping |
+|---|---|
+| ANSSI Rust Secure Coding Guidelines (FR) | [`docs/compliance/anssi-rust.md`](docs/compliance/anssi-rust.md) — 61-rule mapping pinned to ANSSI `84e6ae18`; framed as state-of-the-art evidence in French markets / IEC 62443-4-1 SD-3 audit support |
+
 ---
 
 ## 7. Residual Risks
