@@ -25,7 +25,7 @@ The verified property is: **at most one probe is in flight at any time during Ha
 | `failureCount` | `0..MaxFailures` | Trips the breaker when threshold is reached |
 | `openTicks` | `0..MaxOpenTicks` | Drives Open → HalfOpen ageing |
 | `probeInflight` | `BOOLEAN` | The load-bearing flag for the single-probe rule |
-| `probesAccepted` | `Nat` | Bookkeeping to bound liveness |
+| `probesAccepted` | `Nat` | Bookkeeping for the current half-open episode |
 | `callerActive` | `SUBSET Callers` | The set of callers currently inside `call()`; `Cardinality` is the safety property witness |
 
 ## Actions
@@ -36,7 +36,7 @@ The verified property is: **at most one probe is in flight at any time during Ha
 | `ClosedCallFailure(c)` | increments `failureCount` (without tripping) |
 | `ClosedCallFailureTripBreaker(c)` | the threshold-reaching failure: `state' = Open`, `openTicks' = 0` |
 | `OpenShortCircuit(c)` | call short-circuits without changing state |
-| `OpenTimerElapses` | `state' = HalfOpen` after `MaxOpenTicks` |
+| `OpenTimerElapses` | `state' = HalfOpen` after `MaxOpenTicks`; resets per-episode probe bookkeeping |
 | `OpenTick` | `openTicks' = openTicks + 1` |
 | `HalfOpenProbeStart(c)` | reserves the probe (precondition: `~probeInflight`) |
 | `HalfOpenProbeRejected(c)` | concurrent caller observes `probeInflight = TRUE`, returns `ProbeInFlight` |
@@ -50,7 +50,7 @@ The verified property is: **at most one probe is in flight at any time during Ha
 | `TypeOK` | All variables stay within declared types | PASS at bound |
 | `NoDoubleProbe` | `(state = HalfOpen ∧ probeInflight) ⇒ |callerActive| ≤ 1` | PASS at bound |
 | `NoOrphanReservation` | `probeInflight ⇒ |callerActive| ≥ 1` | PASS at bound |
-| `ProbeAcceptedIsBounded` | `probesAccepted ≤ MaxOpenTicks * NumCallers + NumCallers` | PASS at bound |
+| `ProbeAcceptedIsBounded` | `probesAccepted ≤ 1` within the current half-open episode | PASS at bound |
 
 ## Bound and rationale
 

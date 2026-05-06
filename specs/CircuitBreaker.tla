@@ -24,7 +24,7 @@ VARIABLES
     failureCount,
     openTicks,         \* ticks since entering Open
     probeInflight,     \* BOOLEAN
-    probesAccepted,    \* count of probe calls that ran the closure in HalfOpen
+    probesAccepted,    \* probe calls that ran the closure in the current HalfOpen episode
     callerActive       \* set of callers currently inside `call()`
 
 vars == <<state, failureCount, openTicks, probeInflight, probesAccepted, callerActive>>
@@ -85,7 +85,8 @@ OpenTimerElapses ==
     /\ openTicks + 1 = MaxOpenTicks
     /\ state' = "HalfOpen"
     /\ openTicks' = MaxOpenTicks
-    /\ UNCHANGED <<failureCount, probeInflight, probesAccepted, callerActive>>
+    /\ probesAccepted' = 0
+    /\ UNCHANGED <<failureCount, probeInflight, callerActive>>
 
 \* Open ticks (without ageing).
 OpenTick ==
@@ -160,12 +161,10 @@ NoDoubleProbe ==
 NoOrphanReservation ==
     probeInflight => Cardinality(callerActive) >= 1
 
-\* P3: NoSilentClose — the only transition to Closed (other than Init)
-\* is via HalfOpenProbeSuccess. Encoded as a state invariant: when
-\* state = Closed and failureCount = 0 and probesAccepted increased,
-\* the prior state was HalfOpen. (Approximated via probesAccepted
-\* counter; full temporal version not necessary for this property.)
+\* P3: ProbeAcceptedIsBounded — in a single HalfOpen episode, at most
+\* one probe call may run the downstream closure. The counter resets
+\* when Open ages into a fresh HalfOpen episode.
 ProbeAcceptedIsBounded ==
-    probesAccepted <= MaxOpenTicks * NumCallers + NumCallers
+    probesAccepted <= 1
 
 =============================================================================
