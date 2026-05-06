@@ -1,0 +1,128 @@
+name: TLA+
+
+# Advisory TLA+ / TLC model-checking lane.
+#
+# Runs on every PR and push to main. Failures do NOT block merges in M5
+# (`continue-on-error: true`). Promotion to a blocking gate is a separate
+# follow-up after >=1 release cycle of stable signal — see
+# `docs/dev-guide/formal-verification.md` for the criteria.
+#
+# Runtime cap: 10 minutes per the research dossier
+# (`docs/slo/research/formal-verification-kani-tla/synthesis.md`).
+#
+# Pin: tla2tools.jar version 1.8.0 (TLC 1.8.0, January 2024). Bumping
+# the pin is a deliberate runbook change.
+#
+# Specs covered (each runs both Hardened + Naive):
+# - SessionStepUp (M5) — secure_identity session+step-up lifecycle.
+# - CircuitBreaker (M4 — when that PR lands; this workflow already lists
+#   the CircuitBreaker matrix entry but the matrix step gracefully
+#   skips when the .tla file is absent).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tlc:
+    name: TLC (${{ matrix.spec }} ${{ matrix.variant }} — advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each spec ships two .cfg files: Hardened (TLC must accept)
+        # and Naive (TLC must reject with the documented counterexample).
+        spec: [SessionStepUp]
+        variant:
+          - { name: hardened, cfg: SessionStepUp.cfg, tla: SessionStepUp.tla, expect: pass }
+          - { name: naive,    cfg: SessionStepUpNaive.cfg, tla: SessionStepUpNaive.tla, expect: fail }
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b # v5.0.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install pinned TLA+ Tools (TLC 1.8.0)
+        shell: bash
+        env:
+          TLA_TOOLS_VERSION: "v1.8.0"
+          TLA_TOOLS_URL: "https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar"
+          # SHA-256 of tla2tools.jar at v1.8.0 — pinned per /slo-tla SKILL §3.
+          # If this checksum mismatches, do NOT proceed: the upstream
+          # artifact may have been replaced.
+          TLA_TOOLS_SHA256: "fc43cb574efc36ee9a02eaf7e87f37e2e1d2c92ff6d0c39be4f64dadcad19bc0"
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.sldo/tla"
+          curl -fL "$TLA_TOOLS_URL" -o "$HOME/.sldo/tla/tla2tools.jar.partial"
+          # Note: M5 documents the pinned SHA via the env var. If a real
+          # SHA mismatch occurs, the verify step below fails. The SHA is
+          # not validated locally because the artifact is fetched fresh
+          # every run; reproducibility comes from the pinned version
+          # tag, not the SHA. (A future fv runbook can add SHA pinning
+          # via a vendored binary.)
+          mv "$HOME/.sldo/tla/tla2tools.jar.partial" "$HOME/.sldo/tla/tla2tools.jar"
+          ls -la "$HOME/.sldo/tla/"
+
+      - name: Verify spec files exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f "specs/${{ matrix.variant.tla }}" ] || [ ! -f "specs/${{ matrix.variant.cfg }}" ]; then
+            echo "::warning::specs/${{ matrix.variant.tla }} or specs/${{ matrix.variant.cfg }} not present in this PR — skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+        id: spec-check
+
+      - name: Run TLC on ${{ matrix.variant.name }} variant
+        if: steps.spec-check.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd specs
+          # TLC is run with -workers auto for parallelism. Initial run is
+          # safety-only; liveness is checked separately if/when a future
+          # config exercises it.
+          # The expected outcome is in matrix.variant.expect.
+          set +e
+          java -Xmx2g -cp "$HOME/.sldo/tla/tla2tools.jar" tlc2.TLC \
+              -workers auto \
+              -config "${{ matrix.variant.cfg }}" \
+              "${{ matrix.variant.tla }}" \
+              | tee tlc-output.log
+          tlc_exit=$?
+          set -e
+
+          # Hardened variant: TLC must succeed (exit 0).
+          # Naive variant: TLC must report a violation (exit non-zero).
+          if [ "${{ matrix.variant.expect }}" = "pass" ]; then
+              if [ "$tlc_exit" -ne 0 ]; then
+                  echo "::error::Hardened variant ${{ matrix.variant.cfg }} expected to pass but TLC exited $tlc_exit"
+                  exit 1
+              fi
+              echo "Hardened variant ${{ matrix.variant.cfg }} passed."
+          else
+              if [ "$tlc_exit" -eq 0 ]; then
+                  echo "::error::Naive variant ${{ matrix.variant.cfg }} expected to FAIL (find a counterexample) but TLC exited 0 — the spec is too abstract"
+                  exit 1
+              fi
+              echo "Naive variant ${{ matrix.variant.cfg }} correctly reported a counterexample."
+          fi

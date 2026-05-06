@@ -45,7 +45,7 @@
 | 2 | Kani proofs for `secure_authz` deny-by-default + `secure_boundary` depth/size/field limits | `done` | 2026-05-06 | 2026-05-06 | [`docs/slo/lessons/fv-m2.md`](../lessons/fv-m2.md) | [`docs/slo/completion/fv-m2.md`](../completion/fv-m2.md) — discriminant + limit-rejection invariants proven within bounds; matrix extended to authz+boundary; Kani pin bumped to 0.67.0 for current dependency compatibility. Closes #12. |
 | 3 | Kani proofs for `secure_data` nonce-uniqueness within path + `secure_errors` public-body-no-leak | `done` | 2026-05-06 | 2026-05-06 | [`docs/slo/lessons/fv-m3.md`](../lessons/fv-m3.md) | [`docs/slo/completion/fv-m3.md`](../completion/fv-m3.md) — per-algorithm nonce-length invariants on `secure_data`; status-range + static-code + whitelist proofs on `secure_errors`. Closes #13. |
 | 4 | Add `secure_resilience::circuit_breaker` module + TLA+ spec + verified-design doc | `done` | 2026-05-06 | 2026-05-06 | (compact lessons in completion) | New module + Hardened/Naive TLA+ specs + verified-design doc + 7 BDD scenarios incl. concurrent double-probe rejection. Closes #14. |
-| 5 | TLA+ spec for `secure_identity` session+step-up + verified-design doc + `tla.yml` CI lane | `not_started` | | | | |
+| 5 | TLA+ spec for `secure_identity` session+step-up + verified-design doc + `tla.yml` CI lane | `done` | 2026-05-06 | 2026-05-06 | (compact lessons in completion) | [`docs/slo/completion/fv-m5.md`](../completion/fv-m5.md) — `specs/SessionStepUp{,Naive}.{tla,cfg}` + `.trace.md`; verified-design doc; `.github/workflows/tla.yml` (advisory, 10-min cap, TLC 1.8.0). Closes #15. |
 
 ---
 
