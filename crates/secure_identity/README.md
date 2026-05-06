@@ -20,16 +20,16 @@ Output is a `security_core::identity::AuthenticatedIdentity`, which `secure_auth
 
 ```toml
 [dependencies]
-secure_identity = "0.1"
+secure_identity = "0.1.2"
 
 # OIDC (PKCE) flows:
-# secure_identity = { version = "0.1", features = ["oidc"] }
+# secure_identity = { version = "0.1.2", features = ["oidc"] }
 
 # Redis-backed sessions:
-# secure_identity = { version = "0.1", features = ["session-redis"] }
+# secure_identity = { version = "0.1.2", features = ["session-redis"] }
 
 # Biometric / device-binding / step-up:
-# secure_identity = { version = "0.1", features = ["biometric"] }
+# secure_identity = { version = "0.1.2", features = ["biometric"] }
 ```
 
 ## Quick example — production boot check

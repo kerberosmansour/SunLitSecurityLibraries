@@ -14,10 +14,8 @@ name: TLA+
 # the pin is a deliberate runbook change.
 #
 # Specs covered (each runs both Hardened + Naive):
+# - CircuitBreaker (M4) — secure_resilience half-open single-probe rule.
 # - SessionStepUp (M5) — secure_identity session+step-up lifecycle.
-# - CircuitBreaker (M4 — when that PR lands; this workflow already lists
-#   the CircuitBreaker matrix entry but the matrix step gracefully
-#   skips when the .tla file is absent).
 
 on:
   push:
@@ -44,10 +42,27 @@ jobs:
       matrix:
         # Each spec ships two .cfg files: Hardened (TLC must accept)
         # and Naive (TLC must reject with the documented counterexample).
-        spec: [SessionStepUp]
-        variant:
-          - { name: hardened, cfg: SessionStepUp.cfg, tla: SessionStepUp.tla, expect: pass }
-          - { name: naive,    cfg: SessionStepUpNaive.cfg, tla: SessionStepUpNaive.tla, expect: fail }
+        include:
+          - spec: CircuitBreaker
+            variant: hardened
+            cfg: CircuitBreaker.cfg
+            tla: CircuitBreaker.tla
+            expect: pass
+          - spec: CircuitBreaker
+            variant: naive
+            cfg: CircuitBreakerNaive.cfg
+            tla: CircuitBreakerNaive.tla
+            expect: fail
+          - spec: SessionStepUp
+            variant: hardened
+            cfg: SessionStepUp.cfg
+            tla: SessionStepUp.tla
+            expect: pass
+          - spec: SessionStepUp
+            variant: naive
+            cfg: SessionStepUpNaive.cfg
+            tla: SessionStepUpNaive.tla
+            expect: fail
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -84,15 +99,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ ! -f "specs/${{ matrix.variant.tla }}" ] || [ ! -f "specs/${{ matrix.variant.cfg }}" ]; then
-            echo "::warning::specs/${{ matrix.variant.tla }} or specs/${{ matrix.variant.cfg }} not present in this PR — skipping"
+          if [ ! -f "specs/${{ matrix.tla }}" ] || [ ! -f "specs/${{ matrix.cfg }}" ]; then
+            echo "::warning::specs/${{ matrix.tla }} or specs/${{ matrix.cfg }} not present in this PR — skipping"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
         id: spec-check
 
-      - name: Run TLC on ${{ matrix.variant.name }} variant
+      - name: Run TLC on ${{ matrix.variant }} variant
         if: steps.spec-check.outputs.skip != 'true'
         shell: bash
         run: |
@@ -101,28 +116,28 @@ jobs:
           # TLC is run with -workers auto for parallelism. Initial run is
           # safety-only; liveness is checked separately if/when a future
           # config exercises it.
-          # The expected outcome is in matrix.variant.expect.
+          # The expected outcome is in matrix.expect.
           set +e
           java -Xmx2g -cp "$HOME/.sldo/tla/tla2tools.jar" tlc2.TLC \
               -workers auto \
-              -config "${{ matrix.variant.cfg }}" \
-              "${{ matrix.variant.tla }}" \
+              -config "${{ matrix.cfg }}" \
+              "${{ matrix.tla }}" \
               | tee tlc-output.log
           tlc_exit=$?
           set -e
 
           # Hardened variant: TLC must succeed (exit 0).
           # Naive variant: TLC must report a violation (exit non-zero).
-          if [ "${{ matrix.variant.expect }}" = "pass" ]; then
+          if [ "${{ matrix.expect }}" = "pass" ]; then
               if [ "$tlc_exit" -ne 0 ]; then
-                  echo "::error::Hardened variant ${{ matrix.variant.cfg }} expected to pass but TLC exited $tlc_exit"
+                  echo "::error::Hardened variant ${{ matrix.cfg }} expected to pass but TLC exited $tlc_exit"
                   exit 1
               fi
-              echo "Hardened variant ${{ matrix.variant.cfg }} passed."
+              echo "Hardened variant ${{ matrix.cfg }} passed."
           else
               if [ "$tlc_exit" -eq 0 ]; then
-                  echo "::error::Naive variant ${{ matrix.variant.cfg }} expected to FAIL (find a counterexample) but TLC exited 0 — the spec is too abstract"
+                  echo "::error::Naive variant ${{ matrix.cfg }} expected to FAIL (find a counterexample) but TLC exited 0 — the spec is too abstract"
                   exit 1
               fi
-              echo "Naive variant ${{ matrix.variant.cfg }} correctly reported a counterexample."
+              echo "Naive variant ${{ matrix.cfg }} correctly reported a counterexample."
           fi

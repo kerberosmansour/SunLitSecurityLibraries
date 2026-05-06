@@ -49,4 +49,4 @@ This mapping is state-of-the-art secure-coding evidence for French-market procur
 
 ## Lint Behaviour
 
-Milestone M3 adds `scripts/anssi-mapping-lint.sh`. The lint checks the pinned commit, the 61-row count, non-empty Status cells, and resolvable Evidence pointers for `compliant` rows. Treat the script as the source of truth for exact validation rules once it lands.
+`scripts/anssi-mapping-lint.sh` checks the pinned commit, the 61-row count, non-empty Status cells, and resolvable Evidence pointers for `compliant` rows. Treat the script as the source of truth for exact validation rules.

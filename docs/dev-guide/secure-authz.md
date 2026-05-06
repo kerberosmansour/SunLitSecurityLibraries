@@ -10,7 +10,7 @@
 
 ```toml
 [dependencies]
-secure_authz = { path = "../secure_authz" }
+secure_authz = "0.1.2"
 ```
 
 ---

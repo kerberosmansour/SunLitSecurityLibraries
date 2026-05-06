@@ -1,6 +1,6 @@
 [package]
 name = "secure_identity"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Authentication helpers for JWT, OIDC, MFA, API keys, sessions, and step-up policy."
@@ -34,18 +34,18 @@ totp-rs = { version = "5", features = ["otpauth"] }
 openidconnect = { version = "4", optional = true }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"], optional = true }
 redis = { version = "1", features = ["aio", "tokio-comp"], optional = true }
-security_core = { package = "security_core", version = "0.1.0", path = "../security_core" }
-security_events = { package = "security_events", version = "0.1.0", path = "../security_events" }
-secure_errors = { package = "secure_errors", version = "0.1.0", path = "../secure_errors" }
-secure_device_trust = { package = "secure_device_trust", version = "0.1.0", path = "../secure_device_trust" }
-secure_network = { package = "secure_network", version = "0.1.0", path = "../secure_network" }
+security_core = { package = "security_core", version = "0.1.2", path = "../security_core" }
+security_events = { package = "security_events", version = "0.1.2", path = "../security_events" }
+secure_errors = { package = "secure_errors", version = "0.1.2", path = "../secure_errors" }
+secure_device_trust = { package = "secure_device_trust", version = "0.1.2", path = "../secure_device_trust" }
+secure_network = { package = "secure_network", version = "0.1.2", path = "../secure_network" }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
 uuid = { workspace = true }
 serde = { workspace = true }
-security_core = { package = "security_core", version = "0.1.0", path = "../security_core" }
+security_core = { package = "security_core", version = "0.1.2", path = "../security_core" }
 time = { workspace = true }
 proptest = "1"
 ring = "0.17"

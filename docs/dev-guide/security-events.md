@@ -10,7 +10,7 @@
 
 ```toml
 [dependencies]
-security_events = { path = "../security_events" }
+security_events = "0.1.2"
 ```
 
 ---

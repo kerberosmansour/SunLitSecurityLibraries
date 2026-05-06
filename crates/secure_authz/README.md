@@ -20,10 +20,10 @@ Deny-by-default authorization (OWASP **C7**) with typed subjects/actions/resourc
 
 ```toml
 [dependencies]
-secure_authz = "0.1"  # default features: ["axum"]
+secure_authz = "0.1.2"  # default features: ["axum"]
 
 # For actix-web:
-# secure_authz = { version = "0.1", default-features = false, features = ["actix-web"] }
+# secure_authz = { version = "0.1.2", default-features = false, features = ["actix-web"] }
 ```
 
 ## Quick example (axum) — guard a route with `AuthzLayer`

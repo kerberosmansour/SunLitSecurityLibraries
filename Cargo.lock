@@ -3800,7 +3800,7 @@ dependencies = [
 
 [[package]]
 name = "secure_authz"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "actix-web",
  "axum",
@@ -3829,7 +3829,7 @@ dependencies = [
 
 [[package]]
 name = "secure_boundary"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "actix-http",
  "actix-web",
@@ -3862,7 +3862,7 @@ dependencies = [
 
 [[package]]
 name = "secure_data"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -3891,7 +3891,7 @@ dependencies = [
 
 [[package]]
 name = "secure_device_trust"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "secure_network",
  "security_core",
@@ -3902,7 +3902,7 @@ dependencies = [
 
 [[package]]
 name = "secure_errors"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "actix-web",
  "axum",
@@ -3922,7 +3922,7 @@ dependencies = [
 
 [[package]]
 name = "secure_identity"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "jsonwebtoken",
@@ -3950,7 +3950,7 @@ dependencies = [
 
 [[package]]
 name = "secure_network"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "proptest",
  "security_core",
@@ -3964,7 +3964,7 @@ dependencies = [
 
 [[package]]
 name = "secure_output"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "proptest",
  "security_core",
@@ -3972,7 +3972,7 @@ dependencies = [
 
 [[package]]
 name = "secure_privacy"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "hex",
  "hmac 0.12.1",
@@ -3988,7 +3988,7 @@ dependencies = [
 
 [[package]]
 name = "secure_reference_service"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "axum",
  "axum-core",
@@ -4020,7 +4020,7 @@ dependencies = [
 
 [[package]]
 name = "secure_resilience"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "proptest",
  "security_core",
@@ -4033,7 +4033,7 @@ dependencies = [
 
 [[package]]
 name = "secure_smoke_service"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "actix-web",
  "axum",
@@ -4092,7 +4092,7 @@ dependencies = [
 
 [[package]]
 name = "security_core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "derive_more 1.0.0",
  "serde",
@@ -4103,7 +4103,7 @@ dependencies = [
 
 [[package]]
 name = "security_events"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "hex",
  "hmac 0.12.1",

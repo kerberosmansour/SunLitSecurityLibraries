@@ -10,7 +10,7 @@
 
 ```toml
 [dependencies]
-secure_boundary = { path = "../secure_boundary" }
+secure_boundary = "0.1.2"
 ```
 
 ---

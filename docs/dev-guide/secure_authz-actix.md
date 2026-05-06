@@ -20,8 +20,8 @@ Behaviorally identical to the axum [`AuthzLayer`] — same rejection semantics, 
 
 ```toml
 [dependencies]
-secure_authz = { version = "0.1", default-features = false, features = ["actix-web"] }
-security_core = "0.1"   # only if you need AuthenticatedIdentity types directly
+secure_authz = { version = "0.1.2", default-features = false, features = ["actix-web"] }
+security_core = "0.1.2"   # only if you need AuthenticatedIdentity types directly
 actix-web = "4"
 ```
 

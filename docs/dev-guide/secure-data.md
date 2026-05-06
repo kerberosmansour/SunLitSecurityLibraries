@@ -10,13 +10,14 @@
 
 ```toml
 [dependencies]
-secure_data = { path = "../secure_data" }
+secure_data = "0.1.2"
 
 # With optional features:
-secure_data = { path = "../secure_data", features = ["vault"] }       # HashiCorp Vault
-secure_data = { path = "../secure_data", features = ["aws-kms"] }     # AWS KMS
-secure_data = { path = "../secure_data", features = ["fips"] }        # FIPS 140-2/3 backend
-secure_data = { path = "../secure_data", features = ["vault", "aws-kms"] } # Both
+secure_data = { version = "0.1.2", features = ["vault"] }       # HashiCorp Vault
+secure_data = { version = "0.1.2", features = ["aws-kms"] }     # AWS KMS
+secure_data = { version = "0.1.2", features = ["fips"] }        # FIPS 140-2/3 backend
+secure_data = { version = "0.1.2", features = ["pq"] }          # Hybrid PQ envelope wrap
+secure_data = { version = "0.1.2", features = ["vault", "aws-kms"] } # Both
 ```
 
 ---
@@ -562,9 +563,9 @@ match envelope.validate_structure() {
 # }
 ```
 
-### What comes next?
+### What is enforced now?
 
-M3 (issue #9) lands the cross-version compatibility matrix and `AlgorithmPolicy::min_version`. M4 (issue #10) documents the `fips` x `pq` posture honestly.
+The M3 compatibility matrix and `AlgorithmPolicy::min_version` checks are landed: v1 classical envelopes continue to decrypt, v2 hybrid envelopes require a PQ-enabled build, and policy downgrades fail closed. The M4 FIPS posture is also landed: `fips` and `pq` can be enabled together, but the PQ leg reports `pending_cmvp` and never claims validation.
 
 ### Why hybrid, not PQ-only?
 
@@ -606,7 +607,7 @@ let envelope = encrypt_with_policy(&policy, ...).await?;
 println!("{:?}", envelope);
 // EnvelopeEncrypted { version: "1", algorithm: "AES-256-GCM", ..., pq_fips_status: None }
 //
-// On a future M2 + `--features fips,pq` build:
+// On a `--features fips,pq` build:
 // EnvelopeEncrypted { version: "2", algorithm: "X25519+ML-KEM-768/HKDF-SHA-256", ...,
 //                     pq_fips_status: Some("pending_cmvp") }
 ```
@@ -674,6 +675,7 @@ fn load_config() -> Result<(), Box<dyn std::error::Error>> {
 | `aws-kms` | `AwsKmsKeyProvider`, `aws-sdk-kms` | Using AWS KMS |
 | `fips` | `aws-lc-rs` AEAD backend | FIPS 140-2/3 compliance required |
 | `password` | `Argon2Hasher`, `argon2` | Password hashing with Argon2id |
+| `pq` | `ml-kem`, `x25519-dalek`, `hkdf`, `sha2` | Hybrid X25519 + ML-KEM-768 v2 envelope key wrap |
 
 All features are off by default. Enable only what you need:
 

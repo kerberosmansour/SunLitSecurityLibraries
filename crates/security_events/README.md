@@ -17,10 +17,10 @@ Security logging, monitoring, and tamper-evident audit trail (OWASP C9). Part of
 
 ```toml
 [dependencies]
-security_events = "0.1"
+security_events = "0.1.2"
 
 # OpenTelemetry integration:
-# security_events = { version = "0.1", features = ["otel"] }
+# security_events = { version = "0.1.2", features = ["otel"] }
 ```
 
 ## What's inside

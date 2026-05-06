@@ -1,6 +1,6 @@
 [package]
 name = "secure_device_trust"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Native-client device trust decisions, attestation metadata, and trust-tier session policy."
@@ -13,10 +13,10 @@ keywords = ["security", "device", "trust", "attestation"]
 name = "secure_device_trust"
 
 [dependencies]
-security_core = { package = "security_core", version = "0.1.0", path = "../security_core" }
+security_core = { package = "security_core", version = "0.1.2", path = "../security_core" }
 serde = { workspace = true }
 time = { workspace = true }
 
 [dev-dependencies]
-secure_network = { package = "secure_network", version = "0.1.0", path = "../secure_network" }
+secure_network = { package = "secure_network", version = "0.1.2", path = "../secure_network" }
 serde_json = "1"
