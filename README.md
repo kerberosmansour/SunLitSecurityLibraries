@@ -121,6 +121,7 @@ The production milestone plan lives in
 | `password` | `argon2` | Argon2id password hashing and verification |
 | `azure-kv` | — | Azure Key Vault key provider (wrap/unwrap only) |
 | `mobile-storage` | — | Mobile secure storage: `SensitiveBuffer`, `BackupExclusion`, `MobileStoragePolicy` (MASVS-STORAGE-1) |
+| `pq` | — *(M1: reserved; M2: `ml-kem`, `x25519-dalek`, `hkdf`, `sha2`)* | Hybrid post-quantum X25519 + ML-KEM-768 / HKDF-SHA-256 KEM for envelope key wrap. M1 reserves the public surface (`CryptoAlgorithm::HybridX25519MlKem768`, `EncryptionEnvelope::combiner_id`, error variants, `pq` module size constants) so downstream consumers can pin against an envelope shape that won't break when M2 ships. See [`docs/slo/design/pq-migration-plan.md`](docs/slo/design/pq-migration-plan.md). |
 
 All features are off by default. Enable with `cargo build -p secure_data --features vault,aws-kms`.
 

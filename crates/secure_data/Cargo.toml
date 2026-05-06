@@ -19,6 +19,13 @@ aws-kms = ["dep:aws-sdk-kms", "dep:aws-config"]
 password = ["dep:argon2"]
 azure-kv = []
 mobile-storage = []
+# pq: post-quantum hybrid X25519 + ML-KEM-768 KEM behind a feature flag.
+# M1 reserves the flag with no dependencies — the hybrid implementation
+# (RustCrypto/ml-kem 0.3.0, x25519-dalek 2, hkdf 0.12, sha2 0.10) lands in
+# pq-readiness M2 (issue #8). M1 builds with `--features pq` are valid but
+# the encrypt path returns `DataError::PqUnavailable` because the KEM is
+# not yet implemented. See `docs/slo/design/pq-migration-plan.md`.
+pq = []
 
 [dependencies]
 security_core = { package = "security_core", version = "0.1.0", path = "../security_core" }
