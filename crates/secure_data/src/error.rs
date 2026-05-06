@@ -132,4 +132,51 @@ pub enum DataError {
         /// The minimum algorithm required by policy.
         minimum: String,
     },
+
+    /// A post-quantum operation was requested but the `pq` feature is not
+    /// compiled into this build.
+    ///
+    /// Emitted when `CryptoAlgorithm::HybridX25519MlKem768` is selected on a
+    /// build without `--features pq`. The `pq` feature gates the optional
+    /// dependencies (`ml-kem`, `x25519-dalek`, `hkdf`, `sha2`); without them
+    /// the encrypt/decrypt path cannot construct the hybrid KEM. There is no
+    /// silent fallback to a classical algorithm — see
+    /// `docs/slo/design/pq-migration-plan.md` for the rationale.
+    #[error("post-quantum unavailable: rebuild with `--features pq`")]
+    PqUnavailable,
+
+    /// A post-quantum envelope (carrying a `combiner_id`) was decoded on a
+    /// build without `--features pq`.
+    ///
+    /// Distinct from `PqUnavailable` (encrypt-side request) — this variant is
+    /// the decrypt-side counterpart, returned when a v2 hybrid envelope is
+    /// presented to a non-PQ build. Never silently downgrades to a classical
+    /// algorithm.
+    #[error("post-quantum feature required: this envelope was produced with the `pq` feature; rebuild with `--features pq` to decrypt")]
+    PqFeatureRequired,
+
+    /// An envelope was rejected by an `AlgorithmPolicy` constraint that the
+    /// existing `AlgorithmBelowPolicyMinimum` variant does not capture (e.g.,
+    /// a wire-format-version policy that requires v2-or-higher envelopes).
+    ///
+    /// Distinct from `AlgorithmBelowPolicyMinimum`: that variant is about the
+    /// rank of the AEAD algorithm. This variant is about higher-level policy
+    /// decisions like minimum envelope version or required combiner.
+    #[error("algorithm rejected by policy: {reason}")]
+    AlgorithmRejectedByPolicy {
+        /// Human-readable reason — must not include sensitive material.
+        reason: String,
+    },
+
+    /// An envelope failed structural validation before any cryptographic
+    /// operation was attempted.
+    ///
+    /// Examples: a v1 envelope (classical AEAD) carrying a `combiner_id`
+    /// field; an envelope with internally inconsistent metadata. Returned
+    /// from the deserialize / validate boundary, not from the AEAD path.
+    #[error("envelope malformed: {reason}")]
+    EnvelopeMalformed {
+        /// Human-readable reason — must not include the malformed bytes.
+        reason: String,
+    },
 }
