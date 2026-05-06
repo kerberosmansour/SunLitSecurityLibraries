@@ -17,7 +17,8 @@
 - **`nonce_length_preserved_per_algorithm`** assumes the bound (`expected_len ∈ {12, 24}`) explicitly. Without the assumption, Kani would explore arbitrary `usize` values; with it, the proof is bounded and tractable.
 
 ## Assumptions verified
-- Kani's symbolic `kani::any::<AppError>()` covers every variant (verified at runbook authoring; documented in research dossier).
+- Bounded symbolic selectors cover every `AppError` variant plus both `RateLimit` retry-after shapes and every current `CryptoAlgorithm`; Kani does not synthesize these non-exhaustive enums directly.
+- The `secure_errors` whitelist proof uses the internal `PublicErrorCode` enum so Kani proves the mapping table without spending the advisory lane on string-content comparisons.
 - `PublicError.code` is `&'static str` by type signature in `crate::public::PublicError` — Kani's bit-precise check on the type is sufficient.
 - The `[lints.rust] unexpected_cfgs` config is required per crate; carrying forward fv M1's pattern works in `secure_errors` and the proofs compile clean.
 

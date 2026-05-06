@@ -88,6 +88,17 @@ const XCHACHA20_POLY1305_NONCE_LEN: usize = 24;
 
 use crate::algorithm::CryptoAlgorithm;
 
+fn symbolic_crypto_algorithm() -> CryptoAlgorithm {
+    let case: u8 = kani::any();
+    kani::assume(case < 3);
+
+    match case {
+        0 => CryptoAlgorithm::Aes256Gcm,
+        1 => CryptoAlgorithm::XChaCha20Poly1305,
+        _ => CryptoAlgorithm::HybridX25519MlKem768,
+    }
+}
+
 /// Proof: `CryptoAlgorithm::nonce_len()` returns a value within the set
 /// of canonical AEAD nonce lengths (12 for AES-256-GCM, 24 for
 /// XChaCha20-Poly1305).
@@ -99,7 +110,7 @@ use crate::algorithm::CryptoAlgorithm;
 /// plan, which is already in the canonical set).
 #[kani::proof]
 fn nonce_len_per_algorithm_in_canonical_set() {
-    let alg: CryptoAlgorithm = kani::any();
+    let alg = symbolic_crypto_algorithm();
     let actual = alg.nonce_len();
 
     assert!(actual == AES_256_GCM_NONCE_LEN || actual == XCHACHA20_POLY1305_NONCE_LEN);
@@ -117,7 +128,7 @@ fn nonce_len_per_algorithm_in_canonical_set() {
 #[kani::proof]
 #[kani::unwind(2)]
 fn nonce_length_preserved_per_algorithm() {
-    let alg: CryptoAlgorithm = kani::any();
+    let alg = symbolic_crypto_algorithm();
     let expected_len = alg.nonce_len();
 
     // Bound the symbolic nonce length to the two valid values to keep
