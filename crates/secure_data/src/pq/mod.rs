@@ -55,10 +55,35 @@ pub fn is_recognised_combiner(id: u8) -> bool {
     id == COMBINER_ID_X25519_ML_KEM_768
 }
 
-/// Returns the FIPS-track status of the post-quantum path.
+/// Returns the runtime FIPS posture of the PQ path on this build.
 ///
-/// This is an honest status label only. As of this runbook, no CMVP
-/// certificate covers ML-KEM-768 for this crate's PQ path.
+/// - `None` — the `pq` feature is not enabled; the question does not apply.
+/// - `Some("pending_cmvp")` — the `pq` feature is enabled. As of 2026-05,
+///   no CMVP cert covers ML-KEM-768 in any Rust-callable cryptographic
+///   module; the PQ path is honestly labelled as validation-pending,
+///   regardless of whether the `fips` feature is also enabled.
+/// - `Some("validated")` — the `pq-aws-lc` feature (or successor) selects
+///   a CMVP-validated PQ implementation. This branch does not exist as
+///   of M4; it is reserved for the future runbook that promotes the
+///   FIPS-track posture per `docs/slo/design/pq-migration-plan.md` §5.
+///
+/// Auditors / SBOM consumers can call this function (or grep for its
+/// returned literal in compiled binaries) to verify the honest label is
+/// in place. The CI lint `scripts/lint-fips-pq-claims.sh` enforces the
+/// project's documentation posture; this function enforces the runtime
+/// posture.
+///
+/// # Examples
+///
+/// ```
+/// use secure_data::pq::fips_status;
+///
+/// match fips_status() {
+///     None => { /* PQ path not built in */ }
+///     Some("pending_cmvp") => { /* PQ enabled; FIPS pending CMVP */ }
+///     Some(_other) => { /* future "validated" / etc. */ }
+/// }
+/// ```
 #[must_use]
 pub fn fips_status() -> Option<&'static str> {
     #[cfg(feature = "pq")]
