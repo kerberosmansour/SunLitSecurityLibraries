@@ -152,10 +152,7 @@ async fn tm_pqd_abuse_6_downgrade_attack_rejected_by_policy() {
             assert!(reason.contains("envelope_version"));
             assert!(reason.contains("min_envelope_version"));
         }
-        other => panic!(
-            "expected AlgorithmRejectedByPolicy on downgrade, got: {:?}",
-            other
-        ),
+        _ => panic!("expected AlgorithmRejectedByPolicy on downgrade"),
     }
 }
 
@@ -201,10 +198,7 @@ async fn tm_pqd_abuse_7_version_byte_tamper_fails_at_aead_authentication() {
         Err(DataError::AuthenticationFailure) => {}
         Err(DataError::AlgorithmRejectedByPolicy { .. }) => {}
         Err(DataError::EnvelopeMalformed { .. }) => {}
-        other => panic!(
-            "version-byte tamper must NOT silently decrypt; got: {:?}",
-            other
-        ),
+        _ => panic!("version-byte tamper must NOT silently decrypt"),
     }
 }
 
