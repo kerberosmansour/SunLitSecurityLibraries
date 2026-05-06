@@ -29,6 +29,13 @@ breaking API changes, but security fixes and migration notes should be explicit.
   with `combiner_id = 0x01`; existing classical v1 envelopes continue to
   decrypt unchanged. The `pq` path is labelled `pending_cmvp` and makes no
   FIPS-validation claim. Closes #8.
+- `secure_data` adds `AlgorithmPolicy::with_min_envelope_version(u8)` and
+  `secure_data::envelope::decrypt_with_policy` for downgrade-attack
+  defence on the decrypt side. A consumer that requires v2-or-higher
+  envelopes can now reject v1 envelopes at the structural boundary
+  before any AEAD work; v1 envelopes return
+  `DataError::AlgorithmRejectedByPolicy { reason }`. Default
+  `AlgorithmPolicy` continues to accept every envelope. Closes #9.
 - `secure_data` reserves a post-quantum migration path. The crate now exposes a
   `CryptoAlgorithm::HybridX25519MlKem768` enum slot, an optional
   `EncryptionEnvelope::combiner_id: Option<u8>` wire-format field, and a public `pq` module with

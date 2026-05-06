@@ -512,6 +512,62 @@ fn xchacha_cipher_from_dek(dek: &[u8]) -> Result<XChaCha20Poly1305, DataError> {
     Ok(XChaCha20Poly1305::new(key))
 }
 
+/// Decrypts an [`EnvelopeEncrypted`] under an explicit [`AlgorithmPolicy`].
+///
+/// Identical to [`decrypt_for_use`] except the policy is checked against
+/// the envelope's wire-format version *before* any cryptographic
+/// operation. When the envelope's version is below the configured
+/// `min_envelope_version`, returns
+/// [`DataError::AlgorithmRejectedByPolicy`] — the downgrade-attack
+/// defence (`tm-pqd-abuse-6`).
+///
+/// # Errors
+///
+/// - [`DataError::AlgorithmRejectedByPolicy`] when the envelope's
+///   version is below the configured `min_envelope_version`.
+/// - All errors that `decrypt_for_use` returns (envelope-malformed,
+///   pq-feature-required, AEAD authentication failure, etc.).
+///
+/// # Examples
+///
+/// ```
+/// # async fn example() -> Result<(), secure_data::error::DataError> {
+/// use secure_data::algorithm::{AlgorithmPolicy, CryptoAlgorithm};
+/// use secure_data::envelope::{decrypt_with_policy, encrypt_for_storage};
+/// use secure_data::kms::StaticDevKeyProvider;
+///
+/// let provider = StaticDevKeyProvider::new();
+/// let envelope = encrypt_for_storage(b"hello", "default", &provider).await?;
+///
+/// // Default policy — accepts every envelope version.
+/// let lax = AlgorithmPolicy::default();
+/// let plain = decrypt_with_policy(&envelope, &provider, &lax).await?;
+/// assert_eq!(plain, b"hello");
+///
+/// // Strict policy — rejects v1 envelopes.
+/// let strict = AlgorithmPolicy::prefer(CryptoAlgorithm::HybridX25519MlKem768)
+///     .with_min_envelope_version(2);
+/// let result = decrypt_with_policy(&envelope, &provider, &strict).await;
+/// assert!(matches!(
+///     result,
+///     Err(secure_data::error::DataError::AlgorithmRejectedByPolicy { .. })
+/// ));
+/// # Ok(())
+/// # }
+/// ```
+pub async fn decrypt_with_policy<P: KeyProvider>(
+    envelope: &EnvelopeEncrypted,
+    provider: &P,
+    policy: &AlgorithmPolicy,
+) -> Result<Vec<u8>, DataError> {
+    // Pre-flight: validate the envelope's wire-format version against
+    // the policy *before* any AEAD work. Catches downgrade attacks
+    // (`tm-pqd-abuse-6`) at the structural boundary.
+    policy.validate_envelope_version(&envelope.version)?;
+
+    decrypt_for_use(envelope, provider).await
+}
+
 /// Encrypts using the specified algorithm.
 fn encrypt_with_algorithm(
     algorithm: CryptoAlgorithm,
