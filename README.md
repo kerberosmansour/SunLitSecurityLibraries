@@ -169,6 +169,12 @@ Comprehensive guides for integrating each crate into your Rust applications:
 | [`secure_device_trust`](./docs/dev-guide/secure-device-trust.md) | Native-client bootstrap identity, client type/platform, backend attestation mode, trust-tier decisions |
 | [`secure_authz`](./docs/dev-guide/secure-authz.md) | Deny-by-default authorization, RBAC + ABAC + temporal permissions, tenant isolation, bulk checks, `AuthzLayer` middleware |
 | [`secure_data`](./docs/dev-guide/secure-data.md) | Secret types, envelope encryption, key rotation, KMS providers (Vault, AWS), FIPS readiness |
+| [`secure_data` PQ](./docs/dev-guide/secure-data-pq.md) | Hybrid X25519 + ML-KEM-768 v2 envelope key wrap behind `secure_data/pq` |
+| [`secure_network`](./docs/dev-guide/secure-network.md) | TLS policy validation, SPKI pinning, mTLS client identity, cleartext detection |
+| [`secure_resilience`](./docs/dev-guide/secure-resilience.md) | Environment signals, RASP decisions, and the TLA+-verified circuit breaker |
+| [`secure_privacy`](./docs/dev-guide/secure-privacy.md) | PII classification, consent checks, retention policy, HMAC pseudonymization |
+| [Formal verification](./docs/dev-guide/formal-verification.md) | Kani proof catalogue and TLA+ specs for circuit breaker/session step-up evidence |
+| [ANSSI mapping](./docs/dev-guide/anssi-mapping.md) | How auditors consume the 61-rule ANSSI Rust evidence mapping |
 | [Integration Guide](./docs/dev-guide/integration-guide.md) | End-to-end middleware ordering, `AppState` setup, request handler patterns, production checklist |
 
 Runbook and project-delivery artifacts live in [`docs/slo/`](docs/slo/README.md):
@@ -285,7 +291,7 @@ cargo vet                    # audit trail
 - **Advisory ignore list**: every entry requires a written justification (see `deny.toml`)
 - **Memory-safety attestation**: every workspace crate declares `#![forbid(unsafe_code)]` at lib-root. The posture is regression-tested by [`crates/security_core/tests/no_unsafe_code.rs`](./crates/security_core/tests/no_unsafe_code.rs) — removal fails the build with a named-crate error. The accompanying scan also asserts no `unsafe` keyword appears anywhere in `crates/*/src/`.
 - **Transitive `unsafe` visibility**: every PR runs `cargo geiger --workspace --all-features` (advisory, 10-min cap) and uploads the JSON artifact. The number is the upper bound across all features; deltas are visible to reviewers via the artifact diff. See [`docs/dev-guide/unsafe-budget.md`](./docs/dev-guide/unsafe-budget.md) for the posture and threshold-promotion plan.
-- **Formal verification** (advisory, in flight): every PR runs `cargo kani` (15-min cap) against the workspace's proof harnesses. M1 ships a bootstrap proof in `secure_data` (nonce non-zero); M2–M5 extend to `secure_authz`, `secure_boundary`, `secure_errors`, plus TLA+ specs for a new `secure_resilience::circuit_breaker` module and the existing `secure_identity` session+step-up flow. See [`docs/dev-guide/formal-verification.md`](./docs/dev-guide/formal-verification.md).
+- **Formal verification** (advisory): every PR runs `cargo kani` (15-min cap) against the workspace's proof harnesses for `secure_data`, `secure_authz`, `secure_boundary`, and `secure_errors`. The TLA+ lane (10-min cap) checks the verified circuit-breaker and session step-up state machines, including their Naive counterexample specs. See [`docs/dev-guide/formal-verification.md`](./docs/dev-guide/formal-verification.md).
 
 ---
 

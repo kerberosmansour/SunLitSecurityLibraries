@@ -1,6 +1,6 @@
 [package]
 name = "secure_resilience"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Security resilience helpers for environment checks, integrity signals, and timeout budgeting."
@@ -13,8 +13,8 @@ keywords = ["security", "resilience", "integrity", "runtime"]
 name = "secure_resilience"
 
 [dependencies]
-security_core = { package = "security_core", version = "0.1.0", path = "../security_core" }
-security_events = { package = "security_events", version = "0.1.0", path = "../security_events" }
+security_core = { package = "security_core", version = "0.1.2", path = "../security_core" }
+security_events = { package = "security_events", version = "0.1.2", path = "../security_events" }
 serde = { workspace = true }
 sha2 = "0.10"
 time = { workspace = true }

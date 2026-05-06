@@ -21,10 +21,10 @@ Framework-neutral core; pick `axum` (default), `actix-web`, or both.
 
 ```toml
 [dependencies]
-secure_boundary = "0.1"  # default features: ["axum"]
+secure_boundary = "0.1.2"  # default features: ["axum"]
 
 # For actix-web:
-# secure_boundary = { version = "0.1", default-features = false, features = ["actix-web"] }
+# secure_boundary = { version = "0.1.2", default-features = false, features = ["actix-web"] }
 ```
 
 ## Quick example (axum)

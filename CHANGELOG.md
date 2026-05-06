@@ -9,6 +9,10 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ## Unreleased
 
+- No unreleased changes.
+
+## [0.1.2] - 2026-05-06
+
 - Published the per-rule ANSSI Rust Secure Coding Guidelines mapping. All 61
   pinned rules now carry a posture (`compliant`, `partial`, `waived`, or
   `N/A`) with concrete evidence pointers or named compensating controls, so EU
@@ -78,9 +82,9 @@ breaking API changes, but security fixes and migration notes should be explicit.
   under `#![cfg(kani)]` so it has zero impact on regular builds. Promotion
   of the lane to a blocking gate is a separate runbook after at least one
   release cycle of stable signal. See `docs/dev-guide/formal-verification.md`
-  for the proof catalogue, planned M2–M5 proofs, and the TLA+ specs landing
-  for `secure_resilience::circuit_breaker` (M4) and `secure_identity`
-  session+step-up (M5). Closes #11.
+  for the proof catalogue and the TLA+ specs for
+  `secure_resilience::circuit_breaker` and `secure_identity` session+step-up.
+  Closes #11.
 - `secure_resilience` now ships a TLA+-verified circuit breaker
   (`CircuitBreaker`, `CircuitBreakerPolicy`, `CircuitBreakerState`,
   `CircuitBreakerError`). Closed/open/half-open state machine with the
@@ -102,9 +106,8 @@ breaking API changes, but security fixes and migration notes should be explicit.
   MaxStepUpTicks=2, MaxPrivActionAttempts=3`. The Naive variant deliberately
   omits the step-up gate; TLC must find the documented counterexample (verified per
   `specs/SessionStepUp.trace.md`). Verified-design doc at
-  `docs/slo/design/session-step-up-verified.md`. The lane already lists
-  a CircuitBreaker matrix entry for fv M4 (#14) — when that PR lands,
-  the entry activates without workflow changes. Closes #15.
+  `docs/slo/design/session-step-up-verified.md`. The same lane now also runs
+  the CircuitBreaker hardened and naive specs. Closes #15.
 - The supply-chain CI lane now runs `cargo-geiger` (pinned to `0.13.0`) on
   every PR and uploads the JSON artifact (30-day retention). The advisory step
   surfaces transitive `unsafe` usage in the dependency tree; deltas are

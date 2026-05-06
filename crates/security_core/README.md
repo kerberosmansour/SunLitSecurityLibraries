@@ -16,7 +16,7 @@ You're building a Rust service or library that needs to talk to other security c
 
 ```toml
 [dependencies]
-security_core = "0.1"
+security_core = "0.1.2"
 ```
 
 ## What's inside
@@ -62,7 +62,7 @@ assert_ne!(class, DataClassification::Public);
 
 ## Status
 
-Alpha. APIs may change before 1.0; pinning to `version = "0.1"` is recommended.
+Alpha. APIs may change before 1.0; pinning to `version = "0.1.2"` is recommended.
 
 ## Links
 

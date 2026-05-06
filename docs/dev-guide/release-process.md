@@ -16,18 +16,18 @@ The service crates are internal integration fixtures and are marked
 - `secure_smoke_service`
 
 Publish the library crates individually so downstream users can depend only on
-the control they need. crates.io package names use the `sunlit_` prefix, while
-the Rust library target names stay stable for imports such as
-`use secure_data::...`.
+the control they need. The current crates.io package names match the Rust
+library target names exactly, for example `secure_data` is installed with
+`cargo add secure_data` and imported with `use secure_data::...`.
 
-Recommended first-publish order:
+Recommended publish order for the `0.1.2` release:
 
 1. `security_core`
 2. `security_events`
-3. `secure_output`
-4. `secure_device_trust`
+3. `secure_errors`
+4. `secure_output`
 5. `secure_network`
-6. `secure_errors`
+6. `secure_device_trust`
 7. `secure_boundary`
 8. `secure_data`
 9. `secure_resilience`
@@ -35,7 +35,8 @@ Recommended first-publish order:
 11. `secure_identity`
 12. `secure_authz`
 
-Before publishing, package every crate:
+Before publishing, package every crate from a clean branch that points at the
+release commit:
 
 ```bash
 cargo package -p security_core
@@ -48,11 +49,12 @@ do
 done
 ```
 
-Only `security_core` can fully package-verify before anything is
-published. The other first-release crates have versioned local path dependencies
-that Cargo resolves against crates.io during package verification, so package
-them and publish them one at a time after their prerequisite crates exist in the
-registry.
+For update releases, run `cargo publish --dry-run -p <crate>` immediately
+before publishing each crate in the order above. The manifests keep versioned
+local path dependencies; when Cargo prepares the package, the published
+manifest resolves those sibling dependencies from crates.io. That means a
+dependent crate's dry run only succeeds after its prerequisite `0.1.2` packages
+have reached the index.
 
 Before publishing or making the repository public, run the local supply-chain
 gate. It includes `cargo audit`, `cargo deny`, `cargo vet`, and OSV Scanner:
@@ -61,11 +63,18 @@ gate. It includes `cargo audit`, `cargo deny`, `cargo vet`, and OSV Scanner:
 bash scripts/audit.sh
 ```
 
-When ready, publish in the order above:
+When ready, publish in the order above. crates.io publishes are permanent for
+the uploaded version. Space each upload by at least 10 minutes to avoid
+registry throttling and to give the index time to settle before dependents are
+published:
 
 ```bash
 cargo login
 cargo publish -p security_core
+sleep 600
+cargo publish -p security_events
+sleep 600
+# continue through the ordered crate list
 ```
 
 Publishing to crates.io is permanent for a given version. If a secret ever
@@ -89,10 +98,10 @@ To produce signed artifacts without publishing:
 
 ```bash
 cosign verify-blob \
-  --bundle secure_data-0.1.0.crate.sigstore.json \
+  --bundle secure_data-0.1.2.crate.sigstore.json \
   --certificate-identity-regexp 'https://github.com/kerberosmansour/SunLitSecurityLibraries/.github/workflows/release-sign.yml@refs/(heads|tags)/.*' \
   --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
-  secure_data-0.1.0.crate
+  secure_data-0.1.2.crate
 ```
 
 ## GitHub hardening checklist

@@ -19,6 +19,12 @@ The axum adapters are covered by the per-crate rustdoc and the workspace's [`ARC
 - [Branch protection](./branch-protection.md) — live baseline, public-release target, and required checks for GitHub.
 - [Release process](./release-process.md) — crates.io packaging order, Sigstore verification, and GitHub hardening checklist.
 - [Static analysis](./static-analysis.md) — Semgrep Rust scanning now and CodeQL code scanning once the repo is public.
+- [`secure_network`](./secure-network.md) — TLS policy checks, cleartext URL detection, SPKI certificate pinning, and mTLS edge identity validation.
+- [`secure_resilience`](./secure-resilience.md) — circuit breaker, RASP signal aggregation, app integrity checks, and the TLA+ verification trail.
+- [`secure_privacy`](./secure-privacy.md) — PII classification, HMAC pseudonymization, consent decisions, and retention status checks.
+- [`secure_data` PQ guide](./secure-data-pq.md) — hybrid X25519 + ML-KEM-768 v2 envelope key wrap behind `secure_data/pq`.
+- [Formal verification](./formal-verification.md) — Kani harnesses, TLA+ specs, and the advisory verification lanes.
+- [ANSSI Rust mapping](./anssi-mapping.md) — 61-rule evidence map pinned to ANSSI `84e6ae18`.
 
 ## How the examples stay honest
 

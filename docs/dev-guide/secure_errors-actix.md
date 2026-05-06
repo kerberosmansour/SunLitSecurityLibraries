@@ -26,7 +26,7 @@ Byte-identical output to the axum path for the same `AppError` — verified by [
 
 ```toml
 [dependencies]
-secure_errors = { version = "0.1", default-features = false, features = ["actix-web"] }
+secure_errors = { version = "0.1.2", default-features = false, features = ["actix-web"] }
 actix-web = "4"
 ```
 

@@ -20,13 +20,13 @@ A single source-of-truth mapper (`http::into_response_parts`) turns `AppError` i
 
 ```toml
 [dependencies]
-secure_errors = "0.1"  # default: axum
+secure_errors = "0.1.2"  # default: axum
 
 # For actix-web instead of axum:
-# secure_errors = { version = "0.1", default-features = false, features = ["actix-web"] }
+# secure_errors = { version = "0.1.2", default-features = false, features = ["actix-web"] }
 
 # Both at once (e.g. workspace with services on both):
-# secure_errors = { version = "0.1", features = ["axum", "actix-web"] }
+# secure_errors = { version = "0.1.2", features = ["axum", "actix-web"] }
 ```
 
 ## Quick example (axum)

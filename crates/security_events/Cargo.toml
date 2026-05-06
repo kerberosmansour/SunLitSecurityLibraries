@@ -1,6 +1,6 @@
 [package]
 name = "security_events"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Security telemetry, redaction, HMAC-sealed events, and audit-friendly event sinks."
@@ -18,7 +18,7 @@ otel = ["dep:tracing-opentelemetry", "dep:opentelemetry"]
 http-sink = ["dep:reqwest"]
 
 [dependencies]
-security_core = { package = "security_core", version = "0.1.0", path = "../security_core" }
+security_core = { package = "security_core", version = "0.1.2", path = "../security_core" }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
 serde = { workspace = true }
@@ -34,5 +34,8 @@ opentelemetry = { version = "0.27", optional = true }
 
 [dev-dependencies]
 serde_json = "1"
-secure_errors = { path = "../secure_errors" }
+# Dev-only cycle break: `secure_errors` depends on `security_events` at runtime,
+# so this dev-dependency must remain satisfiable before `secure_errors` 0.1.2
+# has been published. The local path still exercises the workspace crate.
+secure_errors = { package = "secure_errors", version = "0.1.1", path = "../secure_errors" }
 proptest = "1"

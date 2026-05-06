@@ -1,13 +1,13 @@
 # Formal Verification
 
-> **Status:** M1 + M2 of the [`formal-verification-kani-tla` runbook](../slo/future/RUNBOOK-formal-verification-kani-tla.md) — Kani toolchain bootstrapped with nonce and discriminant/limit proofs plus an advisory CI lane. M3 adds proofs in `secure_data` and `secure_errors`; M4 ships a new `secure_resilience::circuit_breaker` module with a TLA+-verified design; M5 lands the TLA+ spec for the existing `secure_identity` session+step-up flow.
+> **Status:** M1-M5 of the [`formal-verification-kani-tla` runbook](../slo/future/RUNBOOK-formal-verification-kani-tla.md) are complete. The advisory Kani lane covers `secure_data`, `secure_authz`, `secure_boundary`, and `secure_errors`; the advisory TLA+ lane covers the circuit-breaker and session step-up state machines.
 
 SunLit ships proof-grade evidence for safety-critical invariants alongside its property-based and fuzz tests. Two tools, two layers:
 
 | Layer | Tool | Lives in | What it proves | CI lane |
 |---|---|---|---|---|
 | Code-level | [Kani](https://model-checking.github.io/kani/) | `crates/<crate>/src/proofs.rs` (`#[cfg(kani)]`) | Bit-precise model-checked invariants on actual Rust code | [`.github/workflows/kani.yml`](../../.github/workflows/kani.yml) — advisory, 15-min cap |
-| Design-level | [TLA+ / TLC](https://lamport.azurewebsites.net/tla/tla.html) | `specs/*.tla` | Protocol-level safety + liveness on abstract state machines | `.github/workflows/tla.yml` — *(M5)* advisory, 10-min cap |
+| Design-level | [TLA+ / TLC](https://lamport.azurewebsites.net/tla/tla.html) | `specs/*.tla` | Protocol-level safety + liveness on abstract state machines | [`.github/workflows/tla.yml`](../../.github/workflows/tla.yml) — advisory, 10-min cap |
 
 ## Why both?
 
@@ -18,7 +18,7 @@ Kani and TLA+ are **complementary, not redundant**:
 
 The value of *both* is that Kani catches "the implementation diverges from the design" while TLA+ catches "the design itself has a race." A bug in either layer would slip past the other.
 
-## What's proven today (M1 + M2 + M3)
+## What's Proven Today
 
 | Proof | File | Property | Kani CI |
 |---|---|---|---|
@@ -38,13 +38,12 @@ The value of *both* is that Kani catches "the implementation diverges from the d
 
 Each harness lives in its crate's `src/proofs.rs` under `#![cfg(kani)]` so it compiles **only** under `cargo kani`. Regular `cargo build` and `cargo test` runs exclude these files entirely; adding harnesses has zero impact on the production build.
 
-## What's planned (M3–M5)
+## Verified Designs Today
 
-| Milestone | Issue | Proofs / specs | Tool |
+| Design | Files | Properties | CI |
 |---|---|---|---|
-| fv M3 | [#13](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/13) | `secure_data` nonce-uniqueness within path + `secure_errors` no-internal-detail-leak | Kani |
-| fv M4 | [#14](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/14) | Add `secure_resilience::circuit_breaker` module + TLA+ spec proving no-double-probe / no-stuck-half-open / no-silent-close | TLA+ + Rust |
-| fv M5 | [#15](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/15) | TLA+ spec for `secure_identity` session+step-up: no privileged action from unauthenticated state, expired sessions never reusable, step-up window enforced | TLA+ |
+| Circuit breaker | [`specs/CircuitBreaker.tla`](../../specs/CircuitBreaker.tla), [`specs/CircuitBreakerNaive.tla`](../../specs/CircuitBreakerNaive.tla), [`docs/slo/design/circuit-breaker-verified.md`](../slo/design/circuit-breaker-verified.md) | No double probe in half-open, no stuck half-open, no silent close. The Naive variant must fail with the documented counterexample. | ✓ advisory |
+| Session step-up | [`specs/SessionStepUp.tla`](../../specs/SessionStepUp.tla), [`specs/SessionStepUpNaive.tla`](../../specs/SessionStepUpNaive.tla), [`docs/slo/design/session-step-up-verified.md`](../slo/design/session-step-up-verified.md) | No privileged action without step-up, no expired-session reuse, bounded step-up window. The Naive variant must fail with the documented counterexample. | ✓ advisory |
 
 ## Promotion criteria — advisory → blocking
 
@@ -75,9 +74,21 @@ cargo kani -p secure_data --harness nonce_non_zero
 
 A Kani run produces both a pass/fail summary and an HTML "concrete playback" trace if the proof fails. The trace is the product — read it like a stack trace, not a state dump. Every counterexample should answer: *what specific input violates the invariant, and what design change resolves it?*
 
-### TLA+ (M4+)
+### TLA+
 
-The `slo-tla` skill (in [SunLitOrchestrate](https://github.com/kerberosmansour/SunLitOrchestrate)) drives the TLA+ workflow — install pinned `tla2tools.jar` to `~/.sldo/tla/`, run `tlc` against `specs/*.cfg`, translate counterexamples to plain-English narratives. The `specs/` directory will contain the M4/M5 specs once those milestones land.
+The `slo-tla` skill (in [SunLitOrchestrate](https://github.com/kerberosmansour/SunLitOrchestrate)) drives the TLA+ workflow: install pinned `tla2tools.jar` to `~/.sldo/tla/`, run TLC against `specs/*.cfg`, and translate counterexamples to plain-English narratives.
+
+```bash
+java -Xmx2g -cp "$HOME/.sldo/tla/tla2tools.jar" tlc2.TLC \
+  -workers auto \
+  -config specs/CircuitBreaker.cfg \
+  specs/CircuitBreaker.tla
+
+java -Xmx2g -cp "$HOME/.sldo/tla/tla2tools.jar" tlc2.TLC \
+  -workers auto \
+  -config specs/SessionStepUp.cfg \
+  specs/SessionStepUp.tla
+```
 
 ## Anti-patterns (per `/slo-tla` SKILL discipline)
 

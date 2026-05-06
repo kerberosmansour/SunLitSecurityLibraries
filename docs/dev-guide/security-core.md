@@ -12,7 +12,7 @@ Add the dependency to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-security_core = { path = "../security_core" }
+security_core = "0.1.2"
 ```
 
 ---

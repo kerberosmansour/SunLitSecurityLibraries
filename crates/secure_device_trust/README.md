@@ -19,7 +19,7 @@ You're building a service that talks to **native desktop or mobile clients** (Ta
 
 ```toml
 [dependencies]
-secure_device_trust = "0.1"
+secure_device_trust = "0.1.2"
 ```
 
 ## Quick example — issue a session certificate

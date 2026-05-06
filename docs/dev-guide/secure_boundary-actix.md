@@ -18,13 +18,13 @@ All three are behavior-identical to their axum twins. A service on Actix with th
 
 ```toml
 [dependencies]
-secure_boundary = { version = "0.1", default-features = false, features = ["actix-web"] }
+secure_boundary = { version = "0.1.2", default-features = false, features = ["actix-web"] }
 actix-web = "4"
 ```
 
 - `default-features = false` turns off the (default) `axum` feature so your build doesn't pull in axum.
 - If your workspace hosts services on both frameworks, you can enable both features at once: `features = ["axum", "actix-web"]`. The crate composes.
-- If you prefer git-rev pinning during Era 2 of Sunlit Guardian, replace `version = "0.1"` with `git = "https://github.com/kerberosmansour/SunLitSecurityLibraries", rev = "<sha>"`.
+- If you prefer git-rev pinning during Era 2 of Sunlit Guardian, replace `version = "0.1.2"` with `git = "https://github.com/kerberosmansour/SunLitSecurityLibraries", rev = "<sha>"`.
 
 ## Minimal working example (copy-paste)
 
@@ -151,13 +151,13 @@ The same `CspNonce` value appears in the `script-src 'nonce-...'` directive on t
 ### 1. Forgetting `default-features = false`
 
 ```toml
-secure_boundary = { version = "0.1", features = ["actix-web"] }  # pulls axum too
+secure_boundary = { version = "0.1.2", features = ["actix-web"] }  # pulls axum too
 ```
 
 This compiles, but you'll pay for compiling axum + tower + tower-http you won't use. If that's acceptable (e.g., because a sibling crate in the workspace uses the axum path), it's fine. Otherwise:
 
 ```toml
-secure_boundary = { version = "0.1", default-features = false, features = ["actix-web"] }
+secure_boundary = { version = "0.1.2", default-features = false, features = ["actix-web"] }
 ```
 
 ### 2. Wrapping middleware in the wrong order

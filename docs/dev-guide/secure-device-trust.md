@@ -1,8 +1,15 @@
 # `secure_device_trust`
 
 `secure_device_trust` evaluates native-client trust evidence before user
-authentication. It is the production library surface that the ZeroTrustAuth
-conformance harness will consume in its next milestone.
+authentication. It is the production library surface for ZeroTrustAuth
+conformance and other native-client access checks.
+
+## Quick Start
+
+```toml
+[dependencies]
+secure_device_trust = "0.1.2"
+```
 
 ## What It Does
 

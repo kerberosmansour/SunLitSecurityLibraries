@@ -10,7 +10,7 @@
 
 ```toml
 [dependencies]
-secure_output = { path = "../secure_output" }
+secure_output = "0.1.2"
 ```
 
 ---

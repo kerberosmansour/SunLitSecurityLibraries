@@ -18,7 +18,7 @@ Secrets management, envelope encryption, password hashing, and FIPS-ready crypto
 
 ```toml
 [dependencies]
-secure_data = { version = "0.1", features = ["password"] }
+secure_data = { version = "0.1.2", features = ["password"] }
 ```
 
 ## Quick examples
