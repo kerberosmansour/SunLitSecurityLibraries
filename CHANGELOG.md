@@ -9,7 +9,9 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ## Unreleased
 
-- No unreleased changes.
+- Fixed `secure_boundary::safe_types::SafeUrl` userinfo handling so SSRF
+  checks apply to the effective hostname after `@`, blocking private,
+  loopback, and link-local IP targets smuggled through URL userinfo syntax.
 
 ## [0.1.2] - 2026-05-06
 

@@ -108,6 +108,30 @@ fn safe_url_link_local_169254_rejected() {
 }
 
 #[test]
+fn safe_url_link_local_in_userinfo_rejected() {
+    // Given: userinfo before a link-local hostname
+    let result = SafeUrl::try_from("http://example.com@169.254.169.254/latest/meta-data/");
+    // Then: returns Err
+    assert!(result.is_err());
+}
+
+#[test]
+fn safe_url_loopback_with_port_in_userinfo_rejected() {
+    // Given: userinfo before a loopback hostname and port
+    let result = SafeUrl::try_from("http://safe.example@127.0.0.1:18080/admin");
+    // Then: returns Err
+    assert!(result.is_err());
+}
+
+#[test]
+fn safe_url_ipv6_loopback_in_userinfo_rejected() {
+    // Given: userinfo before a bracketed IPv6 loopback hostname
+    let result = SafeUrl::try_from("http://example.com@[::1]/admin");
+    // Then: returns Err
+    assert!(result.is_err());
+}
+
+#[test]
 fn safe_url_file_scheme_rejected() {
     // Given: file:// scheme
     let result = SafeUrl::try_from("file:///etc/passwd");
