@@ -341,7 +341,10 @@ impl TryFrom<&str> for SafeUrl {
         };
         let rest = &s[prefix_len..];
         let host_end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
-        let host_with_port = &rest[..host_end];
+        let authority = &rest[..host_end];
+        let host_with_port = authority
+            .rsplit_once('@')
+            .map_or(authority, |(_, host_port)| host_port);
 
         // Strip IPv6 brackets or port suffix
         let host = if host_with_port.starts_with('[') {
