@@ -13,8 +13,8 @@ keywords = ["security", "tls", "pinning", "network"]
 name = "secure_network"
 
 [dependencies]
-security_core = { package = "security_core", version = "0.1.2", path = "../security_core" }
-security_events = { package = "security_events", version = "0.1.2", path = "../security_events" }
+security_core = { workspace = true }
+security_events = { workspace = true }
 serde = { workspace = true }
 sha2 = "0.10"
 x509-parser = "0.16"

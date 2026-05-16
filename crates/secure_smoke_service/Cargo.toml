@@ -18,19 +18,19 @@ path = "src/lib.rs"
 
 [dependencies]
 # Workspace library crates
-security_core = { package = "security_core", version = "0.1.2", path = "../security_core" }
-secure_errors = { package = "secure_errors", version = "0.1.2", path = "../secure_errors" }
-security_events = { package = "security_events", version = "0.1.2", path = "../security_events" }
-secure_boundary = { package = "secure_boundary", version = "0.1.2", path = "../secure_boundary", features = ["mobile-platform"] }
+security_core = { workspace = true }
+secure_errors = { workspace = true }
+security_events = { workspace = true }
+secure_boundary = { workspace = true, features = ["mobile-platform"] }
 # E2E tests exercise the Actix-web 4 adapters via a feature-flagged test
 # harness; the axum smoke binary itself does not depend on actix-web at runtime.
-secure_output = { package = "secure_output", version = "0.1.2", path = "../secure_output" }
-secure_identity = { package = "secure_identity", version = "0.1.2", path = "../secure_identity", features = ["biometric"] }
-secure_authz = { package = "secure_authz", version = "0.1.2", path = "../secure_authz" }
-secure_data = { package = "secure_data", version = "0.1.2", path = "../secure_data", features = ["mobile-storage"] }
-secure_network = { package = "secure_network", version = "0.1.2", path = "../secure_network" }
-secure_resilience = { package = "secure_resilience", version = "0.1.2", path = "../secure_resilience" }
-secure_privacy = { package = "secure_privacy", version = "0.1.2", path = "../secure_privacy" }
+secure_output = { workspace = true }
+secure_identity = { workspace = true, features = ["biometric"] }
+secure_authz = { workspace = true }
+secure_data = { workspace = true, features = ["mobile-storage"] }
+secure_network = { workspace = true }
+secure_resilience = { workspace = true }
+secure_privacy = { workspace = true }
 
 # Axum / Tower / Tokio
 axum = "0.8"
@@ -41,12 +41,12 @@ tokio = { version = "1", features = ["full"] }
 hyper = { version = "1", features = ["full"] }
 
 # Serialisation
-serde = { version = "1", features = ["derive"] }
+serde = { workspace = true }
 serde_json = "1"
 
 # Utilities
-uuid = { version = "1", features = ["v4"] }
-time = { version = "0.3" }
+uuid = { workspace = true }
+time = { workspace = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 http = "1"
@@ -64,7 +64,7 @@ base64 = "0.22"
 # For sg-gate-a M1 E2E tests against the Actix-web 4 adapters. The additional
 # features are unified with the `[dependencies]` entry so the test target
 # sees both the existing axum integration and the Actix adapters.
-secure_boundary = { package = "secure_boundary", version = "0.1.2", path = "../secure_boundary", features = ["actix-web"] }
-secure_authz = { package = "secure_authz", version = "0.1.2", path = "../secure_authz", features = ["actix-web"] }
-secure_errors = { package = "secure_errors", version = "0.1.2", path = "../secure_errors", features = ["actix-web"] }
+secure_boundary = { workspace = true, features = ["actix-web"] }
+secure_authz = { workspace = true, features = ["actix-web"] }
+secure_errors = { workspace = true, features = ["actix-web"] }
 actix-web = "4"

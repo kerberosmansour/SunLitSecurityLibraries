@@ -16,8 +16,8 @@ name = "security_core"
 uuid = { workspace = true }
 time = { workspace = true }
 serde = { workspace = true }
-derive_more = { workspace = true }
+derive_more = { version = "1", features = ["display", "from", "into"] }
 
 [dev-dependencies]
-tokio = { workspace = true }
+tokio = { version = "1", features = ["full"] }
 time = { workspace = true, features = ["macros"] }
