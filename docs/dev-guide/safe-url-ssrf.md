@@ -76,7 +76,6 @@ A POST body containing `{"callback":"http://169.254.169.254/"}` now fails at the
 ## What `SafeUrl` does NOT do
 
 - **DNS rebinding.** `SafeUrl` only validates the host *string*. If the host is `evil.example.com` and the resolver returns `169.254.169.254` at connect time, `SafeUrl` doesn't catch it. Defense: use a DNS resolver that enforces a public-IP policy, or re-check the resolved `IpAddr` at connect time with the same predicate used here.
-- **IPv4-mapped IPv6.** A host like `[::ffff:127.0.0.1]` is not currently rejected. If a Sunlit Guardian-style audit adds this requirement, open a follow-up runbook. (Deferred from sg-gate-a M3 to keep scope tight.)
 - **SNI/TLS-layer attacks.** `SafeUrl` is a string check. Use `secure_network` for TLS-layer controls (cert pinning, cleartext rejection).
 - **Open redirect.** See [`SafeRedirectUrl`](../../crates/secure_boundary/src/safe_types.rs) — a distinct type that enforces path-only URLs for HTTP redirects.
 
