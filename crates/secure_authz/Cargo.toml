@@ -24,20 +24,20 @@ axum = ["dep:axum", "dep:axum-core", "dep:tower"]
 actix-web = ["dep:actix-web"]
 
 [dependencies]
-security_core = { package = "security_core", version = "0.1.2", path = "../security_core" }
-secure_device_trust = { package = "secure_device_trust", version = "0.1.2", path = "../secure_device_trust" }
-secure_errors = { package = "secure_errors", version = "0.1.2", path = "../secure_errors" }
-secure_identity = { package = "secure_identity", version = "0.1.2", path = "../secure_identity" }
-secure_network = { package = "secure_network", version = "0.1.2", path = "../secure_network" }
-security_events = { package = "security_events", version = "0.1.2", path = "../security_events" }
+security_core = { workspace = true }
+secure_device_trust = { workspace = true }
+secure_errors = { workspace = true }
+secure_identity = { workspace = true }
+secure_network = { workspace = true }
+security_events = { workspace = true }
 casbin = "2"
 smallvec = { version = "1", features = ["serde"] }
 lru = "0.18"
 tokio = { version = "1", features = ["sync", "time", "rt"] }
-serde = { version = "1", features = ["derive"] }
+serde = { workspace = true }
 serde_json = "1"
-uuid = { version = "1", features = ["v4", "serde"] }
-time = { version = "0.3", features = ["serde"] }
+uuid = { workspace = true }
+time = { workspace = true }
 axum = { version = "0.8", optional = true }
 axum-core = { version = "0.5", optional = true }
 tower = { version = "0.5", optional = true }
@@ -53,8 +53,8 @@ tower = { version = "0.5", features = ["util"] }
 actix-web = { version = "4" }
 http-body-util = "0.1"
 proptest = "1"
-uuid = { version = "1", features = ["v4"] }
-time = "0.3"
+uuid = { workspace = true }
+time = { workspace = true }
 
 [[example]]
 name = "actix_authz_minimal"

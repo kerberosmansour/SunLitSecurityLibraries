@@ -13,7 +13,7 @@ keywords = ["security", "encoding", "xss", "output"]
 name = "secure_output"
 
 [dependencies]
-security_core = { package = "security_core", version = "0.1.2", path = "../security_core" }
+security_core = { workspace = true }
 
 [dev-dependencies]
 proptest = "1"
