@@ -2889,15 +2889,15 @@ dependencies = [
 
 [[package]]
 name = "opentelemetry"
-version = "0.27.1"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab70038c28ed37b97d8ed414b6429d343a8bbf44c9f79ec854f3a643029ba6d7"
+checksum = "b0142c63252a9e054e68a4c61a5778f7b14f576274d593f8ce883d191a099682"
 dependencies = [
  "futures-core",
  "futures-sink",
  "js-sys",
  "pin-project-lite",
- "thiserror 1.0.69",
+ "thiserror 2.0.18",
  "tracing",
 ]
 
@@ -4108,7 +4108,7 @@ version = "0.1.2"
 dependencies = [
  "hex",
  "hmac 0.12.1",
- "opentelemetry 0.27.1",
+ "opentelemetry 0.32.0",
  "proptest",
  "reqwest",
  "secure_errors",
