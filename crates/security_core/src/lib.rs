@@ -13,3 +13,4 @@ pub mod redact;
 pub mod severity;
 pub mod time;
 pub mod types;
+pub mod variant_analysis;
