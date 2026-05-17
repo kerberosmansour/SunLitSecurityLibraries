@@ -26,9 +26,9 @@ html-sanitize = ["dep:ammonia"]
 mobile-platform = []
 
 [dependencies]
-security_core = { package = "security_core", version = "0.1.2", path = "../security_core" }
-secure_errors = { package = "secure_errors", version = "0.1.2", path = "../secure_errors" }
-security_events = { package = "security_events", version = "0.1.2", path = "../security_events" }
+security_core = { workspace = true }
+secure_errors = { workspace = true }
+security_events = { workspace = true }
 axum = { version = "0.8", optional = true }
 axum-core = { version = "0.5", optional = true }
 tower = { version = "0.5", optional = true }
@@ -37,7 +37,7 @@ http-body-util = { version = "0.1", optional = true }
 actix-web = { version = "4", optional = true }
 actix-http = { version = "3", optional = true }
 futures-util = { version = "0.3", optional = true }
-serde = { version = "1", features = ["derive"] }
+serde = { workspace = true }
 base64 = "0.22"
 serde_json = "1"
 serde_urlencoded = "0.7"
@@ -45,11 +45,11 @@ unicode-normalization = "0.1"
 mime = "0.3"
 bytes = "1"
 http = "1"
-uuid = { workspace = true, features = ["v4", "serde"] }
+uuid = { workspace = true }
 quick-xml = { version = "0.36", features = ["serialize"] }
 thiserror = "2"
 time = { workspace = true }
-tokio = { workspace = true }
+tokio = { version = "1", features = ["full"] }
 ammonia = { version = "4", optional = true }
 
 [dev-dependencies]
@@ -57,8 +57,8 @@ axum = { version = "0.8", features = ["macros"] }
 tower = { version = "0.5", features = ["util"] }
 actix-web = { version = "4" }
 serde_json = "1"
-secure_output = { package = "secure_output", version = "0.1.2", path = "../secure_output" }
-tokio = { workspace = true, features = ["full"] }
+secure_output = { workspace = true }
+tokio = { version = "1", features = ["full"] }
 proptest = "1"
 
 [[example]]

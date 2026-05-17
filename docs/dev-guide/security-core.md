@@ -3,6 +3,7 @@
 > **OWASP C1**: Shared foundation types for the SunLit security workspace.
 
 `security_core` provides the foundational types, traits, and abstractions that every other SunLit crate depends on. It contains no business logic and no I/O — only type definitions, sealed traits, and identity abstractions.
+It also includes the typed variant-analysis report schema used to record follow-up searches after a security finding.
 
 ---
 

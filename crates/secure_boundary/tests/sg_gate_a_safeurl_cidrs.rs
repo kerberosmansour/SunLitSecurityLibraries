@@ -137,6 +137,23 @@ fn rejects_cidr_ipv6_unspecified_slash_128() {
     assert_rejected("::");
 }
 
+// ── IPv4-mapped IPv6 literals ───────────────────────────────────────────────
+
+#[test]
+fn rejects_ipv4_mapped_cidr_127_slash_8() {
+    assert_rejected("::ffff:127.0.0.1");
+}
+
+#[test]
+fn rejects_ipv4_mapped_cidr_10_slash_8() {
+    assert_rejected("::ffff:10.0.0.1");
+}
+
+#[test]
+fn rejects_ipv4_mapped_cidr_169_254_slash_16() {
+    assert_rejected("::ffff:169.254.169.254");
+}
+
 // ── Negative controls (must still be accepted) ──────────────────────────────
 
 #[test]
@@ -153,6 +170,11 @@ fn accepts_public_ipv4_1_1_1_1() {
 fn accepts_public_ipv6_2606() {
     // Cloudflare public DNS — must still be accepted.
     assert_accepted("2606:4700:4700::1111");
+}
+
+#[test]
+fn accepts_public_ipv4_mapped_ipv6_8_8_8_8() {
+    assert_accepted("::ffff:8.8.8.8");
 }
 
 #[test]
