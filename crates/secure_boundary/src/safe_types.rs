@@ -269,6 +269,9 @@ impl fmt::Display for SafeCommandArg {
 /// | `ff00::/8` | IPv6 multicast | Same as IPv4 multicast, on IPv6 |
 /// | `::/128` | IPv6 unspecified | Stack-internal vulnerabilities |
 ///
+/// IPv4-mapped IPv6 literals such as `[::ffff:127.0.0.1]` are classified
+/// against the embedded IPv4 address before the IPv6 ranges are checked.
+///
 /// The blocked set is variant-analysis-tested — each CIDR has a named
 /// regression test in `sg_gate_a_safeurl_cidrs.rs`, so removing a single
 /// line from the internal classifier fails a specific, named test.
@@ -421,6 +424,10 @@ fn is_private_ipv4(addr: std::net::Ipv4Addr) -> bool {
 }
 
 fn is_private_ipv6(addr: std::net::Ipv6Addr) -> bool {
+    if let Some(v4) = addr.to_ipv4_mapped() {
+        return is_private_ipv4(v4);
+    }
+
     // ::1/128 loopback
     addr.is_loopback()
     // ::/128 unspecified

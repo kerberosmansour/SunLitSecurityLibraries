@@ -33,6 +33,10 @@
             {
               "name": "cdx:sunlit:capability",
               "value": "correlation-context"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "variant-analysis-result-schema"
             }
           ]
         },
@@ -102,6 +106,10 @@
             {
               "name": "cdx:sunlit:capability",
               "value": "security-headers"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "agent-prompt-injection-boundary"
             }
           ]
         },
@@ -272,7 +280,7 @@
       {
         "bom-ref": "claim:security_core:capabilities",
         "target": "component:security_core",
-        "predicate": "Advertises shared-security-types, identity-source-trait, correlation-context for control coverage C1.",
+        "predicate": "Advertises shared-security-types, identity-source-trait, correlation-context, variant-analysis-result-schema for control coverage C1.",
         "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
       },
       {
@@ -290,7 +298,7 @@
       {
         "bom-ref": "claim:secure_boundary:capabilities",
         "target": "component:secure_boundary",
-        "predicate": "Advertises input-validation, request-size-depth-limits, security-headers for control coverage C5,C8.",
+        "predicate": "Advertises input-validation, request-size-depth-limits, security-headers, agent-prompt-injection-boundary for control coverage C5,C8.",
         "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
       },
       {

@@ -24,8 +24,8 @@ axum = ["dep:axum-core", "dep:tower-layer"]
 actix-web = ["dep:actix-web"]
 
 [dependencies]
-security_core = { package = "security_core", version = "0.1.2", path = "../security_core" }
-security_events = { package = "security_events", version = "0.1.2", path = "../security_events" }
+security_core = { workspace = true }
+security_events = { workspace = true }
 thiserror = "2"
 axum-core = { version = "0.5", optional = true }
 tower-layer = { version = "0.3", optional = true }

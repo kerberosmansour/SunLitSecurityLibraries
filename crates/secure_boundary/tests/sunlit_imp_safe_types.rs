@@ -132,6 +132,22 @@ fn safe_url_ipv6_loopback_in_userinfo_rejected() {
 }
 
 #[test]
+fn safe_url_ipv4_mapped_loopback_rejected() {
+    // Given: an IPv4 loopback address encoded as an IPv6 literal
+    let result = SafeUrl::try_from("http://[::ffff:127.0.0.1]/admin");
+    // Then: returns Err
+    assert!(result.is_err());
+}
+
+#[test]
+fn safe_url_ipv4_mapped_link_local_rejected() {
+    // Given: an IMDS/link-local address encoded as an IPv6 literal
+    let result = SafeUrl::try_from("http://[::ffff:169.254.169.254]/latest/meta-data/");
+    // Then: returns Err
+    assert!(result.is_err());
+}
+
+#[test]
 fn safe_url_file_scheme_rejected() {
     // Given: file:// scheme
     let result = SafeUrl::try_from("file:///etc/passwd");

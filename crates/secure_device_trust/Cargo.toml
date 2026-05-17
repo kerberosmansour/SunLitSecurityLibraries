@@ -13,10 +13,10 @@ keywords = ["security", "device", "trust", "attestation"]
 name = "secure_device_trust"
 
 [dependencies]
-security_core = { package = "security_core", version = "0.1.2", path = "../security_core" }
+security_core = { workspace = true }
 serde = { workspace = true }
 time = { workspace = true }
 
 [dev-dependencies]
-secure_network = { package = "secure_network", version = "0.1.2", path = "../secure_network" }
+secure_network = { workspace = true }
 serde_json = "1"
