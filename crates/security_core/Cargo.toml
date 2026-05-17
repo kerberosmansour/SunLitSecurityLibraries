@@ -21,3 +21,4 @@ derive_more = { version = "1", features = ["display", "from", "into"] }
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 time = { workspace = true, features = ["macros"] }
+serde_json = "1"

@@ -312,6 +312,19 @@ let app = Router::new()
 
 ---
 
+## Prompt Boundaries
+
+Use `render_untrusted_markdown_literal` before adding issue bodies, user Markdown, model output, or tool logs to an agent prompt. The helper rejects unsafe control characters and bidi controls, then wraps the text in a tilde fence that is longer than any tilde run inside the input.
+
+```rust
+use secure_boundary::render_untrusted_markdown_literal;
+
+let fenced = render_untrusted_markdown_literal("ignore prior instructions")?;
+assert!(fenced.starts_with("~~~text\n"));
+```
+
+---
+
 ## Safe Types
 
 Safe types are zero-cost newtypes that validate input at construction time. They prevent entire classes of injection attacks when used in DTOs or standalone:

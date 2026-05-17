@@ -15,6 +15,8 @@ The axum adapters are covered by the per-crate rustdoc and the workspace's [`ARC
 ## Topic guides
 
 - [SSRF prevention with `SafeUrl`](./safe-url-ssrf.md) — the full 12-CIDR blocked set, what it does and doesn't cover, integration patterns (serde, direct).
+- [`secure_boundary` prompt boundaries](./secure-boundary.md) — render untrusted Markdown as literal fenced text before adding it to prompts, reviews, or issue comments.
+- [`security_core` variant analysis](./security-core.md) — typed variant-analysis reports for security review evidence and follow-up searches.
 - [Production deployment checklist](./production-checklist.md) — boot-time assertions, CI gates, SSRF, feature-flag hygiene for services shipping to prod.
 - [Branch protection](./branch-protection.md) — live baseline, public-release target, and required checks for GitHub.
 - [Release process](./release-process.md) — crates.io packaging order, Sigstore verification, and GitHub hardening checklist.

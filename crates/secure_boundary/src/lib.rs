@@ -62,6 +62,7 @@ pub mod headers;
 pub mod id;
 pub mod limits;
 pub mod normalize;
+pub mod prompt_boundary;
 pub mod safe_types;
 pub mod serde;
 pub mod validate;
@@ -100,6 +101,10 @@ pub use header_sanitize::sanitize_header_value;
 pub use headers::{CspNonce, SecurityHeadersLayer};
 pub use id::{OpaquePublicId, OrderId, TenantId, UserId};
 pub use limits::RequestLimits;
+pub use prompt_boundary::{
+    render_untrusted_markdown_literal, render_untrusted_markdown_literal_with_config,
+    PromptBoundaryConfig, PromptBoundaryError,
+};
 pub use safe_types::{
     LdapSafeString, SafeCommandArg, SafeFilename, SafePath, SafeRedirectUrl, SafeUrl, SqlIdentifier,
 };
