@@ -58,7 +58,10 @@ impl fmt::Display for PromptBoundaryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::TooLarge { actual, max } => {
-                write!(f, "prompt boundary input too large: {actual} bytes exceeds {max}")
+                write!(
+                    f,
+                    "prompt boundary input too large: {actual} bytes exceeds {max}"
+                )
             }
             Self::ControlCharacter { .. } => {
                 f.write_str("prompt boundary input contains a disallowed control character")
