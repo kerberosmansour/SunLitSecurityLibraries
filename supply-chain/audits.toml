@@ -13,6 +13,18 @@ criteria = "safe-to-deploy"
 version = "0.3.0"
 notes = "Direct pq feature dependency for ML-KEM-768 reviewed for pqd M2. RustCrypto pure-Rust implementation; Apache-2.0 OR MIT license accepted by deny policy."
 
+[[audits.openssl]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.10.79 -> 0.10.80"
+notes = "Delta review for the GHSA-phqj-4mhp-q6mq fix (bump pulled in to clear the OSV gate). Only source change is in src/cipher_ctx.rs: the cipher_update_inplace output-buffer-size assertion is TIGHTENED from `inlen + block_size` to `cipher_update_output_size(inlen)`, fixing a slice buffer overflow with AES key-wrap-with-padding ciphers; adds a #[should_panic] regression test. No new unsafe blocks, powerful imports, or ambient capabilities; strictly security-positive. Reviewed via `cargo vet diff`."
+
+[[audits.openssl-sys]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.9.115 -> 0.9.116"
+notes = "Delta review. Build-script changes only: macOS Homebrew detection now prefers openssl@4, falls back to openssl@3/3.0, and drops openssl@1.1 (build/find_normal.rs); header validation comment now notes OpenSSL 4.x support (build/main.rs); CHANGELOG + version bump. No runtime code, unsafe, or capability changes. Reviewed via `cargo vet diff`."
+
 [[audits.sha2]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
 criteria = "safe-to-deploy"
