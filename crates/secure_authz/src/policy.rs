@@ -73,8 +73,14 @@ pub trait PolicyEngine: private::Sealed + Send + Sync {
 
 // ─── Casbin implementation ─────────────────────────────────────────────────
 
-const RBAC_MODEL_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/rbac_model.conf");
-const EMPTY_POLICY_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/empty_policy.csv");
+// The Casbin RBAC model is embedded into the binary at compile time. It must
+// NOT be read from the filesystem at runtime: the previous
+// `from_file(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/rbac_model.conf"))`
+// baked the *build machine's* absolute path into the binary, so any deployment
+// that doesn't ship the source tree (e.g. a distroless container) crashed at
+// startup with `Casbin Io Error: NotFound`. `include_str!` resolves at compile
+// time relative to this source file, so the content travels with the binary.
+const RBAC_MODEL: &str = include_str!("../fixtures/rbac_model.conf");
 
 use casbin::{CoreApi, MgmtApi};
 use std::sync::{
@@ -94,10 +100,13 @@ impl private::Sealed for DefaultPolicyEngine {}
 impl DefaultPolicyEngine {
     /// Creates a new engine with an empty (no-policy) state.
     pub async fn new_empty() -> Result<Self, PolicyError> {
-        let model = casbin::DefaultModel::from_file(RBAC_MODEL_PATH)
+        let model = casbin::DefaultModel::from_str(RBAC_MODEL)
             .await
             .map_err(|e| PolicyError::LoadFailed(e.to_string()))?;
-        let adapter = casbin::FileAdapter::new(EMPTY_POLICY_PATH);
+        // In-memory adapter = empty policy set, no filesystem dependency
+        // (replaces the previous empty-CSV FileAdapter). Policies are seeded
+        // programmatically via `add_policy` (see sunlit_identity::authz).
+        let adapter = casbin::MemoryAdapter::default();
         let enforcer = casbin::Enforcer::new(model, adapter)
             .await
             .map_err(|e| PolicyError::LoadFailed(e.to_string()))?;

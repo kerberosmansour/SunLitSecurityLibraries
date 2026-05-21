@@ -11,6 +11,20 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 - No unreleased changes.
 
+## secure_authz 0.1.3 - 2026-05-21
+
+- Reliability/deployment fix: `secure_authz` no longer reads the Casbin RBAC
+  model from the filesystem at runtime. `DefaultPolicyEngine::new_empty()`
+  previously loaded the model via
+  `casbin::DefaultModel::from_file(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/rbac_model.conf"))`
+  and an empty-CSV `FileAdapter`. `env!("CARGO_MANIFEST_DIR")` bakes the **build
+  machine's** absolute path into the binary, so any deployment that does not
+  ship the crate source tree (e.g. a distroless container image) crashed at
+  startup with `policy load failed: Casbin Io Error: NotFound`. The model is now
+  embedded with `include_str!` and policies start from an in-memory adapter, so
+  the compiled binary needs **no filesystem access** to initialize the policy
+  engine. No public API or authorization-behavior change for callers.
+
 ## [0.1.3] - 2026-05-07
 
 - Security: fixed `secure_boundary::safe_types::SafeUrl` userinfo handling so SSRF
