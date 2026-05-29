@@ -1,7 +1,8 @@
-# OSV Scanner exception file for the root Cargo.lock.
-# Keep this aligned with deny.toml and revisit before public release.
-
-[[IgnoredVulns]]
-id = "RUSTSEC-2023-0071"
-ignoreUntil = 2026-08-01
-reason = "rsa 0.9.10 is pulled by jsonwebtoken/openidconnect for JWT/OIDC public-key verification paths. The Marvin advisory is a private-key operation timing channel; this library does not expose RSA private-key decryption."
+[[sca_lockfile]]
+ecosystem = "crates.io"
+path = "dogfood/review-loop/Cargo.lock"
+parser = "Cargo.lock"
+package = "time"
+badVersion = "0.2.23"
+knownAdvisory = "RUSTSEC-2020-0071"
+fixture = true
