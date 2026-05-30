@@ -76,7 +76,11 @@ jobs:
           knownAdvisory = "RUSTSEC-2020-0071"
           fixture = true
           EOF
-          git add dogfood/review-loop/Cargo.toml dogfood/review-loop/Cargo.lock osv-scanner.toml
+          # Ignore the scan/triage artifacts so no later `git add` (agent or
+          # otherwise) can sweep them into the remediation PR. The remediation
+          # plan is force-added (`git add -f`) when the PR is opened.
+          printf '\n.cache/\nfindings.osv.json\n' >> .gitignore
+          git add dogfood/review-loop/Cargo.toml dogfood/review-loop/Cargo.lock osv-scanner.toml .gitignore
           git commit -m "test: seed SCA review-loop drill cargo dependency"
           git push --set-upstream origin "$base_branch"
           {
