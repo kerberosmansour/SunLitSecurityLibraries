@@ -64,3 +64,6 @@ specs/**/MC.cfg
 specs/**/*.dot
 specs/**/*.toolbox/
 states/
+
+.cache/
+findings.osv.json
