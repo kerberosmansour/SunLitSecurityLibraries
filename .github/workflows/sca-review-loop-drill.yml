@@ -136,6 +136,17 @@ jobs:
           )"
           echo "pr_number=${pr_number}" >> "$GITHUB_OUTPUT"
 
+      - name: Scrub scan artifacts from the worktree (deterministic)
+        # The agentic fixer can run a force `git add` that bypasses both the
+        # prompt and .gitignore. Remove the stray scan/triage artifacts so there
+        # is literally nothing for it to add; the committed remediation plan
+        # (a tracked file) is intentionally left in place.
+        run: |
+          rm -f findings.osv.json
+          rm -f .cache/sca-events.json .cache/sca-work-items.json
+          rm -rf .cache/sca-state
+          git status --porcelain --untracked-files=all || true
+
       - name: Validate Claude credential mode
         id: claude_auth
         env:
