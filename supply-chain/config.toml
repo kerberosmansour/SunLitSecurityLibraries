@@ -814,7 +814,7 @@ version = "0.26.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.opentelemetry]]
-version = "0.27.1"
+version = "0.32.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.opentelemetry_sdk]]
