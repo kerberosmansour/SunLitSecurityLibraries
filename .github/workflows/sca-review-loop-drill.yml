@@ -274,10 +274,10 @@ jobs:
           gh pr checkout "${{ steps.open_pr.outputs.pr_number }}"
           grep -q 'version = "0.2.25"' dogfood/review-loop/Cargo.lock
           grep -q '0.2.25' dogfood/review-loop/Cargo.toml
-          gh pr merge "${{ steps.open_pr.outputs.pr_number }}" --merge
+          gh pr merge "${{ steps.open_pr.outputs.pr_number }}" --squash --delete-branch
 
       - name: Cleanup drill branches
-        if: success()
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
