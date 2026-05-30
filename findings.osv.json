@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-05-30T00:27:35.016Z",
+  "scanner": {
+    "mode": "fixture",
+    "version": "v2.3.8",
+    "commit": "408fcd6f8707999a29e7ba45e15809764cf24f67"
+  },
+  "findings": [
+    {
+      "ecosystem": "crates.io",
+      "package": "time",
+      "version": "0.2.23",
+      "advisoryId": "RUSTSEC-2020-0071",
+      "manifestPath": "dogfood/review-loop/Cargo.lock"
+    }
+  ]
+}

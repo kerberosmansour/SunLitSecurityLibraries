@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "revision": 1,
+  "findings": {
+    "crates.io:time@0.2.23:RUSTSEC-2020-0071": {
+      "findingKey": "crates.io:time@0.2.23:RUSTSEC-2020-0071",
+      "advisoryId": "RUSTSEC-2020-0071",
+      "ecosystem": "crates.io",
+      "package": "time",
+      "affectedVersion": "0.2.23",
+      "class": "critical",
+      "track": "emergency",
+      "fixedVersion": "0.2.25",
+      "state": "in_progress",
+      "manifestPaths": [
+        "dogfood/review-loop/Cargo.lock"
+      ],
+      "firstSeen": "2026-05-30T00:27:35.094Z",
+      "lastSeen": "2026-05-30T00:27:35.094Z"
+    }
+  }
+}

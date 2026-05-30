@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "workItems": [
+    {
+      "findingKey": "crates.io:time@0.2.23:RUSTSEC-2020-0071",
+      "track": "emergency",
+      "state": "in_progress"
+    }
+  ],
+  "evidence": [
+    {
+      "findingKey": "crates.io:time@0.2.23:RUSTSEC-2020-0071",
+      "osv": {
+        "advisoryId": "RUSTSEC-2020-0071",
+        "class": "critical",
+        "fixedVersion": "0.2.25"
+      },
+      "dependencyReview": {
+        "present": true,
+        "vulnerableTransitives": []
+      },
+      "ghsa": {
+        "id": null,
+        "cvss": 9.8
+      },
+      "kev": {
+        "listed": false
+      },
+      "epss": {
+        "score": 0.5,
+        "available": true
+      },
+      "registry": {
+        "publishedAt": null
+      },
+      "provenance": {
+        "osv": "ok",
+        "dependencyReview": "ok",
+        "ghsa": "ok",
+        "kev": "ok",
+        "epss": "ok",
+        "registry": "ok"
+      },
+      "manifestPaths": [
+        "dogfood/review-loop/Cargo.lock"
+      ],
+      "raw": {
+        "ecosystem": "crates.io",
+        "package": "time",
+        "version": "0.2.23",
+        "advisoryId": "RUSTSEC-2020-0071",
+        "manifestPath": "dogfood/review-loop/Cargo.lock"
+      }
+    }
+  ]
+}
