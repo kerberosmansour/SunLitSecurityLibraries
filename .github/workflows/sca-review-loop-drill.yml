@@ -120,11 +120,14 @@ jobs:
         run: |
           set -euo pipefail
           git switch -c "${{ steps.branches.outputs.head_branch }}"
+          # Exercise the remediator (plan lands in .cache, which is gitignored).
           node tools/sca/dist/remediate.mjs remediate-emergency \
             --work-items .cache/sca-work-items.json \
             --output .cache/sca-remediation-plan.json
-          git add -f .cache/sca-remediation-plan.json
-          git commit -m "test: open incomplete SCA remediation drill PR"
+          # Open the incomplete PR with an EMPTY commit: the plan/artifacts are
+          # never committed, so the only diff that ever appears in this PR is the
+          # fixer's cargo bump — nothing for the reviewer to object to.
+          git commit --allow-empty -m "test: open incomplete SCA remediation drill PR"
           git push --set-upstream origin "${{ steps.branches.outputs.head_branch }}"
           gh pr create \
             --base "${{ steps.branches.outputs.base_branch }}" \
@@ -142,13 +145,11 @@ jobs:
 
       - name: Scrub scan artifacts from the worktree (deterministic)
         # The agentic fixer can run a force `git add` that bypasses both the
-        # prompt and .gitignore. Remove the stray scan/triage artifacts so there
-        # is literally nothing for it to add; the committed remediation plan
-        # (a tracked file) is intentionally left in place.
+        # prompt and .gitignore. Remove every scan/triage artifact so there is
+        # literally nothing for it to add — the PR can only contain the bump.
         run: |
           rm -f findings.osv.json
-          rm -f .cache/sca-events.json .cache/sca-work-items.json
-          rm -rf .cache/sca-state
+          rm -rf .cache
           git status --porcelain --untracked-files=all || true
 
       - name: Validate Claude credential mode
@@ -184,7 +185,7 @@ jobs:
           prompt: |
             You are the Track A SCA reviewer identity in an authorized SunLitSecurityLibraries drill.
             Review PR #${{ steps.open_pr.outputs.pr_number }}.
-            The PR intentionally includes a remediation plan but has not applied it.
+            The PR is intentionally empty so far — the dependency bump has NOT been applied yet.
             You MUST submit a request-changes review unless the PR bumps the vulnerable `time`
             crate from `0.2.23` to `0.2.25` in dogfood/review-loop/Cargo.toml and dogfood/review-loop/Cargo.lock.
             In the request-changes body, tell the fixer to make only that exact dependency change and no unrelated edits.
