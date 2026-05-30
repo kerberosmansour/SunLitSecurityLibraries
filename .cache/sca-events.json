@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "events": [
+    {
+      "name": "sca.finding.routed",
+      "findingKey": "crates.io:time@0.2.23:RUSTSEC-2020-0071",
+      "track": "emergency"
+    }
+  ],
+  "metrics": {
+    "dedupeRate": 0
+  }
+}
