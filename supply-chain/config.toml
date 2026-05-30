@@ -553,10 +553,13 @@ criteria = "safe-to-deploy"
 version = "0.9.1"
 criteria = "safe-to-deploy"
 
+<<<<<<< HEAD
 [[exemptions.hkdf]]
 version = "0.13.0"
 criteria = "safe-to-deploy"
 
+=======
+>>>>>>> origin/main
 [[exemptions.hmac]]
 version = "0.13.0"
 criteria = "safe-to-deploy"
@@ -818,7 +821,7 @@ version = "0.26.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.opentelemetry]]
-version = "0.27.1"
+version = "0.32.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.opentelemetry_sdk]]
