@@ -933,7 +933,7 @@ version = "1.11.0"
 criteria = "safe-to-run"
 
 [[exemptions.quick-xml]]
-version = "0.36.2"
+version = "0.40.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.quinn]]
