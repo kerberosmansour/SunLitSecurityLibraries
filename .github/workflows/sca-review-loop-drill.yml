@@ -175,7 +175,7 @@ jobs:
             In the request-changes body, tell the fixer to make only that exact dependency change and no unrelated edits.
             Do not approve, merge, push, read secrets, or alter branch protection.
           claude_args: |
-            --max-turns 16
+            --max-turns 30
             --allowedTools "Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr review:*)"
             --disallowedTools "Bash(gh pr merge:*),Bash(git push:*),Bash(gh secret:*)"
 
@@ -200,13 +200,14 @@ jobs:
           anthropic_workspace_id: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
           prompt: |
             You are the bounded Track A remediation fixer in an authorized SunLitSecurityLibraries drill.
-            Fix reviewer-requested issues on PR #${{ steps.open_pr.outputs.pr_number }}.
-            Make exactly this change: update the `time` crate from `0.2.23` to `0.2.25` in
-            dogfood/review-loop/Cargo.toml and dogfood/review-loop/Cargo.lock.
-            Do not edit tests, workflows, repo settings, unrelated files, secrets, or branch protection.
-            Commit and push the smallest correction to the existing PR branch.
+            Do exactly these steps on PR #${{ steps.open_pr.outputs.pr_number }}, then stop:
+            1. Run `gh pr checkout ${{ steps.open_pr.outputs.pr_number }}`.
+            2. In dogfood/review-loop/Cargo.toml change `time = "0.2.23"` to `time = "0.2.25"`.
+            3. In dogfood/review-loop/Cargo.lock change the `time` package `version = "0.2.23"` to `version = "0.2.25"`.
+            4. Run `git add -A`, then `git commit -m "fix: bump time to 0.2.25"`, then `git push`.
+            Make no other edits. Do not merge, touch other files, secrets, or branch protection.
           claude_args: |
-            --max-turns 16
+            --max-turns 30
             --allowedTools "Read,Edit,MultiEdit,Bash(gh pr view:*),Bash(gh pr checkout:*),Bash(git diff:*),Bash(git status:*),Bash(git add:*),Bash(git commit:*),Bash(git push:*)"
             --disallowedTools "Bash(gh pr merge:*),Bash(osv-scanner fix:*),Bash(gh secret:*)"
 
@@ -220,14 +221,15 @@ jobs:
           anthropic_service_account_id: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
           anthropic_workspace_id: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
           prompt: |
-            Re-review PR #${{ steps.open_pr.outputs.pr_number }} after the remediation fixer changes.
-            Approve only if the PR now bumps `time` from `0.2.23` to `0.2.25` in
-            dogfood/review-loop/Cargo.toml and dogfood/review-loop/Cargo.lock and makes no unrelated changes
-            beyond the drill remediation plan.
-            Otherwise request changes with concrete recommendations.
-            Do not merge, push, read secrets, or alter branch protection.
+            Re-review PR #${{ steps.open_pr.outputs.pr_number }} in one pass, then stop.
+            Run `gh pr diff ${{ steps.open_pr.outputs.pr_number }}` once.
+            If the diff shows `time` updated to `0.2.25` in BOTH dogfood/review-loop/Cargo.toml and
+            dogfood/review-loop/Cargo.lock (and no unrelated changes), run exactly:
+            `gh pr review ${{ steps.open_pr.outputs.pr_number }} --approve --body "Verified: time bumped to 0.2.25."`
+            Otherwise run `gh pr review ${{ steps.open_pr.outputs.pr_number }} --request-changes --body "<reason>"`.
+            Submit exactly one review and stop. Do not merge, push, read secrets, or alter branch protection.
           claude_args: |
-            --max-turns 16
+            --max-turns 30
             --allowedTools "Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr review:*)"
             --disallowedTools "Bash(gh pr merge:*),Bash(git push:*),Bash(gh secret:*)"
 
@@ -256,7 +258,7 @@ jobs:
           gh pr merge "${{ steps.open_pr.outputs.pr_number }}" --merge
 
       - name: Cleanup drill branches
-        if: always()
+        if: success()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
