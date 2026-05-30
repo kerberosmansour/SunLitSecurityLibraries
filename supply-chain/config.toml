@@ -553,6 +553,13 @@ criteria = "safe-to-deploy"
 version = "0.9.1"
 criteria = "safe-to-deploy"
 
+<<<<<<< HEAD
+[[exemptions.hkdf]]
+version = "0.13.0"
+criteria = "safe-to-deploy"
+
+=======
+>>>>>>> origin/main
 [[exemptions.hmac]]
 version = "0.13.0"
 criteria = "safe-to-deploy"
