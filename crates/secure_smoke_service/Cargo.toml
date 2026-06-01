@@ -53,7 +53,7 @@ http = "1"
 thiserror = "2"
 
 # JWT creation for tests
-jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
 
 [dev-dependencies]
 axum = { version = "0.8", features = ["macros"] }
