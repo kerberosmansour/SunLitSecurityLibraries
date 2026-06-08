@@ -20,7 +20,7 @@ oidc = ["dep:openidconnect", "dep:reqwest"]
 session-redis = ["dep:redis"]
 
 [dependencies]
-jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
 tokio = { version = "1", features = ["sync", "time", "net", "io-util"] }
 ring = "0.17"
 subtle = "2"
@@ -42,7 +42,7 @@ secure_network = { workspace = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
-jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
 uuid = { workspace = true }
 serde = { workspace = true }
 security_core = { workspace = true }
