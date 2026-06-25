@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": 1,
+  "revision": 2,
   "findings": {
     "crates.io:quinn-proto@0.11.14:RUSTSEC-2026-0185": {
       "findingKey": "crates.io:quinn-proto@0.11.14:RUSTSEC-2026-0185",
@@ -17,6 +17,23 @@
       ],
       "firstSeen": "2026-06-22T19:24:01.188Z",
       "lastSeen": "2026-06-22T19:24:01.188Z",
+      "reason": "no fix"
+    },
+    "crates.io:opentelemetry_sdk@0.26.0:GHSA-w9wp-h8wv-79jx": {
+      "findingKey": "crates.io:opentelemetry_sdk@0.26.0:GHSA-w9wp-h8wv-79jx",
+      "advisoryId": "GHSA-w9wp-h8wv-79jx",
+      "ecosystem": "crates.io",
+      "package": "opentelemetry_sdk",
+      "affectedVersion": "0.26.0",
+      "class": "critical",
+      "track": "dropped",
+      "fixedVersion": null,
+      "state": "dropped",
+      "manifestPaths": [
+        "Cargo.lock"
+      ],
+      "firstSeen": "2026-06-25T18:57:57.389Z",
+      "lastSeen": "2026-06-25T18:57:57.389Z",
       "reason": "no fix"
     }
   }
