@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": 9,
+  "revision": 10,
   "findings": {
     "crates.io:quinn-proto@0.11.14:RUSTSEC-2026-0185": {
       "findingKey": "crates.io:quinn-proto@0.11.14:RUSTSEC-2026-0185",
@@ -153,6 +153,23 @@
       ],
       "firstSeen": "2026-07-22T09:01:22.566Z",
       "lastSeen": "2026-07-22T09:01:22.566Z",
+      "reason": "no fix"
+    },
+    "crates.io:quinn-proto@0.11.14:GHSA-4w2j-m93h-cj5j": {
+      "findingKey": "crates.io:quinn-proto@0.11.14:GHSA-4w2j-m93h-cj5j",
+      "advisoryId": "GHSA-4w2j-m93h-cj5j",
+      "ecosystem": "crates.io",
+      "package": "quinn-proto",
+      "affectedVersion": "0.11.14",
+      "class": "critical",
+      "track": "dropped",
+      "fixedVersion": null,
+      "state": "dropped",
+      "manifestPaths": [
+        "Cargo.lock"
+      ],
+      "firstSeen": "2026-07-24T14:21:38.107Z",
+      "lastSeen": "2026-07-24T14:21:38.107Z",
       "reason": "no fix"
     }
   }
