@@ -428,6 +428,38 @@ fn spki_rsa_modulus_bits(der: &[u8]) -> Option<usize> {
     significant.checked_mul(8)
 }
 
+/// Validates a base64urlUInt RSA modulus and returns its actual bit length.
+fn rsa_component_modulus_bits(modulus: &str) -> Option<usize> {
+    let bytes = B64.decode(modulus).ok()?;
+    let first = *bytes.first()?;
+    // RFC 7518 base64urlUInt values use the minimum number of octets.
+    if first == 0 {
+        return None;
+    }
+    let leading_bits = 8usize.checked_sub(first.leading_zeros() as usize)?;
+    bytes
+        .len()
+        .checked_sub(1)?
+        .checked_mul(8)?
+        .checked_add(leading_bits)
+}
+
+/// Validates a base64urlUInt RSA public exponent.
+fn rsa_component_exponent_is_valid(exponent: &str) -> bool {
+    let Ok(bytes) = B64.decode(exponent) else {
+        return false;
+    };
+    if bytes.first().is_none_or(|first| *first == 0) {
+        return false;
+    }
+    let Some(value) = bytes.iter().try_fold(0u64, |value, byte| {
+        value.checked_mul(256)?.checked_add(u64::from(*byte))
+    }) else {
+        return false;
+    };
+    value >= 3 && value % 2 == 1
+}
+
 /// Strips PEM armour and base64-decodes the body.
 fn pem_body(pem: &[u8]) -> Option<Vec<u8>> {
     let text = std::str::from_utf8(pem).ok()?;
@@ -801,6 +833,38 @@ impl CapabilityVerifier {
             return Err(CapabilityError::InvalidKey);
         }
         let key = DecodingKey::from_rsa_pem(pem).map_err(|_| CapabilityError::InvalidKey)?;
+        Ok(Self {
+            issuer,
+            audience,
+            key,
+        })
+    }
+
+    /// Creates a verifier from pinned RSA public-key components.
+    ///
+    /// `modulus` and `exponent` are unpadded base64urlUInt values, matching the
+    /// `n` and `e` members of an RSA JWK. Key material is supplied by the caller
+    /// and never fetched over the network by this type.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CapabilityError::InvalidKey`] if either component is malformed,
+    /// the exponent is not an odd integer of at least three, or the modulus is
+    /// outside [`MIN_RSA_MODULUS_BITS`]..=[`MAX_RSA_MODULUS_BITS`].
+    pub fn from_rsa_components(
+        issuer: String,
+        audience: String,
+        modulus: &str,
+        exponent: &str,
+    ) -> Result<Self, CapabilityError> {
+        let bits = rsa_component_modulus_bits(modulus).ok_or(CapabilityError::InvalidKey)?;
+        if !(MIN_RSA_MODULUS_BITS..=MAX_RSA_MODULUS_BITS).contains(&bits)
+            || !rsa_component_exponent_is_valid(exponent)
+        {
+            return Err(CapabilityError::InvalidKey);
+        }
+        let key = DecodingKey::from_rsa_components(modulus, exponent)
+            .map_err(|_| CapabilityError::InvalidKey)?;
         Ok(Self {
             issuer,
             audience,
