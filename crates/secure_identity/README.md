@@ -66,6 +66,7 @@ fn main() {
 | `boot` | `assert_no_dev_identity_in_production` startup guard. |
 | `dev` | A `DevAuthenticator` for tests; production boot guards against this. |
 | `auth_events` | `security_events`-typed authentication audit events. |
+| `capability` | Strict single-use tenant+operation capabilities: RS256-only, ≤60s TTL, request-bound, jti consumed through a caller-supplied replay store. |
 
 ## Feature flags
 

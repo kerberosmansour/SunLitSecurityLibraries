@@ -341,6 +341,17 @@ impl security_core::identity::IdentitySource for MyKeycloakAdapter {
 let authorizer = Authorizer::new(my_keycloak_adapter);
 ```
 
+**Single-use tenant+operation capabilities.** `secure_identity::capability`
+issues and verifies a narrow bearer statement for brokered access, where the
+calling process holds no database credential and no network path to the store.
+The capability is RS256-only with caller-pinned keys, bound to an exact
+(subject, tenant, closed operation, length-framed request digest), limited to a
+60-second TTL enforced independently by issuer and verifier, and consumed
+exactly once through a caller-supplied `ReplayStore`. That store is the seam a
+deployment must own: the bundled in-memory implementation is single-process, so
+a multi-replica broker has to back it with shared state or the single-use
+property degrades to per-process.
+
 ### `secure_authz` (M6 — OWASP C7)
 Deny-by-default access control. `Authorizer` trait wrapping a policy engine. `SubjectResolver` accepts any `IdentitySource` implementor. Supports RBAC, closure-based ABAC guards, temporal permission windows, resource ownership, tenant scoping, and bulk authorization. All errors during authorization processing deny. Decision log events emitted to `security_events`.
 

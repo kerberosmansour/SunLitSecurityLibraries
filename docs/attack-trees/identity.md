@@ -145,6 +145,8 @@ GOAL: Compromise Authentication — Gain access as a legitimate identity
 |---|---|---|---|
 | Algorithm confusion (1.2.x) | Algorithm pinning in `ValidatorConfig` | `secure_identity` | M6 |
 | Token replay (1.3.x) | Short TTL + `jti` uniqueness check | `secure_identity` | M6 |
+| Capability replay / concurrent double-use | `capability::ReplayStore` atomic `jti` consumption, ≤60s TTL enforced by issuer AND verifier | `secure_identity` | GPIL-M2 |
+| Capability re-binding to another request | Length-framed SHA-256 over (tenant, operation, body) committed in the token | `secure_identity` | GPIL-M2 |
 | Timing oracle (1.4.3) | `subtle::ConstantTimeEq` for all comparisons | `secure_identity`, `secure_data` | M6/M8 |
 | SSRF → JWKS redirect (2.1.x) | JWKS URL pinned at startup | `secure_identity` | M6 |
 | mTLS cert abuse (3.1.x) | CN/SAN allowlist validation | `secure_identity` | M6 |

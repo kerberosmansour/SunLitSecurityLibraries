@@ -10,6 +10,7 @@ pub mod authenticator;
 #[cfg(feature = "biometric")]
 pub mod biometric;
 pub mod boot;
+pub mod capability;
 pub mod dev;
 #[cfg(feature = "biometric")]
 pub mod device_binding;
@@ -29,6 +30,11 @@ pub mod totp;
 
 pub use authenticator::{AuthenticationRequest, Authenticator, TokenKind};
 pub use boot::{assert_no_dev_identity_in_production, ProductionModeViolation};
+pub use capability::{
+    CapabilityError, CapabilityIssuer, CapabilityRequest, CapabilitySigner, CapabilityVerifier,
+    Expected, InMemoryReplayStore, Operation, ReplayStore, RsaCapabilitySigner, VerifiedCapability,
+    MAX_TTL_SECONDS,
+};
 pub use error::IdentityError;
 pub use passwordless::{
     BoundUserSession, DeviceSessionBinding, PasskeySupport, PasswordlessChallenge,
