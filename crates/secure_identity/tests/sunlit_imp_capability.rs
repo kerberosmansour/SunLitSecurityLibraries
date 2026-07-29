@@ -22,6 +22,8 @@ use secure_identity::capability::{
 /// way, so no test coverage is lost.
 const TEST_PRIVATE_PKCS8_B64: &str = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDRb/iDkP6qo4FJv/iB1LBkq2XpOohIJB8QFAoTptmrLkic8adVb25uhG6O3Ox/2GegPEIAa+yhncvIkwROQJFWwfV5JcmmWbUuJc+Xyebvs9MgoDfoDK32kNctdJ8jb36Y02SYxkjzbGV6yz3NDTBKNxrry9pVexxD/aLFIN6ZCvCgoqeg5CREnFk/ORiLOa2Bome4bkd6QCzpG/GVyjoXC+AmqHgyYpgoacceIDlhKk3fwblP5LYLZTA0J8gpHtP4DbGgzr8OiKTbW59sohVFP/hisM+8xZwbFllHr/DM04RPbO2U+Vqu8jIjf5NaNBMnGsBVlhEzwG4dPTt+Vdc5AgMBAAECggEAAeZlWjfeJZO7kXzrOa320TJQXP4AfJYOTZXUSb1vYgBhcoILNx5Ttu80NmR+RUJ5czB6FqP5VuCAzST59VCcOO3OxtP0eRIShOoH0MwpOwwLX+iwL9EwoVO1o1u4h13kh5P7CJtGOrtv+BNAsDvnb/RBcLmYqsKbMlSKWIXjMGnO/HGoA8PyAaFNeV9CKIsIKnIKZuYbOnJSe4C6T+NKwXIErO9Y+/k4npSbbHtFDPagwQbimxlEgd5bkOJhWaX+mIe5Z7TuUSbz8mpZ8vf5jXLgmeJsrOO+otmZ2REF03iEgQYJHXtIhe5iuoLPPsiRQXylciMEyJGWyGffxuvHsQKBgQD75MNoQMceTxEYPKVHCWQ0JcoBYdzNPKrd+BqPBe8uDBTh/1gyyhlJBgrIBAfyKubmO7iHiuWEAZOZEjs1m2+pjeEkETf27Mbj/6QmJ4iCuUDCHs/VQWkEbMDtkmdJVYVgkyz43v50vedv9biEInV6Xpvrn0g8+W+lDbaQOh8BEQKBgQDU2gX7ZRUQ6BSsRplnIXsIhQnklD7uGT+5eoW1LymoEChL4EsMl/BagSnV46HjwR8Wn9TkoVSxRWMaH4Z1gzhBWcOEtbZiMPZU5GpLy5Ua4KMHE0QBQP+KGENJcMTeuiGH/WT67dH9nvu6GJc+eFvi8h/zt8XDU1y+g3ucRCvzqQKBgBF1E03gX2xsUmT5nwLDVdx/Wfaqj6DxuW3UyhJreN4aHEBlb/llJEd5Ubn2/Y39By+hp/JM4Ac8DLypFM1sTlrT6GyVfOlyE36tsvSp/L4ClMhfVkwTUnHqD5znbp0YfjvpN06wNbZliuqpfvY5ZSbr86ZqzZjcOK6ZurNYM9nhAoGAMIM0o9SpFX5f39gDdK771LhFxfRH14qnrIWRXfdO3kA4fvqzAD7NCEOyHk7QghFtHYH2Stm+bNzstnKC+dubgcGMv32PARg5vKWG2Jmg9UxHvAAXGtYOqBHZnC54oG75333QeySjHNQUeZjLN/DEuJgI0kqLZ3ZjiAR9suMSxWkCgYAcOH1FyFfUUy3PAL2DgClBQ2w2G9IL6jhvLp7nokA6sksm+44OoyYYc4Oe/p58pBLENJWt7HXUs9weANmEhnn3zPh0Fw7hC7Fd+tNSB/H15GAo2j84g4uvTu1gLgv6Hepp5CR3JRovTqLz/7flfxuzyTQ0K6igAd7gfA/FZ1Vf8A==";
 const TEST_PUBLIC_SPKI_B64: &str = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0W/4g5D+qqOBSb/4gdSwZKtl6TqISCQfEBQKE6bZqy5InPGnVW9uboRujtzsf9hnoDxCAGvsoZ3LyJMETkCRVsH1eSXJplm1LiXPl8nm77PTIKA36Ayt9pDXLXSfI29+mNNkmMZI82xless9zQ0wSjca68vaVXscQ/2ixSDemQrwoKKnoOQkRJxZPzkYizmtgaJnuG5HekAs6Rvxlco6FwvgJqh4MmKYKGnHHiA5YSpN38G5T+S2C2UwNCfIKR7T+A2xoM6/Doik21ufbKIVRT/4YrDPvMWcGxZZR6/wzNOET2ztlPlarvIyI3+TWjQTJxrAVZYRM8BuHT07flXXOQIDAQAB";
+const TEST_RSA_N_B64URL: &str = "0W_4g5D-qqOBSb_4gdSwZKtl6TqISCQfEBQKE6bZqy5InPGnVW9uboRujtzsf9hnoDxCAGvsoZ3LyJMETkCRVsH1eSXJplm1LiXPl8nm77PTIKA36Ayt9pDXLXSfI29-mNNkmMZI82xless9zQ0wSjca68vaVXscQ_2ixSDemQrwoKKnoOQkRJxZPzkYizmtgaJnuG5HekAs6Rvxlco6FwvgJqh4MmKYKGnHHiA5YSpN38G5T-S2C2UwNCfIKR7T-A2xoM6_Doik21ufbKIVRT_4YrDPvMWcGxZZR6_wzNOET2ztlPlarvIyI3-TWjQTJxrAVZYRM8BuHT07flXXOQ";
+const TEST_RSA_E_B64URL: &str = "AQAB";
 /// A second, unrelated public key, so signature verification is shown to
 /// discriminate rather than accept anything well-formed.
 const OTHER_PUBLIC_SPKI_B64: &str = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAp6B71Pd/k9+h4ZVIZv01PWwCPhEUd4PpVPmhH5u63mgkY1WLYTr5OrJcn9sxqVQQBM5tTz9bQolg9waDLc/CEZvEATSsgIjC5e/mnwCfBb3arsnoVECrTa7eVSV8NvgCmEM/g+FHuyaLawjeOodiL659LBKRY4LgJQaS6saqES1PIr7LEcGKdeCucGqJRFtqAENiCaefMKCjyRFbo0DVnljkQW4MhPgq0urEH8sjRh0k10ThOdgT7CrFboleO84ZGQq+IbJkElTGM2QWFcvoOLwnU9zs0qlKNPqzeuz8f6h325QK9zd9A9Cr61ja1q8RFV2g/c7bxTX2YterqAswQQIDAQAB";
@@ -516,6 +518,54 @@ fn base64_url(bytes: &[u8]) -> String {
 /// scanner reason as the others.
 const WEAK_PRIVATE_PKCS8_B64: &str = "MIICdQIBADANBgkqhkiG9w0BAQEFAASCAl8wggJbAgEAAoGBAKTZvCwNswHe2kCBQn85TBtbJj1YpPULgMzR6i9/dUlKAr/oaLtNGlDhmps4RQUc/IlM41JFwvnNuP2L330CF/aLurX/FlyxtZEMYYiT8rf3OIOPE9m5atyazOqBCw75LR+lHhfy+cAMyHOWzYBjAlajzdETQ5fDSp5miaFkhch3AgMBAAECgYB3VlQ9g/FJcl2HAsvzs7Pfvd1x3YEVD62/GFsy5U8vrg9Ng96FcOyTDq7QnSyB5hj/ABU0EuJx2jaH/cDdCy3ymIaIaR+2LkZ2SkjQAFRtmy8/rTX3GiS+7WqfXN272lExm1UkkqDVYQ7rq7eIx4u7f1ucCWK9nJvHZMvqDr7J2QJBAM7AzxBUCggkk8X5780zxMjWhc6bVHTvEoGEqwZS00k8GUO0P70OZ8izJW5SVPaAKfkg/OYTNZ97pMzMU/OFQ/sCQQDMHdQikJ6CBXlbMdigN2z1hAIOKeDaNK0E5LMFKxvpBmYQZQbIx1Zrznwk9Ns79roLo8W0YVtkn13VJE0ZEKi1AkBhhd7l484rkx1FGCS91TpwRYguMWSAF7jR8QM+41iYRcng/qfGBIJ9z8rLI/jBoSirQ50m5U644HiWxZaf2m97AkApxaD4Qehua3hedWEDyNP/mrhg9akSft05tyP71sqrcafJiyNMS58gCO3XElUbfG6umyGGvLXbbdHiIL+2dXZRAkAbGws1pm4HjfI2r2Rs00X/sQmb5ROMBBqK3TiIFtAMHoPkPWmvbZIVhKoZ3jUapQ5IlB6xzd3obCJHraMxNi9W";
 const WEAK_PUBLIC_SPKI_B64: &str = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCk2bwsDbMB3tpAgUJ/OUwbWyY9WKT1C4DM0eovf3VJSgK/6Gi7TRpQ4ZqbOEUFHPyJTONSRcL5zbj9i999Ahf2i7q1/xZcsbWRDGGIk/K39ziDjxPZuWrcmszqgQsO+S0fpR4X8vnADMhzls2AYwJWo83RE0OXw0qeZomhZIXIdwIDAQAB";
+const WEAK_RSA_N_B64URL: &str = "pNm8LA2zAd7aQIFCfzlMG1smPVik9QuAzNHqL391SUoCv-hou00aUOGamzhFBRz8iUzjUkXC-c24_YvffQIX9ou6tf8WXLG1kQxhiJPyt_c4g48T2blq3JrM6oELDvktH6UeF_L5wAzIc5bNgGMCVqPN0RNDl8NKnmaJoWSFyHc";
+
+#[tokio::test]
+async fn rsa_components_construct_the_same_strict_verifier() {
+    let (priv_pem, _) = test_keys();
+    let token = issuer(&priv_pem)
+        .issue("svc-platform-api", &request(), 30)
+        .await
+        .expect("issue");
+    let verifier = CapabilityVerifier::from_rsa_components(
+        "https://auth.sunlit.test".to_string(),
+        "sunlit-broker".to_string(),
+        TEST_RSA_N_B64URL,
+        TEST_RSA_E_B64URL,
+    )
+    .expect("valid RSA components");
+    let store = InMemoryReplayStore::default();
+
+    verifier
+        .verify(&token, &expected(), &store)
+        .await
+        .expect("first use must verify");
+    assert!(matches!(
+        verifier.verify(&token, &expected(), &store).await,
+        Err(CapabilityError::Replayed)
+    ));
+}
+
+#[test]
+fn malformed_or_weak_rsa_components_are_rejected() {
+    for (name, modulus, exponent) in [
+        ("malformed modulus", "not base64url", TEST_RSA_E_B64URL),
+        ("empty exponent", TEST_RSA_N_B64URL, ""),
+        ("invalid even exponent", TEST_RSA_N_B64URL, "Ag"),
+        ("weak modulus", WEAK_RSA_N_B64URL, TEST_RSA_E_B64URL),
+    ] {
+        let result = CapabilityVerifier::from_rsa_components(
+            "https://auth.sunlit.test".to_string(),
+            "sunlit-broker".to_string(),
+            modulus,
+            exponent,
+        );
+        assert!(
+            matches!(result, Err(CapabilityError::InvalidKey)),
+            "{name} must fail closed"
+        );
+    }
+}
 
 /// The signer and the verifier must agree on what a usable key is. If only one
 /// of them enforces a floor, an attacker who supplies the key picks the side
