@@ -35,7 +35,13 @@ fuzz_target!(|data: &[u8]| {
     // Must never panic. And because the fuzzer cannot produce a valid RSA
     // signature over the pinned key, it must never succeed either — a success
     // here would mean the verifier accepted something it did not authenticate.
-    if verifier.verify(token, &expected, &store).is_ok() {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .expect("runtime");
+    if rt
+        .block_on(verifier.verify(token, &expected, &store))
+        .is_ok()
+    {
         panic!("verifier accepted a capability it did not authenticate");
     }
 });

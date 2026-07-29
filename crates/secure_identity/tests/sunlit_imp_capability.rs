@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use secure_identity::capability::{
     CapabilityError, CapabilityIssuer, CapabilityRequest, CapabilityVerifier, Expected,
-    InMemoryReplayStore, Operation, RsaCapabilitySigner,
+    InMemoryReplayStore, Operation, ReplayStore, RsaCapabilitySigner,
 };
 
 /// Throwaway test key material, stored as bare base64 WITHOUT PEM armour.
@@ -84,16 +84,18 @@ fn expected() -> Expected {
 
 // ---------------------------------------------------------------- happy path
 
-#[test]
-fn happy_path_first_use_succeeds() {
+#[tokio::test]
+async fn happy_path_first_use_succeeds() {
     let (priv_pem, pub_pem) = test_keys();
     let token = issuer(&priv_pem)
         .issue("svc-platform-api", &request(), 30)
+        .await
         .expect("issue");
     let store = InMemoryReplayStore::default();
 
     let verified = verifier(&pub_pem)
         .verify(&token, &expected(), &store)
+        .await
         .expect("first use must succeed");
 
     assert_eq!(verified.tenant(), "acct-42");
@@ -103,17 +105,20 @@ fn happy_path_first_use_succeeds() {
 
 // ------------------------------------------------------------ single use
 
-#[test]
-fn replay_of_the_same_capability_fails_closed() {
+#[tokio::test]
+async fn replay_of_the_same_capability_fails_closed() {
     let (priv_pem, pub_pem) = test_keys();
     let token = issuer(&priv_pem)
         .issue("svc-platform-api", &request(), 30)
+        .await
         .expect("issue");
     let store = InMemoryReplayStore::default();
     let v = verifier(&pub_pem);
 
-    v.verify(&token, &expected(), &store).expect("first use");
-    let second = v.verify(&token, &expected(), &store);
+    v.verify(&token, &expected(), &store)
+        .await
+        .expect("first use");
+    let second = v.verify(&token, &expected(), &store).await;
 
     assert!(
         matches!(second, Err(CapabilityError::Replayed)),
@@ -121,12 +126,13 @@ fn replay_of_the_same_capability_fails_closed() {
     );
 }
 
-#[test]
-fn concurrent_double_use_admits_exactly_one_winner() {
+#[tokio::test]
+async fn concurrent_double_use_admits_exactly_one_winner() {
     let (priv_pem, pub_pem) = test_keys();
     let token = Arc::new(
         issuer(&priv_pem)
             .issue("svc-platform-api", &request(), 30)
+            .await
             .expect("issue"),
     );
     let store = Arc::new(InMemoryReplayStore::default());
@@ -135,16 +141,16 @@ fn concurrent_double_use_admits_exactly_one_winner() {
     let mut handles = Vec::new();
     for _ in 0..16 {
         let (t, s, ver) = (Arc::clone(&token), Arc::clone(&store), Arc::clone(&v));
-        handles.push(std::thread::spawn(move || {
-            ver.verify(&t, &expected(), s.as_ref()).is_ok()
+        handles.push(tokio::spawn(async move {
+            ver.verify(&t, &expected(), s.as_ref()).await.is_ok()
         }));
     }
-    let winners = handles
-        .into_iter()
-        .filter(|_| true)
-        .map(|h| h.join().expect("thread"))
-        .filter(|ok| *ok)
-        .count();
+    let mut winners = 0usize;
+    for h in handles {
+        if h.await.expect("task") {
+            winners += 1;
+        }
+    }
 
     assert_eq!(
         winners, 1,
@@ -154,11 +160,12 @@ fn concurrent_double_use_admits_exactly_one_winner() {
 
 // ------------------------------------------------------- claim binding
 
-#[test]
-fn wrong_tenant_is_rejected() {
+#[tokio::test]
+async fn wrong_tenant_is_rejected() {
     let (priv_pem, pub_pem) = test_keys();
     let token = issuer(&priv_pem)
         .issue("svc-platform-api", &request(), 30)
+        .await
         .expect("issue");
     let store = InMemoryReplayStore::default();
 
@@ -169,16 +176,17 @@ fn wrong_tenant_is_rejected() {
         b"SELECT 1 FROM product_signals",
     );
     assert!(matches!(
-        verifier(&pub_pem).verify(&token, &wrong, &store),
+        verifier(&pub_pem).verify(&token, &wrong, &store).await,
         Err(CapabilityError::TenantMismatch)
     ));
 }
 
-#[test]
-fn wrong_operation_is_rejected() {
+#[tokio::test]
+async fn wrong_operation_is_rejected() {
     let (priv_pem, pub_pem) = test_keys();
     let token = issuer(&priv_pem)
         .issue("svc-platform-api", &request(), 30)
+        .await
         .expect("issue");
     let store = InMemoryReplayStore::default();
 
@@ -189,16 +197,17 @@ fn wrong_operation_is_rejected() {
         b"SELECT 1 FROM product_signals",
     );
     assert!(matches!(
-        verifier(&pub_pem).verify(&token, &wrong, &store),
+        verifier(&pub_pem).verify(&token, &wrong, &store).await,
         Err(CapabilityError::OperationMismatch)
     ));
 }
 
-#[test]
-fn different_request_body_is_rejected() {
+#[tokio::test]
+async fn different_request_body_is_rejected() {
     let (priv_pem, pub_pem) = test_keys();
     let token = issuer(&priv_pem)
         .issue("svc-platform-api", &request(), 30)
+        .await
         .expect("issue");
     let store = InMemoryReplayStore::default();
 
@@ -209,16 +218,17 @@ fn different_request_body_is_rejected() {
         b"SELECT 1 FROM feedback_tickets",
     );
     assert!(matches!(
-        verifier(&pub_pem).verify(&token, &wrong, &store),
+        verifier(&pub_pem).verify(&token, &wrong, &store).await,
         Err(CapabilityError::RequestMismatch)
     ));
 }
 
-#[test]
-fn wrong_subject_is_rejected() {
+#[tokio::test]
+async fn wrong_subject_is_rejected() {
     let (priv_pem, pub_pem) = test_keys();
     let token = issuer(&priv_pem)
         .issue("svc-platform-api", &request(), 30)
+        .await
         .expect("issue");
     let store = InMemoryReplayStore::default();
 
@@ -229,15 +239,15 @@ fn wrong_subject_is_rejected() {
         b"SELECT 1 FROM product_signals",
     );
     assert!(matches!(
-        verifier(&pub_pem).verify(&token, &wrong, &store),
+        verifier(&pub_pem).verify(&token, &wrong, &store).await,
         Err(CapabilityError::SubjectMismatch)
     ));
 }
 
 /// The framed digest must not be confusable by moving bytes across field
 /// boundaries — `("ab","c")` and `("a","bc")` must not collide.
-#[test]
-fn request_digest_framing_is_unambiguous() {
+#[tokio::test]
+async fn request_digest_framing_is_unambiguous() {
     let a = CapabilityRequest::new("ab", Operation::Read, b"c");
     let b = CapabilityRequest::new("a", Operation::Read, b"bc");
     assert_ne!(
@@ -249,88 +259,97 @@ fn request_digest_framing_is_unambiguous() {
 
 // ------------------------------------------------------------- temporal
 
-#[test]
-fn expired_capability_is_rejected() {
+#[tokio::test]
+async fn expired_capability_is_rejected() {
     let (priv_pem, pub_pem) = test_keys();
     let token = issuer(&priv_pem)
         .issue_at("svc-platform-api", &request(), 30, unix_now() - 120)
+        .await
         .expect("issue");
     let store = InMemoryReplayStore::default();
     assert!(matches!(
-        verifier(&pub_pem).verify(&token, &expected(), &store),
+        verifier(&pub_pem).verify(&token, &expected(), &store).await,
         Err(CapabilityError::Expired)
     ));
 }
 
-#[test]
-fn not_yet_valid_capability_is_rejected() {
+#[tokio::test]
+async fn not_yet_valid_capability_is_rejected() {
     let (priv_pem, pub_pem) = test_keys();
     let token = issuer(&priv_pem)
         .issue_at("svc-platform-api", &request(), 30, unix_now() + 600)
+        .await
         .expect("issue");
     let store = InMemoryReplayStore::default();
     assert!(matches!(
-        verifier(&pub_pem).verify(&token, &expected(), &store),
+        verifier(&pub_pem).verify(&token, &expected(), &store).await,
         Err(CapabilityError::NotYetValid)
     ));
 }
 
-#[test]
-fn ttl_above_sixty_seconds_is_refused_at_issue_time() {
+#[tokio::test]
+async fn ttl_above_sixty_seconds_is_refused_at_issue_time() {
     let (priv_pem, _) = test_keys();
-    let err = issuer(&priv_pem).issue("svc-platform-api", &request(), 61);
+    let err = issuer(&priv_pem)
+        .issue("svc-platform-api", &request(), 61)
+        .await;
     assert!(
         matches!(err, Err(CapabilityError::TtlTooLong)),
         "issuing a >60s capability must fail closed, got {err:?}"
     );
 }
 
-#[test]
-fn ttl_above_sixty_seconds_is_refused_at_verify_time_too() {
+#[tokio::test]
+async fn ttl_above_sixty_seconds_is_refused_at_verify_time_too() {
     // Defence in depth: a token minted by a non-conforming issuer must still be
     // rejected by the verifier, which cannot assume the issuer behaved.
     let (priv_pem, pub_pem) = test_keys();
     let token = issuer(&priv_pem)
         .issue_unchecked_ttl_for_test("svc-platform-api", &request(), 3600)
+        .await
         .expect("issue");
     let store = InMemoryReplayStore::default();
     assert!(matches!(
-        verifier(&pub_pem).verify(&token, &expected(), &store),
+        verifier(&pub_pem).verify(&token, &expected(), &store).await,
         Err(CapabilityError::TtlTooLong)
     ));
 }
 
-#[test]
-fn missing_jti_is_rejected() {
+#[tokio::test]
+async fn missing_jti_is_rejected() {
     let (priv_pem, pub_pem) = test_keys();
     let token = issuer(&priv_pem)
         .issue_without_jti_for_test("svc-platform-api", &request(), 30)
+        .await
         .expect("issue");
     let store = InMemoryReplayStore::default();
     assert!(matches!(
-        verifier(&pub_pem).verify(&token, &expected(), &store),
+        verifier(&pub_pem).verify(&token, &expected(), &store).await,
         Err(CapabilityError::MissingJti)
     ));
 }
 
 // --------------------------------------------------------- cryptographic
 
-#[test]
-fn wrong_signing_key_is_rejected() {
+#[tokio::test]
+async fn wrong_signing_key_is_rejected() {
     let (priv_pem, _) = test_keys();
     let other_pub = pem("PUBLIC KEY", OTHER_PUBLIC_SPKI_B64).into_bytes();
     let token = issuer(&priv_pem)
         .issue("svc-platform-api", &request(), 30)
+        .await
         .expect("issue");
     let store = InMemoryReplayStore::default();
     assert!(matches!(
-        verifier(&other_pub).verify(&token, &expected(), &store),
+        verifier(&other_pub)
+            .verify(&token, &expected(), &store)
+            .await,
         Err(CapabilityError::BadSignature)
     ));
 }
 
-#[test]
-fn wrong_issuer_is_rejected() {
+#[tokio::test]
+async fn wrong_issuer_is_rejected() {
     let (priv_pem, pub_pem) = test_keys();
     let token = CapabilityIssuer::new(
         "https://evil.example".to_string(),
@@ -338,16 +357,17 @@ fn wrong_issuer_is_rejected() {
         RsaCapabilitySigner::from_pkcs8_pem(&priv_pem).expect("key"),
     )
     .issue("svc-platform-api", &request(), 30)
+    .await
     .expect("issue");
     let store = InMemoryReplayStore::default();
     assert!(matches!(
-        verifier(&pub_pem).verify(&token, &expected(), &store),
+        verifier(&pub_pem).verify(&token, &expected(), &store).await,
         Err(CapabilityError::IssuerMismatch)
     ));
 }
 
-#[test]
-fn wrong_audience_is_rejected() {
+#[tokio::test]
+async fn wrong_audience_is_rejected() {
     let (priv_pem, pub_pem) = test_keys();
     let token = CapabilityIssuer::new(
         "https://auth.sunlit.test".to_string(),
@@ -355,18 +375,19 @@ fn wrong_audience_is_rejected() {
         RsaCapabilitySigner::from_pkcs8_pem(&priv_pem).expect("key"),
     )
     .issue("svc-platform-api", &request(), 30)
+    .await
     .expect("issue");
     let store = InMemoryReplayStore::default();
     assert!(matches!(
-        verifier(&pub_pem).verify(&token, &expected(), &store),
+        verifier(&pub_pem).verify(&token, &expected(), &store).await,
         Err(CapabilityError::AudienceMismatch)
     ));
 }
 
 /// `alg: none` and HMAC confusion are the classic JWT breaks. The verifier is
 /// RS256-only by construction and must not honour the token's own header.
-#[test]
-fn alg_none_is_rejected() {
+#[tokio::test]
+async fn alg_none_is_rejected() {
     let (_, pub_pem) = test_keys();
     let store = InMemoryReplayStore::default();
     // {"alg":"none","typ":"JWT"} . {claims} . (empty signature)
@@ -376,13 +397,15 @@ fn alg_none_is_rejected() {
         base64_url(br#"{"iss":"https://auth.sunlit.test","aud":"sunlit-broker"}"#)
     );
     assert!(matches!(
-        verifier(&pub_pem).verify(&forged, &expected(), &store),
+        verifier(&pub_pem)
+            .verify(&forged, &expected(), &store)
+            .await,
         Err(CapabilityError::BadSignature) | Err(CapabilityError::Malformed)
     ));
 }
 
-#[test]
-fn hs256_algorithm_confusion_is_rejected() {
+#[tokio::test]
+async fn hs256_algorithm_confusion_is_rejected() {
     let (_, pub_pem) = test_keys();
     let store = InMemoryReplayStore::default();
     let forged = format!(
@@ -392,7 +415,9 @@ fn hs256_algorithm_confusion_is_rejected() {
         base64_url(b"not-a-real-mac")
     );
     assert!(matches!(
-        verifier(&pub_pem).verify(&forged, &expected(), &store),
+        verifier(&pub_pem)
+            .verify(&forged, &expected(), &store)
+            .await,
         Err(CapabilityError::BadSignature) | Err(CapabilityError::Malformed)
     ));
 }
@@ -401,15 +426,17 @@ fn hs256_algorithm_confusion_is_rejected() {
 
 /// A capability is bearer authority. Nothing that renders it may leak the token,
 /// the request body, or the jti.
-#[test]
-fn debug_output_never_leaks_token_or_request_material() {
+#[tokio::test]
+async fn debug_output_never_leaks_token_or_request_material() {
     let (priv_pem, pub_pem) = test_keys();
     let token = issuer(&priv_pem)
         .issue("svc-platform-api", &request(), 30)
+        .await
         .expect("issue");
     let store = InMemoryReplayStore::default();
     let verified = verifier(&pub_pem)
         .verify(&token, &expected(), &store)
+        .await
         .expect("verify");
 
     let rendered = format!("{verified:?}");
@@ -424,11 +451,12 @@ fn debug_output_never_leaks_token_or_request_material() {
     );
 }
 
-#[test]
-fn error_display_never_leaks_token_material() {
+#[tokio::test]
+async fn error_display_never_leaks_token_material() {
     let (priv_pem, pub_pem) = test_keys();
     let token = issuer(&priv_pem)
         .issue("svc-platform-api", &request(), 30)
+        .await
         .expect("issue");
     let store = InMemoryReplayStore::default();
     let wrong = Expected::new(
@@ -439,6 +467,7 @@ fn error_display_never_leaks_token_material() {
     );
     let err = verifier(&pub_pem)
         .verify(&token, &wrong, &store)
+        .await
         .expect_err("must fail");
     let rendered = format!("{err} / {err:?}");
     assert!(!rendered.contains(&token));
@@ -448,8 +477,8 @@ fn error_display_never_leaks_token_material() {
 
 // ------------------------------------------------------------- malformed
 
-#[test]
-fn structurally_malformed_input_is_rejected_without_panic() {
+#[tokio::test]
+async fn structurally_malformed_input_is_rejected_without_panic() {
     let (_, pub_pem) = test_keys();
     let store = InMemoryReplayStore::default();
     let v = verifier(&pub_pem);
@@ -462,7 +491,7 @@ fn structurally_malformed_input_is_rejected_without_panic() {
         "🙂.🙂.🙂",
         &"A".repeat(100_000),
     ] {
-        let out = v.verify(bad, &expected(), &store);
+        let out = v.verify(bad, &expected(), &store).await;
         assert!(out.is_err(), "malformed input {bad:?} must not verify");
     }
 }
@@ -479,4 +508,102 @@ fn unix_now() -> i64 {
 fn base64_url(bytes: &[u8]) -> String {
     use base64::Engine as _;
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
+}
+
+// ------------------------------------------------- key-size agreement (F3)
+
+/// A 1024-bit key: below the accepted floor. Kept as bare base64 for the same
+/// scanner reason as the others.
+const WEAK_PRIVATE_PKCS8_B64: &str = "MIICdQIBADANBgkqhkiG9w0BAQEFAASCAl8wggJbAgEAAoGBAKTZvCwNswHe2kCBQn85TBtbJj1YpPULgMzR6i9/dUlKAr/oaLtNGlDhmps4RQUc/IlM41JFwvnNuP2L330CF/aLurX/FlyxtZEMYYiT8rf3OIOPE9m5atyazOqBCw75LR+lHhfy+cAMyHOWzYBjAlajzdETQ5fDSp5miaFkhch3AgMBAAECgYB3VlQ9g/FJcl2HAsvzs7Pfvd1x3YEVD62/GFsy5U8vrg9Ng96FcOyTDq7QnSyB5hj/ABU0EuJx2jaH/cDdCy3ymIaIaR+2LkZ2SkjQAFRtmy8/rTX3GiS+7WqfXN272lExm1UkkqDVYQ7rq7eIx4u7f1ucCWK9nJvHZMvqDr7J2QJBAM7AzxBUCggkk8X5780zxMjWhc6bVHTvEoGEqwZS00k8GUO0P70OZ8izJW5SVPaAKfkg/OYTNZ97pMzMU/OFQ/sCQQDMHdQikJ6CBXlbMdigN2z1hAIOKeDaNK0E5LMFKxvpBmYQZQbIx1Zrznwk9Ns79roLo8W0YVtkn13VJE0ZEKi1AkBhhd7l484rkx1FGCS91TpwRYguMWSAF7jR8QM+41iYRcng/qfGBIJ9z8rLI/jBoSirQ50m5U644HiWxZaf2m97AkApxaD4Qehua3hedWEDyNP/mrhg9akSft05tyP71sqrcafJiyNMS58gCO3XElUbfG6umyGGvLXbbdHiIL+2dXZRAkAbGws1pm4HjfI2r2Rs00X/sQmb5ROMBBqK3TiIFtAMHoPkPWmvbZIVhKoZ3jUapQ5IlB6xzd3obCJHraMxNi9W";
+const WEAK_PUBLIC_SPKI_B64: &str = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCk2bwsDbMB3tpAgUJ/OUwbWyY9WKT1C4DM0eovf3VJSgK/6Gi7TRpQ4ZqbOEUFHPyJTONSRcL5zbj9i999Ahf2i7q1/xZcsbWRDGGIk/K39ziDjxPZuWrcmszqgQsO+S0fpR4X8vnADMhzls2AYwJWo83RE0OXw0qeZomhZIXIdwIDAQAB";
+
+/// The signer and the verifier must agree on what a usable key is. If only one
+/// of them enforces a floor, an attacker who supplies the key picks the side
+/// that does not — which is precisely the asymmetry this pins shut.
+#[tokio::test]
+async fn undersized_rsa_key_is_rejected_by_both_signer_and_verifier() {
+    let weak_priv = pem("PRIVATE KEY", WEAK_PRIVATE_PKCS8_B64);
+    let weak_pub = pem("PUBLIC KEY", WEAK_PUBLIC_SPKI_B64);
+
+    assert!(
+        matches!(
+            RsaCapabilitySigner::from_pkcs8_pem(weak_priv.as_bytes()),
+            Err(CapabilityError::InvalidKey)
+        ),
+        "signer must refuse a 1024-bit key"
+    );
+    assert!(
+        matches!(
+            CapabilityVerifier::from_rsa_pem(
+                "https://auth.sunlit.test".to_string(),
+                "sunlit-broker".to_string(),
+                weak_pub.as_bytes(),
+            ),
+            Err(CapabilityError::InvalidKey)
+        ),
+        "verifier must refuse a 1024-bit key too, or the floor is one-sided"
+    );
+}
+
+/// POSITIVE CONTROL for the bound: the 2048-bit key used everywhere else must
+/// still be accepted, so the test above is proving a floor rather than a
+/// blanket rejection.
+#[tokio::test]
+async fn supported_rsa_key_size_is_still_accepted() {
+    let (priv_pem, pub_pem) = test_keys();
+    assert!(RsaCapabilitySigner::from_pkcs8_pem(&priv_pem).is_ok());
+    assert!(CapabilityVerifier::from_rsa_pem(
+        "https://auth.sunlit.test".to_string(),
+        "sunlit-broker".to_string(),
+        &pub_pem,
+    )
+    .is_ok());
+}
+
+// ------------------------------------------------ replay store bounds (F4)
+
+/// A spent `jti` only needs remembering while the capability could still be
+/// presented. Retaining them forever is a memory-exhaustion surface reachable
+/// by anyone who can cause capabilities to be issued.
+#[tokio::test]
+async fn replay_store_drops_entries_once_they_can_no_longer_be_presented() {
+    let store = InMemoryReplayStore::default();
+    let now = unix_now();
+
+    store
+        .consume("already-expired", now - 1)
+        .await
+        .expect("claim");
+    assert_eq!(store.len(), 1);
+
+    // Any later claim prunes what can no longer be replayed.
+    store.consume("still-live", now + 300).await.expect("claim");
+    assert_eq!(
+        store.len(),
+        1,
+        "the expired entry must be dropped, not accumulated"
+    );
+
+    // And the live one is still single-use.
+    assert!(matches!(
+        store.consume("still-live", now + 300).await,
+        Err(CapabilityError::Replayed)
+    ));
+}
+
+/// The store fails closed at its cap rather than evicting a live `jti`.
+/// Evicting one would silently re-authorise it.
+#[tokio::test]
+async fn replay_store_fails_closed_at_capacity_rather_than_evicting() {
+    let store = InMemoryReplayStore::with_capacity(2);
+    let now = unix_now();
+    store.consume("a", now + 300).await.expect("first");
+    store.consume("b", now + 300).await.expect("second");
+    assert!(
+        matches!(
+            store.consume("c", now + 300).await,
+            Err(CapabilityError::ReplayStoreUnavailable)
+        ),
+        "at capacity the store must refuse, never evict a live jti"
+    );
 }

@@ -4,6 +4,13 @@
 //! must hold for every input, not just the ones someone thought to enumerate.
 
 use proptest::prelude::*;
+use tokio::runtime::Runtime;
+
+/// proptest bodies are synchronous, so each property drives the async API on a
+/// current-thread runtime — the same shape `prop_session.rs` already uses.
+fn rt() -> Runtime {
+    Runtime::new().expect("runtime")
+}
 use secure_identity::capability::{
     CapabilityError, CapabilityIssuer, CapabilityRequest, CapabilityVerifier, Expected,
     InMemoryReplayStore, Operation, RsaCapabilitySigner, MAX_TTL_SECONDS,
@@ -78,17 +85,18 @@ proptest! {
         op in any_operation(),
         ttl in 1u64..=MAX_TTL_SECONDS,
     ) {
-        let request = CapabilityRequest::new(&tenant, op, &body);
-        let token = issuer().issue(&subject, &request, ttl).expect("issue");
-        let expected = Expected::new(&subject, &tenant, op, &body);
-        let store = InMemoryReplayStore::default();
-        let v = verifier();
-
-        prop_assert!(v.verify(&token, &expected, &store).is_ok());
-        prop_assert!(matches!(
-            v.verify(&token, &expected, &store),
-            Err(CapabilityError::Replayed)
-        ));
+        let (first, second) = rt().block_on(async {
+            let request = CapabilityRequest::new(&tenant, op, &body);
+            let token = issuer().issue(&subject, &request, ttl).await.expect("issue");
+            let expected = Expected::new(&subject, &tenant, op, &body);
+            let store = InMemoryReplayStore::default();
+            let v = verifier();
+            let a = v.verify(&token, &expected, &store).await.is_ok();
+            let b = v.verify(&token, &expected, &store).await;
+            (a, b)
+        });
+        prop_assert!(first);
+        prop_assert!(matches!(second, Err(CapabilityError::Replayed)));
     }
 
     /// A TTL above the maximum is refused, whatever the other inputs are.
@@ -98,11 +106,11 @@ proptest! {
         tenant in "[a-z0-9-]{1,20}",
         ttl in (MAX_TTL_SECONDS + 1)..=100_000u64,
     ) {
-        let request = CapabilityRequest::new(&tenant, Operation::Read, b"x");
-        prop_assert!(matches!(
-            issuer().issue(&subject, &request, ttl),
-            Err(CapabilityError::TtlTooLong)
-        ));
+        let out = rt().block_on(async {
+            let request = CapabilityRequest::new(&tenant, Operation::Read, b"x");
+            issuer().issue(&subject, &request, ttl).await
+        });
+        prop_assert!(matches!(out, Err(CapabilityError::TtlTooLong)));
     }
 
     /// Mutating ANY single byte of the token must break verification. This is
@@ -112,21 +120,23 @@ proptest! {
         idx in any::<prop::sample::Index>(),
         delta in 1u8..=255,
     ) {
-        let request = CapabilityRequest::new("acct", Operation::Read, b"body");
-        let token = issuer().issue("svc", &request, 30).expect("issue");
-        let expected = Expected::new("svc", "acct", Operation::Read, b"body");
+        let outcome = rt().block_on(async {
+            let request = CapabilityRequest::new("acct", Operation::Read, b"body");
+            let token = issuer().issue("svc", &request, 30).await.expect("issue");
+            let expected = Expected::new("svc", "acct", Operation::Read, b"body");
 
-        let mut bytes = token.clone().into_bytes();
-        let i = idx.index(bytes.len());
-        bytes[i] = bytes[i].wrapping_add(delta);
+            let mut bytes = token.clone().into_bytes();
+            let i = idx.index(bytes.len());
+            bytes[i] = bytes[i].wrapping_add(delta);
 
-        // A mutation may produce invalid UTF-8; that is itself a rejection.
-        let store = InMemoryReplayStore::default();
-        let outcome = match String::from_utf8(bytes) {
-            Ok(mutated) if mutated == token => return Ok(()), // no-op mutation
-            Ok(mutated) => verifier().verify(&mutated, &expected, &store).is_err(),
-            Err(_) => true,
-        };
+            // A mutation may produce invalid UTF-8; that is itself a rejection.
+            let store = InMemoryReplayStore::default();
+            match String::from_utf8(bytes) {
+                Ok(mutated) if mutated == token => true, // no-op mutation
+                Ok(mutated) => verifier().verify(&mutated, &expected, &store).await.is_err(),
+                Err(_) => true,
+            }
+        });
         prop_assert!(outcome, "a mutated token must not verify");
     }
 
@@ -147,37 +157,48 @@ proptest! {
         }
     }
 
-    /// A capability REJECTED for any reason must not be consumed — otherwise an
-    /// attacker could burn a victim's capability by replaying it against the
-    /// wrong expectation, and the legitimate holder would then be denied.
+    /// A capability rejected by a CLAIM check must not be consumed — otherwise
+    /// an attacker could burn a victim's capability by presenting it against
+    /// the wrong expectation, and the legitimate holder would then be denied.
+    ///
+    /// Scope, stated deliberately: this holds because every claim check runs
+    /// before the store is entered. It says nothing about failures INSIDE the
+    /// store — a distributed implementation can commit the claim and lose the
+    /// reply, which is why `ReplayIndeterminate` exists and must be treated as
+    /// spent. This property is asserted against `InMemoryReplayStore`, whose
+    /// consume is infallible once the lock is held.
     #[test]
-    fn a_rejected_capability_is_never_spent(
+    fn a_claim_rejected_capability_is_never_spent(
         wrong_tenant in "[a-z0-9-]{1,20}",
     ) {
         prop_assume!(wrong_tenant != "acct");
 
-        let request = CapabilityRequest::new("acct", Operation::Read, b"body");
-        let token = issuer().issue("svc", &request, 30).expect("issue");
-        let store = InMemoryReplayStore::default();
-        let v = verifier();
+        let (rejected, then_usable) = rt().block_on(async {
+            let request = CapabilityRequest::new("acct", Operation::Read, b"body");
+            let token = issuer().issue("svc", &request, 30).await.expect("issue");
+            let store = InMemoryReplayStore::default();
+            let v = verifier();
 
-        // Attacker presents the capability against a tenant it does not authorise.
-        let wrong = Expected::new("svc", &wrong_tenant, Operation::Read, b"body");
-        prop_assert!(v.verify(&token, &wrong, &store).is_err());
+            // Attacker presents the capability against a tenant it does not authorise.
+            let wrong = Expected::new("svc", &wrong_tenant, Operation::Read, b"body");
+            let a = v.verify(&token, &wrong, &store).await.is_err();
 
-        // The legitimate holder must still be able to use it.
-        let right = Expected::new("svc", "acct", Operation::Read, b"body");
-        prop_assert!(
-            v.verify(&token, &right, &store).is_ok(),
-            "a failed verification must not burn the jti"
-        );
+            // The legitimate holder must still be able to use it.
+            let right = Expected::new("svc", "acct", Operation::Read, b"body");
+            let b = v.verify(&token, &right, &store).await.is_ok();
+            (a, b)
+        });
+        prop_assert!(rejected);
+        prop_assert!(then_usable, "a claim-check failure must not burn the jti");
     }
 
     /// Arbitrary bytes presented as a token must be rejected without panicking.
     #[test]
     fn arbitrary_input_never_panics(raw in ".{0,600}") {
-        let store = InMemoryReplayStore::default();
-        let expected = Expected::new("svc", "acct", Operation::Read, b"body");
-        let _ = verifier().verify(&raw, &expected, &store);
+        rt().block_on(async {
+            let store = InMemoryReplayStore::default();
+            let expected = Expected::new("svc", "acct", Operation::Read, b"body");
+            let _ = verifier().verify(&raw, &expected, &store).await;
+        });
     }
 }

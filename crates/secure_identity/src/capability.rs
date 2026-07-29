@@ -19,8 +19,9 @@
 //! * **Request binding.** The capability commits to a length-framed SHA-256 of
 //!   (tenant, operation, request body), so authority cannot be moved to a
 //!   different statement.
-//! * **Redaction.** No token, claim, request body or `jti` appears in `Debug`
-//!   or error output.
+//! * **Redaction.** `Debug` and error output carry no token, no request body,
+//!   no `jti`, and no `subject` or `tenant`. `Operation` and `expires_at` are
+//!   rendered, because they identify neither a principal nor data.
 //!
 //! # Examples
 //!
@@ -30,7 +31,8 @@
 //!     InMemoryReplayStore, Operation, RsaCapabilitySigner,
 //! };
 //!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let signing_pem = std::fs::read("capability_signing_key.pem")?;
 //! let verify_pem = std::fs::read("capability_public_key.pem")?;
 //!
@@ -41,7 +43,8 @@
 //!     "broker".to_string(),
 //!     RsaCapabilitySigner::from_pkcs8_pem(&signing_pem)?,
 //! )
-//! .issue("svc-api", &request, 30)?;
+//! .issue("svc-api", &request, 30)
+//! .await?;
 //!
 //! let verifier = CapabilityVerifier::from_rsa_pem(
 //!     "https://auth.example.com".to_string(),
@@ -51,16 +54,16 @@
 //! let store = InMemoryReplayStore::default();
 //! let expected = Expected::new("svc-api", "acct-42", Operation::Read, b"SELECT 1");
 //!
-//! let verified = verifier.verify(&token, &expected, &store)?;
+//! let verified = verifier.verify(&token, &expected, &store).await?;
 //! assert_eq!(verified.tenant(), "acct-42");
 //!
 //! // The same capability cannot be used twice.
-//! assert!(verifier.verify(&token, &expected, &store).is_err());
+//! assert!(verifier.verify(&token, &expected, &store).await.is_err());
 //! # Ok(())
 //! # }
 //! ```
 
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::sync::Mutex;
 
 use base64::Engine as _;
@@ -82,9 +85,13 @@ const B64: base64::engine::general_purpose::GeneralPurpose =
 /// This is deliberately an enum rather than a free string: a broker must be
 /// able to exhaustively match on what it is being asked to do, and an unknown
 /// variant must fail to deserialise rather than being forwarded.
+///
+/// It is deliberately **not** `#[non_exhaustive]`. Marking it so would stop
+/// downstream brokers writing an exhaustive `match`, which is precisely the
+/// review property this type exists to give them: adding a variant here MUST
+/// break every broker at compile time so each one re-decides what it authorises.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-#[non_exhaustive]
 pub enum Operation {
     /// Read rows the tenant already owns.
     Read,
@@ -153,8 +160,16 @@ pub enum CapabilityError {
     MissingJti,
     /// The capability has already been used.
     Replayed,
-    /// The replay store could not be consulted; verification fails closed.
+    /// The replay store could not be consulted at all. The capability was
+    /// **not** consumed, so it may be retried.
     ReplayStoreUnavailable,
+    /// The replay store was reached but its answer was lost — for example a
+    /// distributed store that committed the claim and then failed to reply.
+    ///
+    /// The capability MUST be treated as **spent**. Retrying is unsafe: the
+    /// claim may already have succeeded, and a caller that retries on this is
+    /// building exactly the double-use the `jti` exists to prevent.
+    ReplayIndeterminate,
     /// The supplied key material could not be parsed.
     InvalidKey,
     /// Signing failed.
@@ -180,6 +195,9 @@ impl std::fmt::Display for CapabilityError {
             Self::MissingJti => "capability has no jti",
             Self::Replayed => "capability already used",
             Self::ReplayStoreUnavailable => "replay store unavailable",
+            Self::ReplayIndeterminate => {
+                "replay store outcome indeterminate; capability must be treated as spent"
+            }
             Self::InvalidKey => "invalid key material",
             Self::SigningFailed => "capability signing failed",
             Self::ClockUnavailable => "system clock unavailable",
@@ -235,7 +253,7 @@ impl std::fmt::Debug for CapabilityRequest {
     /// Renders without the request body or digest.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CapabilityRequest")
-            .field("tenant", &self.tenant)
+            .field("tenant", &"<redacted>")
             .field("operation", &self.operation)
             .field("digest", &"<redacted>")
             .finish()
@@ -261,10 +279,10 @@ impl Expected {
 }
 
 impl std::fmt::Debug for Expected {
-    /// Renders without request material.
+    /// Renders without subject or request material.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Expected")
-            .field("subject", &self.subject)
+            .field("subject", &"<redacted>")
             .field("request", &self.request)
             .finish()
     }
@@ -291,13 +309,18 @@ fn framed_digest(tenant: &str, operation: Operation, body: &[u8]) -> [u8; 32] {
 /// This is an abstraction rather than a key so that a KMS-backed signer — which
 /// never exposes private material to this process — can be substituted for the
 /// local implementation without changing callers.
+#[allow(async_fn_in_trait)]
 pub trait CapabilitySigner {
     /// Signs the JWS signing input with RSASSA-PKCS1-v1_5 over SHA-256.
+    ///
+    /// This is `async` because the intended production implementation is a
+    /// remote KMS. A synchronous seam would force `block_on` inside a caller's
+    /// async runtime, which stalls or deadlocks the executor.
     ///
     /// # Errors
     ///
     /// Returns [`CapabilityError::SigningFailed`] if the signature cannot be produced.
-    fn sign(&self, signing_input: &[u8]) -> Result<Vec<u8>, CapabilityError>;
+    async fn sign(&self, signing_input: &[u8]) -> Result<Vec<u8>, CapabilityError>;
 }
 
 /// A local RSA signer, for tests and for deployments without a KMS.
@@ -315,6 +338,10 @@ impl RsaCapabilitySigner {
     pub fn from_pkcs8_pem(pem: &[u8]) -> Result<Self, CapabilityError> {
         let der = pem_body(pem).ok_or(CapabilityError::InvalidKey)?;
         let key = RsaKeyPair::from_pkcs8(&der).map_err(|_| CapabilityError::InvalidKey)?;
+        let bits = key.public().modulus_len() * 8;
+        if !(MIN_RSA_MODULUS_BITS..=MAX_RSA_MODULUS_BITS).contains(&bits) {
+            return Err(CapabilityError::InvalidKey);
+        }
         Ok(Self {
             key,
             rng: SystemRandom::new(),
@@ -330,13 +357,65 @@ impl std::fmt::Debug for RsaCapabilitySigner {
 }
 
 impl CapabilitySigner for RsaCapabilitySigner {
-    fn sign(&self, signing_input: &[u8]) -> Result<Vec<u8>, CapabilityError> {
+    async fn sign(&self, signing_input: &[u8]) -> Result<Vec<u8>, CapabilityError> {
         let mut sig = vec![0u8; self.key.public().modulus_len()];
         self.key
             .sign(&RSA_PKCS1_SHA256, &self.rng, signing_input, &mut sig)
             .map_err(|_| CapabilityError::SigningFailed)?;
         Ok(sig)
     }
+}
+
+/// Minimum RSA modulus accepted, in bits. Below this the signature is not
+/// meaningfully unforgeable.
+pub const MIN_RSA_MODULUS_BITS: usize = 2048;
+/// Maximum RSA modulus accepted, in bits. Above this verification cost becomes
+/// an amplification surface for an attacker who chooses the key.
+pub const MAX_RSA_MODULUS_BITS: usize = 4096;
+
+/// Extracts the RSA modulus size, in bits, from an SPKI DER public key.
+///
+/// The verifier cannot ask `DecodingKey` how large its key is, so the bound is
+/// enforced here instead. Without this the signer would reject a weak key while
+/// the verifier quietly accepted one — the asymmetry an attacker picks.
+fn spki_rsa_modulus_bits(der: &[u8]) -> Option<usize> {
+    // SPKI: SEQUENCE { SEQUENCE { OID, NULL }, BIT STRING { SEQUENCE { INTEGER n, INTEGER e } } }
+    fn read_len(b: &[u8], i: &mut usize) -> Option<usize> {
+        let first = *b.get(*i)?;
+        *i += 1;
+        if first < 0x80 {
+            return Some(first as usize);
+        }
+        let n = (first & 0x7f) as usize;
+        if n == 0 || n > 4 {
+            return None;
+        }
+        let mut len = 0usize;
+        for _ in 0..n {
+            len = (len << 8) | *b.get(*i)? as usize;
+            *i += 1;
+        }
+        Some(len)
+    }
+    fn expect(b: &[u8], i: &mut usize, tag: u8) -> Option<usize> {
+        if *b.get(*i)? != tag {
+            return None;
+        }
+        *i += 1;
+        read_len(b, i)
+    }
+
+    let mut i = 0usize;
+    expect(der, &mut i, 0x30)?; // outer SEQUENCE
+    let alg_len = expect(der, &mut i, 0x30)?; // AlgorithmIdentifier
+    i += alg_len;
+    expect(der, &mut i, 0x03)?; // BIT STRING
+    i += 1; // unused-bits octet
+    expect(der, &mut i, 0x30)?; // RSAPublicKey SEQUENCE
+    let n_len = expect(der, &mut i, 0x02)?; // INTEGER modulus
+                                            // A leading 0x00 is DER sign padding, not key material.
+    let leading_zero = usize::from(der.get(i) == Some(&0x00));
+    Some((n_len - leading_zero) * 8)
 }
 
 /// Strips PEM armour and base64-decodes the body.
@@ -357,47 +436,108 @@ fn pem_body(pem: &[u8]) -> Option<Vec<u8>> {
 /// Implementations MUST be atomic: `consume` has to admit exactly one caller
 /// for a given `jti`, even under concurrent use, or the single-use guarantee is
 /// only advisory.
+#[allow(async_fn_in_trait)]
 pub trait ReplayStore {
     /// Atomically claims `jti`. Returns [`CapabilityError::Replayed`] if it was
     /// already claimed.
     ///
+    /// This is `async` because the intended production implementation is a
+    /// remote conditional write (DynamoDB, Redis); a synchronous seam would
+    /// force `block_on` inside the caller's runtime.
+    ///
+    /// Implementations MUST be atomic: exactly one caller may win a given
+    /// `jti`, even under concurrency, or the single-use guarantee is advisory.
+    ///
     /// # Errors
     ///
-    /// Returns [`CapabilityError::Replayed`] on reuse, or
-    /// [`CapabilityError::ReplayStoreUnavailable`] if the store cannot answer.
-    fn consume(&self, jti: &str, expires_at: i64) -> Result<(), CapabilityError>;
+    /// * [`CapabilityError::Replayed`] — already claimed.
+    /// * [`CapabilityError::ReplayStoreUnavailable`] — the store was NOT reached
+    ///   and the claim definitely did not happen; safe to retry.
+    /// * [`CapabilityError::ReplayIndeterminate`] — the claim MAY have committed
+    ///   but the outcome was lost. Return this rather than `Unavailable` for a
+    ///   timeout or dropped reply on a write that could have landed.
+    async fn consume(&self, jti: &str, expires_at: i64) -> Result<(), CapabilityError>;
 }
 
 /// An in-memory [`ReplayStore`], suitable for a single process.
 ///
-/// Distributed brokers must supply a shared store instead; this one cannot see
-/// uses made by another replica.
-#[derive(Default)]
+/// Distributed brokers MUST supply a shared store instead; this one cannot see
+/// uses made by another replica, so with more than one replica the single-use
+/// guarantee silently weakens to per-process.
+///
+/// Entries are dropped once their capability has expired — a spent `jti` only
+/// needs remembering for as long as the capability could still be presented.
+/// Without that, the set grows without bound and becomes a memory-exhaustion
+/// surface reachable by anyone who can cause capabilities to be issued.
 pub struct InMemoryReplayStore {
-    seen: Mutex<HashSet<String>>,
+    seen: Mutex<HashMap<String, i64>>,
+    capacity: usize,
+}
+
+impl Default for InMemoryReplayStore {
+    fn default() -> Self {
+        Self::with_capacity(1_048_576)
+    }
+}
+
+impl InMemoryReplayStore {
+    /// Creates a store that will hold at most `capacity` unexpired entries.
+    ///
+    /// Reaching the cap is treated as a fault, not as licence to forget: the
+    /// store fails closed with [`CapabilityError::ReplayStoreUnavailable`]
+    /// rather than evicting a live `jti`, because evicting one would silently
+    /// re-authorise it.
+    #[must_use]
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            seen: Mutex::new(HashMap::new()),
+            capacity,
+        }
+    }
+
+    /// Number of unexpired entries currently retained.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.seen.lock().map(|s| s.len()).unwrap_or(0)
+    }
+
+    /// Whether the store currently retains no entries.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 impl std::fmt::Debug for InMemoryReplayStore {
     /// Renders the size only; `jti` values are replay-relevant.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let n = self.seen.lock().map(|s| s.len()).unwrap_or(0);
         f.debug_struct("InMemoryReplayStore")
-            .field("consumed", &n)
+            .field("retained", &self.len())
+            .field("capacity", &self.capacity)
             .finish()
     }
 }
 
 impl ReplayStore for InMemoryReplayStore {
-    fn consume(&self, jti: &str, _expires_at: i64) -> Result<(), CapabilityError> {
+    async fn consume(&self, jti: &str, expires_at: i64) -> Result<(), CapabilityError> {
+        let now = unix_now()?;
         let mut seen = self
             .seen
             .lock()
             .map_err(|_| CapabilityError::ReplayStoreUnavailable)?;
-        if seen.insert(jti.to_string()) {
-            Ok(())
-        } else {
-            Err(CapabilityError::Replayed)
+
+        // Drop entries whose capability can no longer be presented.
+        seen.retain(|_, exp| *exp > now);
+
+        if seen.contains_key(jti) {
+            return Err(CapabilityError::Replayed);
         }
+        if seen.len() >= self.capacity {
+            // Fail closed. Evicting a live jti would silently re-authorise it.
+            return Err(CapabilityError::ReplayStoreUnavailable);
+        }
+        seen.insert(jti.to_string(), expires_at);
+        Ok(())
     }
 }
 
@@ -453,13 +593,14 @@ impl<S: CapabilitySigner> CapabilityIssuer<S> {
     ///
     /// Returns [`CapabilityError::TtlTooLong`] if `ttl_seconds` exceeds
     /// [`MAX_TTL_SECONDS`], or a signing error.
-    pub fn issue(
+    pub async fn issue(
         &self,
         subject: &str,
         request: &CapabilityRequest,
         ttl_seconds: u64,
     ) -> Result<String, CapabilityError> {
         self.issue_at(subject, request, ttl_seconds, unix_now()?)
+            .await
     }
 
     /// Issues a capability whose validity starts at `iat`.
@@ -468,7 +609,7 @@ impl<S: CapabilitySigner> CapabilityIssuer<S> {
     ///
     /// Returns [`CapabilityError::TtlTooLong`] if `ttl_seconds` exceeds
     /// [`MAX_TTL_SECONDS`], or a signing error.
-    pub fn issue_at(
+    pub async fn issue_at(
         &self,
         subject: &str,
         request: &CapabilityRequest,
@@ -478,7 +619,7 @@ impl<S: CapabilitySigner> CapabilityIssuer<S> {
         if ttl_seconds > MAX_TTL_SECONDS {
             return Err(CapabilityError::TtlTooLong);
         }
-        self.mint(subject, request, ttl_seconds, iat, true)
+        self.mint(subject, request, ttl_seconds, iat, true).await
     }
 
     /// Mints a capability without the issuer-side TTL bound.
@@ -490,13 +631,14 @@ impl<S: CapabilitySigner> CapabilityIssuer<S> {
     ///
     /// Returns a signing error.
     #[doc(hidden)]
-    pub fn issue_unchecked_ttl_for_test(
+    pub async fn issue_unchecked_ttl_for_test(
         &self,
         subject: &str,
         request: &CapabilityRequest,
         ttl_seconds: u64,
     ) -> Result<String, CapabilityError> {
         self.mint(subject, request, ttl_seconds, unix_now()?, true)
+            .await
     }
 
     /// Mints a capability with no `jti`.
@@ -508,16 +650,17 @@ impl<S: CapabilitySigner> CapabilityIssuer<S> {
     ///
     /// Returns a signing error.
     #[doc(hidden)]
-    pub fn issue_without_jti_for_test(
+    pub async fn issue_without_jti_for_test(
         &self,
         subject: &str,
         request: &CapabilityRequest,
         ttl_seconds: u64,
     ) -> Result<String, CapabilityError> {
         self.mint(subject, request, ttl_seconds, unix_now()?, false)
+            .await
     }
 
-    fn mint(
+    async fn mint(
         &self,
         subject: &str,
         request: &CapabilityRequest,
@@ -542,7 +685,7 @@ impl<S: CapabilitySigner> CapabilityIssuer<S> {
         let payload =
             B64.encode(serde_json::to_vec(&claims).map_err(|_| CapabilityError::SigningFailed)?);
         let signing_input = format!("{header}.{payload}");
-        let signature = self.signer.sign(signing_input.as_bytes())?;
+        let signature = self.signer.sign(signing_input.as_bytes()).await?;
         Ok(format!("{signing_input}.{}", B64.encode(signature)))
     }
 }
@@ -589,11 +732,17 @@ impl VerifiedCapability {
 }
 
 impl std::fmt::Debug for VerifiedCapability {
-    /// Renders without the `jti`, which is replay-relevant.
+    /// Renders only non-identifying fields.
+    ///
+    /// `subject`, `tenant` and `jti` are all withheld: the first two identify
+    /// who and whose data an operation touched, and the third is replay-relevant.
+    /// A caller that genuinely needs them has typed accessors and can log them
+    /// deliberately; what must not happen is a struct landing in a log line by
+    /// accident and carrying them along.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("VerifiedCapability")
-            .field("subject", &self.subject)
-            .field("tenant", &self.tenant)
+            .field("subject", &"<redacted>")
+            .field("tenant", &"<redacted>")
             .field("operation", &self.operation)
             .field("jti", &"<redacted>")
             .field("expires_at", &self.expires_at)
@@ -633,6 +782,14 @@ impl CapabilityVerifier {
         audience: String,
         pem: &[u8],
     ) -> Result<Self, CapabilityError> {
+        // Enforce the SAME modulus bounds as the signer. jsonwebtoken will
+        // happily accept a 1024-bit key; the signer will not. That asymmetry is
+        // exactly what an attacker who supplies the key would reach for.
+        let der = pem_body(pem).ok_or(CapabilityError::InvalidKey)?;
+        let bits = spki_rsa_modulus_bits(&der).ok_or(CapabilityError::InvalidKey)?;
+        if !(MIN_RSA_MODULUS_BITS..=MAX_RSA_MODULUS_BITS).contains(&bits) {
+            return Err(CapabilityError::InvalidKey);
+        }
         let key = DecodingKey::from_rsa_pem(pem).map_err(|_| CapabilityError::InvalidKey)?;
         Ok(Self {
             issuer,
@@ -643,13 +800,23 @@ impl CapabilityVerifier {
 
     /// Verifies a capability and consumes it exactly once.
     ///
-    /// Signature, claims and request binding are all checked before the `jti` is
-    /// consumed, so a rejected capability is not spent.
+    /// Signature, claims and request binding are all checked **before** the
+    /// `jti` is consumed, so a capability rejected by any of those checks is
+    /// not spent and may legitimately be presented again.
+    ///
+    /// That guarantee stops at the store boundary, and callers must not
+    /// over-read it. Once [`ReplayStore::consume`] is entered the outcome is
+    /// the store's to report:
+    ///
+    /// * [`CapabilityError::ReplayStoreUnavailable`] — not consumed; retryable.
+    /// * [`CapabilityError::ReplayIndeterminate`] — MAY have been consumed.
+    ///   Treat the capability as spent and obtain a new one; retrying risks the
+    ///   double-use the `jti` exists to prevent.
     ///
     /// # Errors
     ///
     /// Returns the [`CapabilityError`] describing the first failed check.
-    pub fn verify<R: ReplayStore + ?Sized>(
+    pub async fn verify<R: ReplayStore + ?Sized>(
         &self,
         token: &str,
         expected: &Expected,
@@ -702,7 +869,7 @@ impl CapabilityVerifier {
         }
 
         let jti = claims.jti.ok_or(CapabilityError::MissingJti)?;
-        replay_store.consume(&jti, claims.exp)?;
+        replay_store.consume(&jti, claims.exp).await?;
 
         Ok(VerifiedCapability {
             subject: claims.sub,

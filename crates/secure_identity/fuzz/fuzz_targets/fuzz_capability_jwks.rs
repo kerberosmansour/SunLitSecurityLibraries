@@ -30,7 +30,10 @@ fuzz_target!(|data: &[u8]| {
         // still reject a token that key did not sign.
         let store = InMemoryReplayStore::default();
         let expected = Expected::new("fuzz-subject", "fuzz-tenant", Operation::Read, b"fuzz-body");
-        let _ = verifier.verify("not.a.capability", &expected, &store);
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .expect("runtime");
+        let _ = rt.block_on(verifier.verify("not.a.capability", &expected, &store));
     }
 
     // Private signing material: same contract on the signing side.
