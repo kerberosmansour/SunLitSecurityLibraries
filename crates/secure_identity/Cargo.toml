@@ -20,6 +20,7 @@ oidc = ["dep:openidconnect", "dep:reqwest"]
 session-redis = ["dep:redis"]
 
 [dependencies]
+base64 = "0.22"
 jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
 tokio = { version = "1", features = ["sync", "time", "net", "io-util"] }
 ring = "0.17"

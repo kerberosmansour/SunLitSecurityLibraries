@@ -159,6 +159,77 @@ assert!(store.is_cache_valid().await);
 
 ---
 
+## Single-Use Tenant+Operation Capabilities
+
+For brokered access — where the calling process holds **no** database credential
+and **no** network path to the data store — `capability` issues a narrow bearer
+statement a broker can act on: *this subject may perform this operation, for this
+tenant, against this exact request, once, within at most 60 seconds*.
+
+```rust,no_run
+use secure_identity::capability::{
+    CapabilityIssuer, CapabilityRequest, CapabilityVerifier, Expected,
+    InMemoryReplayStore, Operation, RsaCapabilitySigner,
+};
+
+# fn main() -> Result<(), Box<dyn std::error::Error>> {
+let request = CapabilityRequest::new("acct-42", Operation::Read, b"SELECT 1");
+
+let token = CapabilityIssuer::new(
+    "https://auth.example.com".to_string(),
+    "broker".to_string(),
+    RsaCapabilitySigner::from_pkcs8_pem(&std::fs::read("signing.pem")?)?,
+)
+.issue("svc-api", &request, 30)?;
+
+let verifier = CapabilityVerifier::from_rsa_pem(
+    "https://auth.example.com".to_string(),
+    "broker".to_string(),
+    &std::fs::read("public.pem")?,
+)?;
+let store = InMemoryReplayStore::default();
+let expected = Expected::new("svc-api", "acct-42", Operation::Read, b"SELECT 1");
+
+let verified = verifier.verify(&token, &expected, &store)?;   // first use: Ok
+assert!(verifier.verify(&token, &expected, &store).is_err()); // replay: Err
+# Ok(())
+# }
+```
+
+### What is enforced
+
+| Property | How |
+|---|---|
+| Algorithm | RS256 fixed in code. The token's own `alg` header is never consulted, so `alg: none` and HMAC confusion do not apply. |
+| Lifetime | `MAX_TTL_SECONDS` = 60, refused by the issuer **and** independently by the verifier — it does not assume a conforming issuer. |
+| Request binding | Length-framed SHA-256 over (tenant, operation, body), so authority cannot be moved to a different statement. |
+| Single use | The `jti` is consumed through your [`ReplayStore`] as the final step of verification. |
+| Redaction | No token, claim, request body or `jti` appears in `Debug` or error output. |
+
+### Three things to get right in your integration
+
+1. **Supply your own `ReplayStore` if you run more than one replica.**
+   `InMemoryReplayStore` is single-process; it cannot see uses made by another
+   instance, so with multiple replicas the single-use guarantee silently weakens
+   to per-process. Back it with shared state — a conditional write is the usual
+   shape.
+
+2. **Make `consume` atomic.** Check-then-write races admit two winners under
+   concurrency, which is exactly the case a replay guard exists to stop.
+
+3. **Do not reorder verification in a wrapper.** Signature, claims and request
+   binding are all checked *before* the `jti` is consumed, so a rejected
+   capability is not spent. If that order is inverted, an attacker can burn a
+   victim's capability by presenting it against the wrong expectation.
+
+### Choosing a signer
+
+`CapabilitySigner` is a trait rather than a key so a KMS-backed signer — one that
+never exposes private material to the process — can replace
+`RsaCapabilitySigner` without changing callers.
+
+---
+
 ## API Key Authentication
 
 Constant-time API key comparison to prevent timing side-channel attacks:

@@ -41,7 +41,7 @@ Compliance mappings: **NIST 800-53** (AC, AU, IA, SC, SI), **IEC 62443**, **SOC 
 | `security_events` | C9 | Security telemetry, classification-driven redaction, per-event HMAC sealing, event correlation, log-injection prevention, AppSensor detection points, NDJSON/tracing/file/batched sinks |
 | `secure_boundary` | C5/C8 | Input validation, axum extractors, size/depth/field limits, prompt-boundary literal fencing, HTML sanitization, browser security headers, CORS, Fetch Metadata |
 | `secure_output` | C4 | Context-aware output encoding, security headers |
-| `secure_identity` | C6, MASVS-AUTH | Pluggable authentication (one `IdentitySource` implementation), biometric auth validation, step-up auth |
+| `secure_identity` | C6, MASVS-AUTH | Pluggable authentication (one `IdentitySource` implementation), biometric auth validation, step-up auth, single-use tenant+operation capabilities |
 | `secure_device_trust` | C6/C7, MASVS-AUTH | Native-client device trust decisions: bootstrap identity, client type/platform, attestation mode, trust tiers |
 | `secure_authz` | C7 | Deny-by-default authorization, identity-agnostic policy engine |
 | `secure_data` | C2/C7/C8, MASVS-STORAGE | Secret management, envelope encryption, crypto agility, password hashing (Argon2id), FIPS readiness, mobile secure storage |

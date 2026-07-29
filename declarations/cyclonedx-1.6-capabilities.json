@@ -152,6 +152,18 @@
             {
               "name": "cdx:sunlit:capability",
               "value": "step-up-auth"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "single-use-tenant-operation-capability"
+            },
+            {
+              "name": "cdx:sunlit:limit",
+              "value": "Single-use enforcement is only as strong as the caller-supplied ReplayStore; the bundled in-memory store is single-process and cannot see uses by another replica."
+            },
+            {
+              "name": "cdx:sunlit:limit",
+              "value": "RS256 with caller-pinned public key material only. No network key retrieval, no symmetric or caller-selectable algorithms."
             }
           ]
         },
@@ -310,7 +322,7 @@
       {
         "bom-ref": "claim:secure_identity:capabilities",
         "target": "component:secure_identity",
-        "predicate": "Advertises jwt-validation, oidc-discovery, step-up-auth for control coverage C6.",
+        "predicate": "Advertises jwt-validation, oidc-discovery, step-up-auth, single-use-tenant-operation-capability for control coverage C6.",
         "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
       },
       {
@@ -342,6 +354,12 @@
         "target": "component:secure_privacy",
         "predicate": "Advertises privacy-redaction, data-classification-handling for control coverage C8.",
         "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+      },
+      {
+        "bom-ref": "claim:secure_identity:single-use-tenant-operation-capability",
+        "target": "component:secure_identity",
+        "predicate": "secure_identity::capability issues and verifies a strict single-use tenant+operation capability: RS256-only with a caller-pinned public key, exact issuer/audience/subject/tenant/closed-operation binding, a length-framed SHA-256 request digest, iat/nbf/exp/jti, a maximum 60-second TTL enforced independently by issuer and verifier, and atomic jti consumption through a caller-supplied ReplayStore so replay and concurrent double-use fail closed.",
+        "reasoning": "Implemented in crates/secure_identity/src/capability.rs and evidenced by 21 BDD assertions in tests/sunlit_imp_capability.rs plus 6 property invariants in tests/prop_capability.rs, covering wrong algorithm/key/issuer/audience/subject/tenant/operation/request, expiry, not-yet-valid, excess TTL, missing jti, replay, 16-thread concurrent double-use, redaction of token and jti in Debug and error output, and that a rejected capability is never consumed. Two libFuzzer targets cover verification and key parsing."
       }
     ]
   }

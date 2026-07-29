@@ -1,0 +1,501 @@
+//! BDD contract for the strict single-use tenant+operation capability.
+//!
+//! Every test here is a security assertion. A capability that fails ANY of these
+//! must be rejected: the whole point of the primitive is that a broker can trust
+//! one narrow statement — "this subject may perform this operation, for this
+//! tenant, against exactly this request, once, within 60 seconds" — and nothing
+//! wider.
+
+use std::sync::Arc;
+
+use secure_identity::capability::{
+    CapabilityError, CapabilityIssuer, CapabilityRequest, CapabilityVerifier, Expected,
+    InMemoryReplayStore, Operation, RsaCapabilitySigner,
+};
+
+/// Test-only 2048-bit RSA material. Generated for this suite, never shipped,
+/// and deliberately inlined so the fixtures cannot drift from the tests.
+const TEST_PRIVATE_PEM: &str = "-----BEGIN PRIVATE KEY-----
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDRb/iDkP6qo4FJ
+v/iB1LBkq2XpOohIJB8QFAoTptmrLkic8adVb25uhG6O3Ox/2GegPEIAa+yhncvI
+kwROQJFWwfV5JcmmWbUuJc+Xyebvs9MgoDfoDK32kNctdJ8jb36Y02SYxkjzbGV6
+yz3NDTBKNxrry9pVexxD/aLFIN6ZCvCgoqeg5CREnFk/ORiLOa2Bome4bkd6QCzp
+G/GVyjoXC+AmqHgyYpgoacceIDlhKk3fwblP5LYLZTA0J8gpHtP4DbGgzr8OiKTb
+W59sohVFP/hisM+8xZwbFllHr/DM04RPbO2U+Vqu8jIjf5NaNBMnGsBVlhEzwG4d
+PTt+Vdc5AgMBAAECggEAAeZlWjfeJZO7kXzrOa320TJQXP4AfJYOTZXUSb1vYgBh
+coILNx5Ttu80NmR+RUJ5czB6FqP5VuCAzST59VCcOO3OxtP0eRIShOoH0MwpOwwL
+X+iwL9EwoVO1o1u4h13kh5P7CJtGOrtv+BNAsDvnb/RBcLmYqsKbMlSKWIXjMGnO
+/HGoA8PyAaFNeV9CKIsIKnIKZuYbOnJSe4C6T+NKwXIErO9Y+/k4npSbbHtFDPag
+wQbimxlEgd5bkOJhWaX+mIe5Z7TuUSbz8mpZ8vf5jXLgmeJsrOO+otmZ2REF03iE
+gQYJHXtIhe5iuoLPPsiRQXylciMEyJGWyGffxuvHsQKBgQD75MNoQMceTxEYPKVH
+CWQ0JcoBYdzNPKrd+BqPBe8uDBTh/1gyyhlJBgrIBAfyKubmO7iHiuWEAZOZEjs1
+m2+pjeEkETf27Mbj/6QmJ4iCuUDCHs/VQWkEbMDtkmdJVYVgkyz43v50vedv9biE
+InV6Xpvrn0g8+W+lDbaQOh8BEQKBgQDU2gX7ZRUQ6BSsRplnIXsIhQnklD7uGT+5
+eoW1LymoEChL4EsMl/BagSnV46HjwR8Wn9TkoVSxRWMaH4Z1gzhBWcOEtbZiMPZU
+5GpLy5Ua4KMHE0QBQP+KGENJcMTeuiGH/WT67dH9nvu6GJc+eFvi8h/zt8XDU1y+
+g3ucRCvzqQKBgBF1E03gX2xsUmT5nwLDVdx/Wfaqj6DxuW3UyhJreN4aHEBlb/ll
+JEd5Ubn2/Y39By+hp/JM4Ac8DLypFM1sTlrT6GyVfOlyE36tsvSp/L4ClMhfVkwT
+UnHqD5znbp0YfjvpN06wNbZliuqpfvY5ZSbr86ZqzZjcOK6ZurNYM9nhAoGAMIM0
+o9SpFX5f39gDdK771LhFxfRH14qnrIWRXfdO3kA4fvqzAD7NCEOyHk7QghFtHYH2
+Stm+bNzstnKC+dubgcGMv32PARg5vKWG2Jmg9UxHvAAXGtYOqBHZnC54oG75333Q
+eySjHNQUeZjLN/DEuJgI0kqLZ3ZjiAR9suMSxWkCgYAcOH1FyFfUUy3PAL2DgClB
+Q2w2G9IL6jhvLp7nokA6sksm+44OoyYYc4Oe/p58pBLENJWt7HXUs9weANmEhnn3
+zPh0Fw7hC7Fd+tNSB/H15GAo2j84g4uvTu1gLgv6Hepp5CR3JRovTqLz/7flfxuz
+yTQ0K6igAd7gfA/FZ1Vf8A==
+-----END PRIVATE KEY-----\n";
+const TEST_PUBLIC_PEM: &str = "-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0W/4g5D+qqOBSb/4gdSw
+ZKtl6TqISCQfEBQKE6bZqy5InPGnVW9uboRujtzsf9hnoDxCAGvsoZ3LyJMETkCR
+VsH1eSXJplm1LiXPl8nm77PTIKA36Ayt9pDXLXSfI29+mNNkmMZI82xless9zQ0w
+Sjca68vaVXscQ/2ixSDemQrwoKKnoOQkRJxZPzkYizmtgaJnuG5HekAs6Rvxlco6
+FwvgJqh4MmKYKGnHHiA5YSpN38G5T+S2C2UwNCfIKR7T+A2xoM6/Doik21ufbKIV
+RT/4YrDPvMWcGxZZR6/wzNOET2ztlPlarvIyI3+TWjQTJxrAVZYRM8BuHT07flXX
+OQIDAQAB
+-----END PUBLIC KEY-----\n";
+/// A second, unrelated public key used to prove signature verification actually
+/// discriminates rather than accepting anything well-formed.
+const OTHER_PUBLIC_PEM: &str = "-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAp6B71Pd/k9+h4ZVIZv01
+PWwCPhEUd4PpVPmhH5u63mgkY1WLYTr5OrJcn9sxqVQQBM5tTz9bQolg9waDLc/C
+EZvEATSsgIjC5e/mnwCfBb3arsnoVECrTa7eVSV8NvgCmEM/g+FHuyaLawjeOodi
+L659LBKRY4LgJQaS6saqES1PIr7LEcGKdeCucGqJRFtqAENiCaefMKCjyRFbo0DV
+nljkQW4MhPgq0urEH8sjRh0k10ThOdgT7CrFboleO84ZGQq+IbJkElTGM2QWFcvo
+OLwnU9zs0qlKNPqzeuz8f6h325QK9zd9A9Cr61ja1q8RFV2g/c7bxTX2YterqAsw
+QQIDAQAB
+-----END PUBLIC KEY-----\n";
+
+fn test_keys() -> (Vec<u8>, Vec<u8>) {
+    (
+        TEST_PRIVATE_PEM.as_bytes().to_vec(),
+        TEST_PUBLIC_PEM.as_bytes().to_vec(),
+    )
+}
+
+fn issuer(private_pem: &[u8]) -> CapabilityIssuer<RsaCapabilitySigner> {
+    CapabilityIssuer::new(
+        "https://auth.sunlit.test".to_string(),
+        "sunlit-broker".to_string(),
+        RsaCapabilitySigner::from_pkcs8_pem(private_pem).expect("test signing key"),
+    )
+}
+
+fn verifier(public_pem: &[u8]) -> CapabilityVerifier {
+    CapabilityVerifier::from_rsa_pem(
+        "https://auth.sunlit.test".to_string(),
+        "sunlit-broker".to_string(),
+        public_pem,
+    )
+    .expect("test verifying key")
+}
+
+fn request() -> CapabilityRequest {
+    CapabilityRequest::new("acct-42", Operation::Read, b"SELECT 1 FROM product_signals")
+}
+
+fn expected() -> Expected {
+    Expected::new(
+        "svc-platform-api",
+        "acct-42",
+        Operation::Read,
+        b"SELECT 1 FROM product_signals",
+    )
+}
+
+// ---------------------------------------------------------------- happy path
+
+#[test]
+fn happy_path_first_use_succeeds() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = issuer(&priv_pem)
+        .issue("svc-platform-api", &request(), 30)
+        .expect("issue");
+    let store = InMemoryReplayStore::default();
+
+    let verified = verifier(&pub_pem)
+        .verify(&token, &expected(), &store)
+        .expect("first use must succeed");
+
+    assert_eq!(verified.tenant(), "acct-42");
+    assert_eq!(verified.operation(), Operation::Read);
+    assert_eq!(verified.subject(), "svc-platform-api");
+}
+
+// ------------------------------------------------------------ single use
+
+#[test]
+fn replay_of_the_same_capability_fails_closed() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = issuer(&priv_pem)
+        .issue("svc-platform-api", &request(), 30)
+        .expect("issue");
+    let store = InMemoryReplayStore::default();
+    let v = verifier(&pub_pem);
+
+    v.verify(&token, &expected(), &store).expect("first use");
+    let second = v.verify(&token, &expected(), &store);
+
+    assert!(
+        matches!(second, Err(CapabilityError::Replayed)),
+        "second use must be rejected as replay, got {second:?}"
+    );
+}
+
+#[test]
+fn concurrent_double_use_admits_exactly_one_winner() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = Arc::new(
+        issuer(&priv_pem)
+            .issue("svc-platform-api", &request(), 30)
+            .expect("issue"),
+    );
+    let store = Arc::new(InMemoryReplayStore::default());
+    let v = Arc::new(verifier(&pub_pem));
+
+    let mut handles = Vec::new();
+    for _ in 0..16 {
+        let (t, s, ver) = (Arc::clone(&token), Arc::clone(&store), Arc::clone(&v));
+        handles.push(std::thread::spawn(move || {
+            ver.verify(&t, &expected(), s.as_ref()).is_ok()
+        }));
+    }
+    let winners = handles
+        .into_iter()
+        .filter(|_| true)
+        .map(|h| h.join().expect("thread"))
+        .filter(|ok| *ok)
+        .count();
+
+    assert_eq!(
+        winners, 1,
+        "exactly one concurrent use may win, got {winners}"
+    );
+}
+
+// ------------------------------------------------------- claim binding
+
+#[test]
+fn wrong_tenant_is_rejected() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = issuer(&priv_pem)
+        .issue("svc-platform-api", &request(), 30)
+        .expect("issue");
+    let store = InMemoryReplayStore::default();
+
+    let wrong = Expected::new(
+        "svc-platform-api",
+        "acct-OTHER",
+        Operation::Read,
+        b"SELECT 1 FROM product_signals",
+    );
+    assert!(matches!(
+        verifier(&pub_pem).verify(&token, &wrong, &store),
+        Err(CapabilityError::TenantMismatch)
+    ));
+}
+
+#[test]
+fn wrong_operation_is_rejected() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = issuer(&priv_pem)
+        .issue("svc-platform-api", &request(), 30)
+        .expect("issue");
+    let store = InMemoryReplayStore::default();
+
+    let wrong = Expected::new(
+        "svc-platform-api",
+        "acct-42",
+        Operation::Delete,
+        b"SELECT 1 FROM product_signals",
+    );
+    assert!(matches!(
+        verifier(&pub_pem).verify(&token, &wrong, &store),
+        Err(CapabilityError::OperationMismatch)
+    ));
+}
+
+#[test]
+fn different_request_body_is_rejected() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = issuer(&priv_pem)
+        .issue("svc-platform-api", &request(), 30)
+        .expect("issue");
+    let store = InMemoryReplayStore::default();
+
+    let wrong = Expected::new(
+        "svc-platform-api",
+        "acct-42",
+        Operation::Read,
+        b"SELECT 1 FROM feedback_tickets",
+    );
+    assert!(matches!(
+        verifier(&pub_pem).verify(&token, &wrong, &store),
+        Err(CapabilityError::RequestMismatch)
+    ));
+}
+
+#[test]
+fn wrong_subject_is_rejected() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = issuer(&priv_pem)
+        .issue("svc-platform-api", &request(), 30)
+        .expect("issue");
+    let store = InMemoryReplayStore::default();
+
+    let wrong = Expected::new(
+        "svc-SOMETHING-ELSE",
+        "acct-42",
+        Operation::Read,
+        b"SELECT 1 FROM product_signals",
+    );
+    assert!(matches!(
+        verifier(&pub_pem).verify(&token, &wrong, &store),
+        Err(CapabilityError::SubjectMismatch)
+    ));
+}
+
+/// The framed digest must not be confusable by moving bytes across field
+/// boundaries — `("ab","c")` and `("a","bc")` must not collide.
+#[test]
+fn request_digest_framing_is_unambiguous() {
+    let a = CapabilityRequest::new("ab", Operation::Read, b"c");
+    let b = CapabilityRequest::new("a", Operation::Read, b"bc");
+    assert_ne!(
+        a.digest(),
+        b.digest(),
+        "unframed concatenation would make these collide"
+    );
+}
+
+// ------------------------------------------------------------- temporal
+
+#[test]
+fn expired_capability_is_rejected() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = issuer(&priv_pem)
+        .issue_at("svc-platform-api", &request(), 30, unix_now() - 120)
+        .expect("issue");
+    let store = InMemoryReplayStore::default();
+    assert!(matches!(
+        verifier(&pub_pem).verify(&token, &expected(), &store),
+        Err(CapabilityError::Expired)
+    ));
+}
+
+#[test]
+fn not_yet_valid_capability_is_rejected() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = issuer(&priv_pem)
+        .issue_at("svc-platform-api", &request(), 30, unix_now() + 600)
+        .expect("issue");
+    let store = InMemoryReplayStore::default();
+    assert!(matches!(
+        verifier(&pub_pem).verify(&token, &expected(), &store),
+        Err(CapabilityError::NotYetValid)
+    ));
+}
+
+#[test]
+fn ttl_above_sixty_seconds_is_refused_at_issue_time() {
+    let (priv_pem, _) = test_keys();
+    let err = issuer(&priv_pem).issue("svc-platform-api", &request(), 61);
+    assert!(
+        matches!(err, Err(CapabilityError::TtlTooLong)),
+        "issuing a >60s capability must fail closed, got {err:?}"
+    );
+}
+
+#[test]
+fn ttl_above_sixty_seconds_is_refused_at_verify_time_too() {
+    // Defence in depth: a token minted by a non-conforming issuer must still be
+    // rejected by the verifier, which cannot assume the issuer behaved.
+    let (priv_pem, pub_pem) = test_keys();
+    let token = issuer(&priv_pem)
+        .issue_unchecked_ttl_for_test("svc-platform-api", &request(), 3600)
+        .expect("issue");
+    let store = InMemoryReplayStore::default();
+    assert!(matches!(
+        verifier(&pub_pem).verify(&token, &expected(), &store),
+        Err(CapabilityError::TtlTooLong)
+    ));
+}
+
+#[test]
+fn missing_jti_is_rejected() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = issuer(&priv_pem)
+        .issue_without_jti_for_test("svc-platform-api", &request(), 30)
+        .expect("issue");
+    let store = InMemoryReplayStore::default();
+    assert!(matches!(
+        verifier(&pub_pem).verify(&token, &expected(), &store),
+        Err(CapabilityError::MissingJti)
+    ));
+}
+
+// --------------------------------------------------------- cryptographic
+
+#[test]
+fn wrong_signing_key_is_rejected() {
+    let (priv_pem, _) = test_keys();
+    let other_pub = OTHER_PUBLIC_PEM.as_bytes();
+    let token = issuer(&priv_pem)
+        .issue("svc-platform-api", &request(), 30)
+        .expect("issue");
+    let store = InMemoryReplayStore::default();
+    assert!(matches!(
+        verifier(other_pub).verify(&token, &expected(), &store),
+        Err(CapabilityError::BadSignature)
+    ));
+}
+
+#[test]
+fn wrong_issuer_is_rejected() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = CapabilityIssuer::new(
+        "https://evil.example".to_string(),
+        "sunlit-broker".to_string(),
+        RsaCapabilitySigner::from_pkcs8_pem(&priv_pem).expect("key"),
+    )
+    .issue("svc-platform-api", &request(), 30)
+    .expect("issue");
+    let store = InMemoryReplayStore::default();
+    assert!(matches!(
+        verifier(&pub_pem).verify(&token, &expected(), &store),
+        Err(CapabilityError::IssuerMismatch)
+    ));
+}
+
+#[test]
+fn wrong_audience_is_rejected() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = CapabilityIssuer::new(
+        "https://auth.sunlit.test".to_string(),
+        "some-other-broker".to_string(),
+        RsaCapabilitySigner::from_pkcs8_pem(&priv_pem).expect("key"),
+    )
+    .issue("svc-platform-api", &request(), 30)
+    .expect("issue");
+    let store = InMemoryReplayStore::default();
+    assert!(matches!(
+        verifier(&pub_pem).verify(&token, &expected(), &store),
+        Err(CapabilityError::AudienceMismatch)
+    ));
+}
+
+/// `alg: none` and HMAC confusion are the classic JWT breaks. The verifier is
+/// RS256-only by construction and must not honour the token's own header.
+#[test]
+fn alg_none_is_rejected() {
+    let (_, pub_pem) = test_keys();
+    let store = InMemoryReplayStore::default();
+    // {"alg":"none","typ":"JWT"} . {claims} . (empty signature)
+    let forged = format!(
+        "{}.{}.",
+        base64_url(br#"{"alg":"none","typ":"JWT"}"#),
+        base64_url(br#"{"iss":"https://auth.sunlit.test","aud":"sunlit-broker"}"#)
+    );
+    assert!(matches!(
+        verifier(&pub_pem).verify(&forged, &expected(), &store),
+        Err(CapabilityError::BadSignature) | Err(CapabilityError::Malformed)
+    ));
+}
+
+#[test]
+fn hs256_algorithm_confusion_is_rejected() {
+    let (_, pub_pem) = test_keys();
+    let store = InMemoryReplayStore::default();
+    let forged = format!(
+        "{}.{}.{}",
+        base64_url(br#"{"alg":"HS256","typ":"JWT"}"#),
+        base64_url(br#"{"iss":"https://auth.sunlit.test","aud":"sunlit-broker"}"#),
+        base64_url(b"not-a-real-mac")
+    );
+    assert!(matches!(
+        verifier(&pub_pem).verify(&forged, &expected(), &store),
+        Err(CapabilityError::BadSignature) | Err(CapabilityError::Malformed)
+    ));
+}
+
+// ------------------------------------------------------------- redaction
+
+/// A capability is bearer authority. Nothing that renders it may leak the token,
+/// the request body, or the jti.
+#[test]
+fn debug_output_never_leaks_token_or_request_material() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = issuer(&priv_pem)
+        .issue("svc-platform-api", &request(), 30)
+        .expect("issue");
+    let store = InMemoryReplayStore::default();
+    let verified = verifier(&pub_pem)
+        .verify(&token, &expected(), &store)
+        .expect("verify");
+
+    let rendered = format!("{verified:?}");
+    assert!(!rendered.contains(&token), "Debug leaked the raw token");
+    assert!(
+        !rendered.contains("SELECT 1 FROM product_signals"),
+        "Debug leaked the request body"
+    );
+    assert!(
+        !rendered.contains(verified.jti()),
+        "Debug leaked the jti, which is replay-relevant"
+    );
+}
+
+#[test]
+fn error_display_never_leaks_token_material() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = issuer(&priv_pem)
+        .issue("svc-platform-api", &request(), 30)
+        .expect("issue");
+    let store = InMemoryReplayStore::default();
+    let wrong = Expected::new(
+        "svc-platform-api",
+        "acct-OTHER",
+        Operation::Read,
+        b"SELECT 1 FROM product_signals",
+    );
+    let err = verifier(&pub_pem)
+        .verify(&token, &wrong, &store)
+        .expect_err("must fail");
+    let rendered = format!("{err} / {err:?}");
+    assert!(!rendered.contains(&token));
+    assert!(!rendered.contains("acct-OTHER"));
+    assert!(!rendered.contains("SELECT"));
+}
+
+// ------------------------------------------------------------- malformed
+
+#[test]
+fn structurally_malformed_input_is_rejected_without_panic() {
+    let (_, pub_pem) = test_keys();
+    let store = InMemoryReplayStore::default();
+    let v = verifier(&pub_pem);
+    for bad in [
+        "",
+        ".",
+        "..",
+        "a.b",
+        "a.b.c.d",
+        "🙂.🙂.🙂",
+        &"A".repeat(100_000),
+    ] {
+        let out = v.verify(bad, &expected(), &store);
+        assert!(out.is_err(), "malformed input {bad:?} must not verify");
+    }
+}
+
+// ------------------------------------------------------------------ util
+
+fn unix_now() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock")
+        .as_secs() as i64
+}
+
+fn base64_url(bytes: &[u8]) -> String {
+    use base64::Engine as _;
+    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
+}
