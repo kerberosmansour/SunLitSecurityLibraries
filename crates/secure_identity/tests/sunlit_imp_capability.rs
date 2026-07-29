@@ -560,6 +560,44 @@ async fn supported_rsa_key_size_is_still_accepted() {
     .is_ok());
 }
 
+// ------------------------------------- malformed key material (F7, mac-agent)
+
+/// Malformed SPKI must fail closed as [`CapabilityError::InvalidKey`] rather
+/// than panicking, and the accepted modulus size must come from key material
+/// that is actually present rather than from an attacker-chosen length header.
+///
+/// Both halves matter. A panic in key parsing is a denial of service reachable
+/// by whoever supplies configuration; a size read from a claimed-but-absent
+/// length would let a key with no modulus at all satisfy the 2048-bit floor.
+#[tokio::test]
+async fn malformed_spki_is_rejected_without_panicking() {
+    // Each vector is a DER structure that walks far enough into the parser to
+    // reach the modulus INTEGER, then lies about it in a different way.
+    for (name, spki_b64) in [
+        // Zero-length INTEGER followed by a 0x00 byte. The sign-padding strip
+        // subtracts 1 from a length of 0 and underflows.
+        ("zero-length modulus", "MAowAAMGADADAgAA"),
+        // INTEGER claims 257 bytes (exactly a 2048-bit modulus) and supplies
+        // none. Trusting the header would report 2048 bits and pass the floor.
+        ("truncated modulus", "MAowAAMGADAGAoIBAQ=="),
+        // Zero-length INTEGER at the very end, so no byte follows it at all.
+        ("zero-length modulus at end of buffer", "MAkwAAMFADACAgA="),
+        // Length header claiming ~4GiB of modulus.
+        ("oversized length header", "MA0wAAMJADAGAoT/////"),
+    ] {
+        let pem = pem("PUBLIC KEY", spki_b64);
+        let out = CapabilityVerifier::from_rsa_pem(
+            "https://auth.sunlit.test".to_string(),
+            "sunlit-broker".to_string(),
+            pem.as_bytes(),
+        );
+        assert!(
+            matches!(out, Err(CapabilityError::InvalidKey)),
+            "{name} must be rejected as InvalidKey, not panic or parse",
+        );
+    }
+}
+
 // ------------------------------------------------ replay store bounds (F4)
 
 /// A spent `jti` only needs remembering while the capability could still be

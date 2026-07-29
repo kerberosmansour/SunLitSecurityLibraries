@@ -408,14 +408,24 @@ fn spki_rsa_modulus_bits(der: &[u8]) -> Option<usize> {
     let mut i = 0usize;
     expect(der, &mut i, 0x30)?; // outer SEQUENCE
     let alg_len = expect(der, &mut i, 0x30)?; // AlgorithmIdentifier
-    i += alg_len;
+    i = i.checked_add(alg_len)?;
     expect(der, &mut i, 0x03)?; // BIT STRING
-    i += 1; // unused-bits octet
+    i = i.checked_add(1)?; // unused-bits octet
     expect(der, &mut i, 0x30)?; // RSAPublicKey SEQUENCE
     let n_len = expect(der, &mut i, 0x02)?; // INTEGER modulus
-                                            // A leading 0x00 is DER sign padding, not key material.
-    let leading_zero = usize::from(der.get(i) == Some(&0x00));
-    Some((n_len - leading_zero) * 8)
+
+    // The claimed length has to actually be present. Deriving the key size
+    // from the length header alone would let a modulus that is truncated or
+    // absent entirely report a compliant 2048 bits, and a zero length would
+    // underflow the sign-padding strip below.
+    let modulus = der.get(i..i.checked_add(n_len)?)?;
+    // A leading 0x00 is DER sign padding, not key material.
+    let leading_zero = usize::from(modulus.first() == Some(&0x00));
+    let significant = modulus.len().checked_sub(leading_zero)?;
+    if significant == 0 {
+        return None;
+    }
+    significant.checked_mul(8)
 }
 
 /// Strips PEM armour and base64-decodes the body.

@@ -201,4 +201,117 @@ proptest! {
             let _ = verifier().verify(&raw, &expected, &store).await;
         });
     }
+
+    /// Unstructured bytes offered as key material must be rejected calmly.
+    ///
+    /// This is a shallow property on purpose — see the structure-aware one
+    /// below for the part that actually reaches the modulus parser.
+    #[test]
+    fn arbitrary_key_material_never_panics(body in "[A-Za-z0-9+/=]{0,400}") {
+        for kind in ["PUBLIC KEY", "PRIVATE KEY"] {
+            let armoured = pem(kind, &body);
+            let _ = CapabilityVerifier::from_rsa_pem(
+                "https://auth.sunlit.test".to_string(),
+                "sunlit-broker".to_string(),
+                armoured.as_bytes(),
+            );
+            let _ = RsaCapabilitySigner::from_pkcs8_pem(armoured.as_bytes());
+        }
+    }
+
+    /// SPKI whose modulus header disagrees with the modulus actually present
+    /// must yield `InvalidKey`, for every combination of claimed and real
+    /// length — including a claim of zero.
+    ///
+    /// This one is structure-aware, and that is the whole point. The shallow
+    /// property above generates random base64, which never happens to form DER
+    /// that walks as far as the modulus INTEGER; run against the underflowing
+    /// parser it passes cleanly and certifies nothing. That is how a malformed
+    /// SPKI modulus reached review as an integer underflow rather than an
+    /// `InvalidKey`. The crate does carry fuzz targets covering this, but they
+    /// need cargo-fuzz and a nightly toolchain and so never ran in the ordinary
+    /// test job. This property does, and it fails on the unfixed parser.
+    ///
+    /// Both strategies are deliberately biased toward the boundaries. Sampling
+    /// `claimed` and the modulus bytes uniformly puts the underflow — which
+    /// needs a zero claim *and* a leading zero byte together — at roughly one
+    /// in eighty thousand, so a uniform generator passes against the unfixed
+    /// parser and proves nothing. Weighting the edge cases is what makes this
+    /// a regression test rather than a lottery ticket.
+    #[test]
+    fn spki_modulus_length_disagreement_is_rejected(
+        claimed in prop_oneof![
+            3 => Just(0usize),      // the underflowing claim
+            1 => Just(1usize),
+            1 => Just(256usize),    // a 2048-bit modulus, unpadded
+            1 => Just(257usize),    // a 2048-bit modulus with sign padding
+            4 => 0usize..320,
+        ],
+        actual in prop::collection::vec(
+            prop_oneof![2 => Just(0u8), 3 => any::<u8>()],  // leading 0x00 must be common
+            0..320,
+        ),
+    ) {
+        let armoured = pem("PUBLIC KEY", &base64_std(&spki_with_modulus(claimed, &actual)));
+        let out = CapabilityVerifier::from_rsa_pem(
+            "https://auth.sunlit.test".to_string(),
+            "sunlit-broker".to_string(),
+            armoured.as_bytes(),
+        );
+        // These are all malformed or wrongly-sized: none carries a real RSA key.
+        prop_assert!(
+            matches!(out, Err(CapabilityError::InvalidKey)),
+            "claimed={claimed} actual={} must be InvalidKey", actual.len(),
+        );
+    }
+}
+
+// ------------------------------------------------------- DER test constructors
+
+/// Encodes a DER definite-length header value.
+fn der_len(n: usize) -> Vec<u8> {
+    if n < 0x80 {
+        return vec![n as u8];
+    }
+    let bytes: Vec<u8> = n
+        .to_be_bytes()
+        .into_iter()
+        .skip_while(|b| *b == 0)
+        .collect();
+    let mut out = vec![0x80 | bytes.len() as u8];
+    out.extend(bytes);
+    out
+}
+
+fn der_tlv(tag: u8, body: &[u8]) -> Vec<u8> {
+    let mut out = vec![tag];
+    out.extend(der_len(body.len()));
+    out.extend(body);
+    out
+}
+
+/// Builds SPKI that is well-formed all the way down to the modulus INTEGER,
+/// whose length header claims `claimed_len` while `actual` bytes follow.
+///
+/// Everything above the modulus is valid so the parser has to walk the full
+/// structure and reach the interesting field, rather than bailing out early.
+fn spki_with_modulus(claimed_len: usize, actual: &[u8]) -> Vec<u8> {
+    let mut modulus = vec![0x02];
+    modulus.extend(der_len(claimed_len));
+    modulus.extend(actual);
+
+    let mut rsa_pub = modulus;
+    rsa_pub.extend(der_tlv(0x02, &[0x01, 0x00, 0x01])); // exponent 65537
+
+    let mut bit_string = vec![0x00]; // unused-bits octet
+    bit_string.extend(der_tlv(0x30, &rsa_pub));
+
+    let mut outer = der_tlv(0x30, &[]); // empty AlgorithmIdentifier
+    outer.extend(der_tlv(0x03, &bit_string));
+    der_tlv(0x30, &outer)
+}
+
+fn base64_std(bytes: &[u8]) -> String {
+    use base64::Engine as _;
+    base64::engine::general_purpose::STANDARD.encode(bytes)
 }
