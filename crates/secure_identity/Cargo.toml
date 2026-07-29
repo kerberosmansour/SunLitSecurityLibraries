@@ -16,6 +16,7 @@ name = "secure_identity"
 default = []
 dev = []
 biometric = []
+jwks = ["dep:reqwest"]
 oidc = ["dep:openidconnect", "dep:reqwest"]
 session-redis = ["dep:redis"]
 
