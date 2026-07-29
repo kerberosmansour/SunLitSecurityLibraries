@@ -1,11 +1,41 @@
 
 # cargo-vet audits file
 
+[[audits.ammonia]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "4.1.2 -> 4.1.4"
+notes = "Delta reviewed via cargo vet diff and independently APPROVED by win-agent for GPIL M2. Sanitizer hardening for SVG animation/set attributeName targets, namespace/MathML mXSS, and tag-aware URL/attribute filtering, with regression tests. No unsafe, build script, network, or ambient-capability additions."
+
+[[audits.bs58]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.5.1"
+notes = "Full source review for serde_with 3.21's optional Base58 adapter. Pure codec with no build script, filesystem, network, process, or environment authority. The sole unsafe block temporarily exposes a str as mutable bytes behind a Drop guard that replaces every invalid UTF-8 sequence before control returns; the encoder itself emits ASCII."
+
+[[audits.cmov]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.5.3 -> 0.5.4"
+notes = "Security-positive delta reviewed via cargo vet diff for GHSA-3rjw-m598-pq24. AArch64 inline assembly now masks the intended low 8/16 bits before conditional selection, preventing stale high register bits from changing results; regression tests cover the prior u8/u16/i16 failures. No new ambient capability or unsafe call site."
+
 [[audits.hkdf]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 version = "0.12.4"
 notes = "Direct pq feature dependency for HKDF-SHA-256 combiner reviewed for pqd M2. Pure Rust implementation; Apache-2.0 OR MIT license accepted by deny policy."
+
+[[audits.html5ever]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.35.0 -> 0.39.0"
+notes = "Delta reviewed via cargo vet diff and independently APPROVED by win-agent for GPIL M2. Parser/spec conformance changes add charset extraction, encoding indicators, duplicate-attribute tracking, and tokenizer/tree-builder updates. No new build script, network/runtime dependency, unsafe block, or changed safety precondition; existing SIMD fast paths remain runtime-guarded."
+
+[[audits.markup5ever]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.35.0 -> 0.39.0"
+notes = "Delta reviewed via cargo vet diff for GPIL M2. Parser-model updates add encoding indicators, CSP duplicate-attribute state, selectedcontent support, and optional serde support; no unsafe, network, build-script, or ambient-capability additions."
 
 [[audits.ml-kem]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
@@ -25,11 +55,71 @@ criteria = "safe-to-deploy"
 delta = "0.9.115 -> 0.9.116"
 notes = "Delta review. Build-script changes only: macOS Homebrew detection now prefers openssl@4, falls back to openssl@3/3.0, and drops openssl@1.1 (build/find_normal.rs); header validation comment now notes OpenSSL 4.x support (build/main.rs); CHANGELOG + version bump. No runtime code, unsafe, or capability changes. Reviewed via `cargo vet diff`."
 
+[[audits.phf_codegen]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.11.3 -> 0.13.1"
+notes = "Delta reviewed via cargo vet diff for GPIL M2. Code-generation API and dependency updates, including Cow-based inputs; no runtime capability, build-script network access, unsafe code, or ambient authority added."
+
+[[audits.quick-xml]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.40.1 -> 0.41.0"
+notes = "Delta reviewed via cargo vet diff for GPIL M2. Security-positive XML parser hardening adds bounded namespace declarations and linear duplicate-attribute detection to prevent denial-of-service; no unsafe, network, build-script, or ambient-capability additions."
+
+[[audits.quinn-proto]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.11.14 -> 0.11.15"
+notes = "Delta reviewed via cargo vet diff for GPIL M2. QUIC transport hardening bounds missing-chunk buffering, drops saturated state, and corrects timing paths. No new unsafe or ambient capabilities; an optional qlog timestamp comparison concern is non-security telemetry accuracy and does not affect transport enforcement."
+
+[[audits.serde_with]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "3.19.0 -> 3.21.0"
+notes = "Security-positive delta reviewed for GHSA-7gcf-g7xr-8hxj. Attacker-controlled collection size hints now pass through a cautious one-MiB preallocation cap before Vec/map/set allocation, preventing capacity-overflow panics; the added Base58 adapter delegates to reviewed bs58. Existing MaybeUninit/ManuallyDrop unsafe blocks retain their prior invariants with no new unsafe, build script, network, process, filesystem, or environment capability."
+
+[[audits.serde_with_macros]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "3.19.0 -> 3.21.0"
+notes = "Proc-macro delta reviewed with serde_with 3.21. Error handling now aggregates field errors instead of stopping at the first, plus version/documentation updates. The crate continues to forbid unsafe code and adds no build script, network, process, filesystem, environment, or generated runtime authority."
+
 [[audits.sha2]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 version = "0.10.9"
 notes = "Direct pq feature dependency for HKDF-SHA-256 reviewed for pqd M2. Pure Rust implementation; Apache-2.0 OR MIT license accepted by deny policy."
+
+[[audits.string_cache]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.8.9 -> 0.9.0"
+notes = "Delta reviewed via cargo vet diff for GPIL M2. Version and phf_shared dependency updates with documentation changes only; no new unsafe block, runtime authority, network access, or build capability."
+
+[[audits.string_cache_codegen]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.5.4 -> 0.6.1"
+notes = "Delta reviewed via cargo vet diff for GPIL M2. Identifier-generation and code-emission updates remain build-time only; no network access, unsafe code, runtime authority, or ambient-capability additions."
+
+[[audits.tendril]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.3 -> 0.5.1"
+notes = "Delta review: no build script or network/process capability added; existing from_file helper unchanged. 0.5.1 internalizes the prior utf-8 0.7.6 and futf 0.1.5 dependencies. New unchecked UTF-8 conversions are reached only after std::str::from_utf8 validation; futf indexing preserves prior bounds checks; pointer offset-to-add changes are equivalent under existing length invariants. Reviewed remaining unsafe delta and encoding_rs path; standalone all-features crate tests passed 48/48."
+
+[[audits.tracing-opentelemetry]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.27.0 -> 0.33.0"
+notes = "Delta reviewed to remove vulnerable opentelemetry_sdk 0.26 and align with the workspace's opentelemetry 0.32 API. The bridge refactors span-context activation/locking, fixes enter-span deadlock and follows-from panic paths, and adds a filtered event-count layer; it removes the SDK dependency entirely. Unsafe remains limited to Layer::downcast_raw pointer exposure: the existing function-pointer lifetime invariant is preserved and the new wrapper either returns self or delegates to the inner Layer. No build script or filesystem/network/process/environment authority is added."
+
+[[audits.web_atoms]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.3 -> 0.2.5"
+notes = "Delta reviewed via cargo vet diff for GPIL M2. Generated atom-set expansion plus dependency and build-format updates; no unsafe code, network access, runtime authority, or new ambient capability."
 
 [[audits.x25519-dalek]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
