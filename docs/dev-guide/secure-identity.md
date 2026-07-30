@@ -10,10 +10,10 @@
 
 ```toml
 [dependencies]
-secure_identity = "0.1.6"
+secure_identity = "0.1.7"
 
 # For development/testing only:
-secure_identity = { version = "0.1.6", features = ["dev"] }
+secure_identity = { version = "0.1.7", features = ["dev"] }
 ```
 
 ---
@@ -371,7 +371,7 @@ impl SessionManager for RedisSessionManager {
 
 ```toml
 [dependencies]
-secure_identity = { version = "0.1.6", features = ["session-redis"] }
+secure_identity = { version = "0.1.7", features = ["session-redis"] }
 ```
 
 ```rust
@@ -390,7 +390,7 @@ OIDC integration is intentionally a thin wrapper over the `openidconnect` crate 
 
 ```toml
 [dependencies]
-secure_identity = { version = "0.1.6", features = ["oidc"] }
+secure_identity = { version = "0.1.7", features = ["oidc"] }
 ```
 
 ```rust

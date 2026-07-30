@@ -166,6 +166,65 @@ enum JwksSource {
     },
     #[cfg(feature = "dev")]
     Static(JwkSet),
+    #[cfg(test)]
+    Scripted {
+        source: std::sync::Arc<ScriptedJwksSource>,
+        url: Url,
+    },
+}
+
+#[cfg(test)]
+struct ScriptedJwksSource {
+    responses:
+        Mutex<std::collections::VecDeque<Result<ScriptedJwksResponse, WorkloadIdentityError>>>,
+    requests: std::sync::atomic::AtomicUsize,
+}
+
+#[cfg(test)]
+struct ScriptedJwksResponse {
+    effective_url: Url,
+    status: reqwest::StatusCode,
+    content_length: Option<u64>,
+    chunks: Vec<Vec<u8>>,
+}
+
+#[cfg(test)]
+impl ScriptedJwksSource {
+    fn new(
+        responses: impl IntoIterator<Item = Result<ScriptedJwksResponse, WorkloadIdentityError>>,
+    ) -> Self {
+        Self {
+            responses: Mutex::new(responses.into_iter().collect()),
+            requests: std::sync::atomic::AtomicUsize::new(0),
+        }
+    }
+
+    async fn fetch(&self, expected_url: &Url) -> Result<JwkSet, WorkloadIdentityError> {
+        self.requests
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let response = self
+            .responses
+            .lock()
+            .await
+            .pop_front()
+            .unwrap_or(Err(WorkloadIdentityError::JwksUnavailable))?;
+        validate_jwks_response(
+            expected_url,
+            &response.effective_url,
+            response.status.is_success(),
+            response.content_length,
+        )?;
+
+        let mut body = Vec::new();
+        for chunk in response.chunks {
+            append_jwks_chunk(&mut body, &chunk)?;
+        }
+        parse_jwks(&body)
+    }
+
+    fn request_count(&self) -> usize {
+        self.requests.load(std::sync::atomic::Ordering::Relaxed)
+    }
 }
 
 #[derive(Default)]
@@ -179,6 +238,7 @@ pub struct WorkloadJwtValidator {
     issuer: String,
     audience: String,
     cache_ttl: Duration,
+    unknown_key_refresh_floor: Duration,
     source: JwksSource,
     cache: RwLock<CachedJwks>,
     refresh: Mutex<()>,
@@ -213,7 +273,8 @@ impl WorkloadJwtValidator {
     /// Creates a validator using an explicit bounded JWKS cache lifetime.
     ///
     /// A refresh failure never falls back to an expired key set. Unknown key
-    /// identifiers trigger one immediate refresh to support safe key rotation.
+    /// identifiers trigger at most one remote refresh per five-second window;
+    /// requests inside that window fail closed against the current key set.
     ///
     /// # Errors
     ///
@@ -239,6 +300,7 @@ impl WorkloadJwtValidator {
             issuer: issuer.to_owned(),
             audience: audience.to_owned(),
             cache_ttl,
+            unknown_key_refresh_floor: UNKNOWN_KEY_REFRESH_FLOOR,
             source: JwksSource::Remote { client, url },
             cache: RwLock::new(CachedJwks::default()),
             refresh: Mutex::new(()),
@@ -268,7 +330,33 @@ impl WorkloadJwtValidator {
             issuer: issuer.to_owned(),
             audience: audience.to_owned(),
             cache_ttl: DEFAULT_JWKS_CACHE_TTL,
+            unknown_key_refresh_floor: UNKNOWN_KEY_REFRESH_FLOOR,
             source: JwksSource::Static(key_set),
+            cache: RwLock::new(CachedJwks::default()),
+            refresh: Mutex::new(()),
+        })
+    }
+
+    #[cfg(test)]
+    fn from_scripted_source_for_tests(
+        jwks_url: &str,
+        issuer: &str,
+        audience: &str,
+        cache_ttl: Duration,
+        unknown_key_refresh_floor: Duration,
+        source: std::sync::Arc<ScriptedJwksSource>,
+    ) -> Result<Self, WorkloadIdentityError> {
+        let url = validate_jwks_url(jwks_url)?;
+        validate_configuration(issuer, audience, cache_ttl)?;
+        if unknown_key_refresh_floor.is_zero() {
+            return Err(WorkloadIdentityError::InvalidConfiguration);
+        }
+        Ok(Self {
+            issuer: issuer.to_owned(),
+            audience: audience.to_owned(),
+            cache_ttl,
+            unknown_key_refresh_floor,
+            source: JwksSource::Scripted { source, url },
             cache: RwLock::new(CachedJwks::default()),
             refresh: Mutex::new(()),
         })
@@ -310,8 +398,12 @@ impl WorkloadJwtValidator {
         validation.set_audience(&[&self.audience]);
         validation.set_required_spec_claims(&["exp", "nbf", "iss", "aud", "sub"]);
         validation.leeway = 0;
-        validation.validate_exp = true;
-        validation.validate_nbf = true;
+        // jsonwebtoken's native clock helper panics if the system clock is
+        // before the Unix epoch. Keep its strict claim-presence/type checks,
+        // then apply the exact zero-leeway time policy through our fallible
+        // clock conversion below.
+        validation.validate_exp = false;
+        validation.validate_nbf = false;
 
         let claims = decode::<WorkloadClaims>(token, &key, &validation)
             .map(|data| data.claims)
@@ -325,12 +417,7 @@ impl WorkloadJwtValidator {
         }
 
         let now = unix_now()?;
-        if now >= claims.exp {
-            return Err(WorkloadIdentityError::Expired);
-        }
-        if now < claims.nbf {
-            return Err(WorkloadIdentityError::NotYetValid);
-        }
+        validate_workload_time(now, claims.exp, claims.nbf)?;
 
         KubernetesServiceAccountSubject::parse(&claims.sub)
     }
@@ -361,7 +448,7 @@ impl WorkloadJwtValidator {
 
         let _refresh_guard = self.refresh.lock().await;
         let reusable_age = if force_refresh {
-            UNKNOWN_KEY_REFRESH_FLOOR
+            self.unknown_key_refresh_floor
         } else {
             self.cache_ttl
         };
@@ -373,6 +460,8 @@ impl WorkloadJwtValidator {
             JwksSource::Remote { client, url } => fetch_jwks(client, url).await?,
             #[cfg(feature = "dev")]
             JwksSource::Static(key_set) => key_set.clone(),
+            #[cfg(test)]
+            JwksSource::Scripted { source, url } => source.fetch(url).await?,
         };
         let mut cache = self.cache.write().await;
         cache.key_set = Some(key_set.clone());
@@ -391,7 +480,13 @@ impl WorkloadJwtValidator {
     }
 
     fn is_remote(&self) -> bool {
-        matches!(self.source, JwksSource::Remote { .. })
+        match &self.source {
+            JwksSource::Remote { .. } => true,
+            #[cfg(test)]
+            JwksSource::Scripted { .. } => true,
+            #[cfg(feature = "dev")]
+            JwksSource::Static(_) => false,
+        }
     }
 }
 
@@ -496,15 +591,12 @@ async fn fetch_jwks(
         .send()
         .await
         .map_err(|_| WorkloadIdentityError::JwksUnavailable)?;
-    if response.url() != expected_url || !response.status().is_success() {
-        return Err(WorkloadIdentityError::JwksUnavailable);
-    }
-    if response
-        .content_length()
-        .is_some_and(|length| length > MAX_JWKS_DOCUMENT_BYTES as u64)
-    {
-        return Err(WorkloadIdentityError::JwksUnavailable);
-    }
+    validate_jwks_response(
+        expected_url,
+        response.url(),
+        response.status().is_success(),
+        response.content_length(),
+    )?;
 
     let mut body = Vec::new();
     while let Some(chunk) = response
@@ -512,16 +604,36 @@ async fn fetch_jwks(
         .await
         .map_err(|_| WorkloadIdentityError::JwksUnavailable)?
     {
-        let next_len = body
-            .len()
-            .checked_add(chunk.len())
-            .ok_or(WorkloadIdentityError::JwksUnavailable)?;
-        if next_len > MAX_JWKS_DOCUMENT_BYTES {
-            return Err(WorkloadIdentityError::JwksUnavailable);
-        }
-        body.extend_from_slice(&chunk);
+        append_jwks_chunk(&mut body, &chunk)?;
     }
     parse_jwks(&body)
+}
+
+fn validate_jwks_response(
+    expected_url: &Url,
+    effective_url: &Url,
+    status_is_success: bool,
+    content_length: Option<u64>,
+) -> Result<(), WorkloadIdentityError> {
+    if effective_url != expected_url
+        || !status_is_success
+        || content_length.is_some_and(|length| length > MAX_JWKS_DOCUMENT_BYTES as u64)
+    {
+        return Err(WorkloadIdentityError::JwksUnavailable);
+    }
+    Ok(())
+}
+
+fn append_jwks_chunk(body: &mut Vec<u8>, chunk: &[u8]) -> Result<(), WorkloadIdentityError> {
+    let next_len = body
+        .len()
+        .checked_add(chunk.len())
+        .ok_or(WorkloadIdentityError::JwksUnavailable)?;
+    if next_len > MAX_JWKS_DOCUMENT_BYTES {
+        return Err(WorkloadIdentityError::JwksUnavailable);
+    }
+    body.extend_from_slice(chunk);
+    Ok(())
 }
 
 fn parse_jwks(document: &[u8]) -> Result<JwkSet, WorkloadIdentityError> {
@@ -602,8 +714,209 @@ fn map_jwt_error(error: jsonwebtoken::errors::Error) -> WorkloadIdentityError {
 }
 
 fn unix_now() -> Result<u64, WorkloadIdentityError> {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
+    unix_seconds(std::time::SystemTime::now())
+}
+
+fn unix_seconds(now: std::time::SystemTime) -> Result<u64, WorkloadIdentityError> {
+    now.duration_since(std::time::UNIX_EPOCH)
         .map(|duration| duration.as_secs())
         .map_err(|_| WorkloadIdentityError::ClockUnavailable)
+}
+
+fn validate_workload_time(
+    now: u64,
+    expires_at: u64,
+    not_before: u64,
+) -> Result<(), WorkloadIdentityError> {
+    if now >= expires_at {
+        return Err(WorkloadIdentityError::Expired);
+    }
+    if now < not_before {
+        return Err(WorkloadIdentityError::NotYetValid);
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use super::*;
+
+    const TEST_JWKS_URL: &str = "https://kubernetes.default.svc/openid/v1/jwks";
+    const TEST_ISSUER: &str = "https://kubernetes.default.svc";
+    const TEST_AUDIENCE: &str = "sunlit-platform-api";
+    const TEST_KEY_ID: &str = "kube-signing-key";
+    const TEST_RSA_N_B64URL: &str = "0W_4g5D-qqOBSb_4gdSwZKtl6TqISCQfEBQKE6bZqy5InPGnVW9uboRujtzsf9hnoDxCAGvsoZ3LyJMETkCRVsH1eSXJplm1LiXPl8nm77PTIKA36Ayt9pDXLXSfI29-mNNkmMZI82xless9zQ0wSjca68vaVXscQ_2ixSDemQrwoKKnoOQkRJxZPzkYizmtgaJnuG5HekAs6Rvxlco6FwvgJqh4MmKYKGnHHiA5YSpN38G5T-S2C2UwNCfIKR7T-A2xoM6_Doik21ufbKIVRT_4YrDPvMWcGxZZR6_wzNOET2ztlPlarvIyI3-TWjQTJxrAVZYRM8BuHT07flXXOQ";
+
+    fn jwks_with_key_id(key_id: &str) -> Vec<u8> {
+        format!(
+            r#"{{"keys":[{{"kty":"RSA","kid":"{key_id}","use":"sig","alg":"RS256","n":"{TEST_RSA_N_B64URL}","e":"AQAB"}}]}}"#
+        )
+        .into_bytes()
+    }
+
+    fn successful_response(body: Vec<u8>) -> ScriptedJwksResponse {
+        ScriptedJwksResponse {
+            effective_url: Url::parse(TEST_JWKS_URL).expect("test URL"),
+            status: reqwest::StatusCode::OK,
+            content_length: Some(body.len() as u64),
+            chunks: vec![body],
+        }
+    }
+
+    fn scripted_validator(
+        responses: impl IntoIterator<Item = Result<ScriptedJwksResponse, WorkloadIdentityError>>,
+        cache_ttl: Duration,
+        unknown_key_refresh_floor: Duration,
+    ) -> (WorkloadJwtValidator, Arc<ScriptedJwksSource>) {
+        let source = Arc::new(ScriptedJwksSource::new(responses));
+        let validator = WorkloadJwtValidator::from_scripted_source_for_tests(
+            TEST_JWKS_URL,
+            TEST_ISSUER,
+            TEST_AUDIENCE,
+            cache_ttl,
+            unknown_key_refresh_floor,
+            Arc::clone(&source),
+        )
+        .expect("valid scripted validator");
+        (validator, source)
+    }
+
+    #[tokio::test]
+    async fn scripted_remote_response_controls_fail_closed() {
+        let valid_body = jwks_with_key_id(TEST_KEY_ID);
+        let too_many_keys = format!(
+            r#"{{"keys":[{}]}}"#,
+            (0..=MAX_JWKS_KEYS)
+                .map(|index| format!(
+                    r#"{{"kty":"RSA","kid":"key-{index}","use":"sig","alg":"RS256","n":"{TEST_RSA_N_B64URL}","e":"AQAB"}}"#
+                ))
+                .collect::<Vec<_>>()
+                .join(",")
+        )
+        .into_bytes();
+        let cases = [
+            ScriptedJwksResponse {
+                effective_url: Url::parse(TEST_JWKS_URL).expect("test URL"),
+                status: reqwest::StatusCode::FOUND,
+                content_length: Some(valid_body.len() as u64),
+                chunks: vec![valid_body.clone()],
+            },
+            ScriptedJwksResponse {
+                effective_url: Url::parse("https://attacker.invalid/jwks").expect("test URL"),
+                status: reqwest::StatusCode::OK,
+                content_length: Some(valid_body.len() as u64),
+                chunks: vec![valid_body.clone()],
+            },
+            ScriptedJwksResponse {
+                effective_url: Url::parse(TEST_JWKS_URL).expect("test URL"),
+                status: reqwest::StatusCode::OK,
+                content_length: Some((MAX_JWKS_DOCUMENT_BYTES + 1) as u64),
+                chunks: vec![valid_body],
+            },
+            ScriptedJwksResponse {
+                effective_url: Url::parse(TEST_JWKS_URL).expect("test URL"),
+                status: reqwest::StatusCode::OK,
+                content_length: None,
+                chunks: vec![vec![b'x'; MAX_JWKS_DOCUMENT_BYTES + 1]],
+            },
+            successful_response(too_many_keys),
+        ];
+
+        for response in cases {
+            let (validator, source) = scripted_validator(
+                [Ok(response)],
+                Duration::from_secs(60),
+                Duration::from_secs(5),
+            );
+            assert_eq!(
+                validator.key_set(false).await.err(),
+                Some(WorkloadIdentityError::JwksUnavailable)
+            );
+            assert_eq!(source.request_count(), 1);
+        }
+    }
+
+    #[tokio::test]
+    async fn expired_cache_refresh_failure_never_returns_stale_keys() {
+        let (validator, source) = scripted_validator(
+            [
+                Ok(successful_response(jwks_with_key_id(TEST_KEY_ID))),
+                Err(WorkloadIdentityError::JwksUnavailable),
+            ],
+            Duration::from_secs(1),
+            Duration::from_secs(5),
+        );
+        assert_eq!(
+            validator
+                .key_set(false)
+                .await
+                .expect("initial JWKS")
+                .keys
+                .len(),
+            1
+        );
+
+        validator.cache.write().await.fetched_at =
+            Instant::now().checked_sub(Duration::from_secs(2));
+
+        assert_eq!(
+            validator.key_set(false).await.err(),
+            Some(WorkloadIdentityError::JwksUnavailable)
+        );
+        assert_eq!(source.request_count(), 2);
+    }
+
+    #[tokio::test]
+    async fn unknown_key_refresh_is_rate_limited_then_supports_rotation() {
+        let rotated_key_id = "rotated-key";
+        let (validator, source) = scripted_validator(
+            [
+                Ok(successful_response(jwks_with_key_id(TEST_KEY_ID))),
+                Ok(successful_response(jwks_with_key_id(rotated_key_id))),
+            ],
+            Duration::from_secs(120),
+            Duration::from_secs(60),
+        );
+        validator
+            .decoding_key(TEST_KEY_ID)
+            .await
+            .expect("initial key");
+
+        assert_eq!(
+            validator.decoding_key(rotated_key_id).await.err(),
+            Some(WorkloadIdentityError::UnknownKeyId)
+        );
+        assert_eq!(source.request_count(), 1);
+
+        validator.cache.write().await.fetched_at =
+            Instant::now().checked_sub(Duration::from_secs(61));
+
+        validator
+            .decoding_key(rotated_key_id)
+            .await
+            .expect("rotated key after bounded refresh");
+        assert_eq!(source.request_count(), 2);
+    }
+
+    #[test]
+    fn safe_clock_and_exact_time_checks_fail_closed() {
+        let before_epoch = std::time::UNIX_EPOCH
+            .checked_sub(Duration::from_secs(1))
+            .expect("representable pre-epoch time");
+        assert_eq!(
+            unix_seconds(before_epoch),
+            Err(WorkloadIdentityError::ClockUnavailable)
+        );
+        assert_eq!(
+            validate_workload_time(10, 10, 0),
+            Err(WorkloadIdentityError::Expired)
+        );
+        assert_eq!(
+            validate_workload_time(10, 11, 11),
+            Err(WorkloadIdentityError::NotYetValid)
+        );
+        assert_eq!(validate_workload_time(10, 11, 10), Ok(()));
+    }
 }

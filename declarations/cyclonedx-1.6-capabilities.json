@@ -2,7 +2,7 @@
   "$schema": "https://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "version": 2,
+  "version": 3,
   "metadata": {
     "timestamp": "2026-07-30T00:00:00Z",
     "component": {
@@ -175,7 +175,7 @@
             },
             {
               "name": "cdx:sunlit:limit",
-              "value": "Projected workload validation requires the jwks feature and one exact HTTPS JWKS URL. It refuses redirects and stale-key fallback after refresh failure, accepts only RS256 with a required bounded protected kid, and requires exact issuer, exact single audience, exp, and nbf."
+              "value": "Projected workload validation requires the jwks feature and one exact HTTPS JWKS URL. It refuses redirects and stale-key fallback after refresh failure, rate-limits unknown-kid refreshes to at most one per five-second window, accepts only RS256 with a required bounded protected kid, and requires exact issuer, exact single audience, exp, and nbf."
             }
           ]
         },
@@ -377,7 +377,7 @@
         "bom-ref": "claim:secure_identity:projected-kubernetes-workload-jwt-validation",
         "target": "component:secure_identity",
         "predicate": "secure_identity::workload validates projected Kubernetes service-account JWTs from one exact HTTPS JWKS URL with redirects disabled and bounded fail-closed caching; it pins RS256, requires a bounded protected kid selecting exactly one RSA signing key, verifies signature, exact issuer, exact single audience, exp and nbf with zero implicit leeway, and returns only a bounded canonical system:serviceaccount:<namespace>:<serviceaccount> subject without accepting tenant, role, or operation authority.",
-        "reasoning": "Implemented in crates/secure_identity/src/workload.rs behind the jwks feature and evidenced by 10 BDD scenarios in crates/secure_identity/tests/workload_jwt.rs covering HTTPS endpoint pinning, valid subject-only output despite injected tenant/operation claims, algorithm and JWKS metadata confusion, missing/unknown/malformed/oversized kid, signature tampering, issuer/audience mismatch including surplus audiences, exp/nbf and required-claim failures, malformed/oversized JWTs, and noncanonical or unbounded Kubernetes subjects."
+        "reasoning": "Implemented in crates/secure_identity/src/workload.rs behind the jwks feature and evidenced by 10 BDD scenarios in crates/secure_identity/tests/workload_jwt.rs plus 4 focused workload module scenarios. The evidence covers HTTPS endpoint and effective-response-URL pinning, redirect/status refusal, declared and streamed response-size limits, key-count limits, stale-refresh failure, bounded unknown-kid rotation refresh, safe pre-epoch clock failure, valid subject-only output despite injected tenant/operation claims, algorithm and JWKS metadata confusion, missing/unknown/malformed/oversized kid, signature tampering, issuer/audience mismatch including surplus audiences, exp/nbf and required-claim failures, malformed/oversized JWTs, and noncanonical or unbounded Kubernetes subjects."
       }
     ]
   }
