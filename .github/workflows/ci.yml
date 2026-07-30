@@ -82,6 +82,12 @@ jobs:
       - name: Test
         run: cargo test --workspace
 
+      - name: Projected workload JWT contract
+        run: cargo test -p secure_identity --no-default-features --features "jwks" --test workload_jwt
+
+      - name: Projected workload JWKS fetch/cache controls
+        run: cargo test -p secure_identity --no-default-features --features "jwks" --lib workload::tests
+
       - name: Doc
         run: cargo doc --workspace --no-deps
 

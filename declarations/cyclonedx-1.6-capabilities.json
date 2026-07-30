@@ -2,9 +2,9 @@
   "$schema": "https://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "version": 1,
+  "version": 3,
   "metadata": {
-    "timestamp": "2026-05-04T00:00:00Z",
+    "timestamp": "2026-07-30T00:00:00Z",
     "component": {
       "type": "application",
       "name": "SunLitSecurityLibraries"
@@ -152,7 +152,31 @@
             {
               "name": "cdx:sunlit:capability",
               "value": "step-up-auth"
-            }
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "single-use-tenant-operation-capability"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "projected-kubernetes-workload-jwt-validation"
+            },
+            {
+              "name": "cdx:sunlit:limit",
+              "value": "Single-use enforcement is only as strong as the caller-supplied ReplayStore; the bundled in-memory store is single-process and cannot see uses by another replica."
+            },
+            {
+              "name": "cdx:sunlit:limit",
+              "value": "RS256 with caller-pinned public key material only. No network key retrieval, no symmetric or caller-selectable algorithms."
+            },
+            {
+              "name": "cdx:sunlit:limit",
+              "value": "Projected Kubernetes workload JWT validation is authentication-only: it returns one bounded system:serviceaccount:<namespace>:<serviceaccount> subject and conveys no tenant, role, or operation authority; consumers must resolve authority in a deny-by-default registry."
+            },
+        {
+          "name": "cdx:sunlit:limit",
+          "value": "Projected workload validation requires the jwks feature and either one exact HTTPS JWKS URL or one bounded inline public JWKS document. The remote path refuses redirects and stale-key fallback after refresh failure and rate-limits unknown-kid refreshes to at most one per five-second window; the inline path performs no network refresh and requires an operator rollout to rotate keys. Both paths accept only RS256 with a required bounded protected kid and require exact issuer, exact single audience, exp, and nbf."
+        }
           ]
         },
         {
@@ -310,8 +334,8 @@
       {
         "bom-ref": "claim:secure_identity:capabilities",
         "target": "component:secure_identity",
-        "predicate": "Advertises jwt-validation, oidc-discovery, step-up-auth for control coverage C6.",
-        "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+        "predicate": "Advertises jwt-validation, oidc-discovery, step-up-auth, single-use-tenant-operation-capability, and projected-kubernetes-workload-jwt-validation for control coverage C6.",
+        "reasoning": "Repository README crate table and secure_identity bounded-API documentation map each advertised capability to OWASP C6 and its authentication purpose."
       },
       {
         "bom-ref": "claim:secure_authz:capabilities",
@@ -342,6 +366,18 @@
         "target": "component:secure_privacy",
         "predicate": "Advertises privacy-redaction, data-classification-handling for control coverage C8.",
         "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+      },
+      {
+        "bom-ref": "claim:secure_identity:single-use-tenant-operation-capability",
+        "target": "component:secure_identity",
+        "predicate": "secure_identity::capability issues and verifies a strict single-use tenant+operation capability: RS256-only with a caller-pinned public key, exact issuer/audience/subject/tenant/closed-operation binding, a length-framed SHA-256 request digest, iat/nbf/exp/jti, a maximum 60-second TTL enforced independently by issuer and verifier, and atomic jti consumption through a caller-supplied ReplayStore so replay and concurrent double-use fail closed.",
+        "reasoning": "Implemented in crates/secure_identity/src/capability.rs and evidenced by 21 BDD assertions in tests/sunlit_imp_capability.rs plus 6 property invariants in tests/prop_capability.rs, covering wrong algorithm/key/issuer/audience/subject/tenant/operation/request, expiry, not-yet-valid, excess TTL, missing jti, replay, 16-thread concurrent double-use, redaction of token and jti in Debug and error output, and that a rejected capability is never consumed. Two libFuzzer targets cover verification and key parsing."
+      },
+      {
+        "bom-ref": "claim:secure_identity:projected-kubernetes-workload-jwt-validation",
+        "target": "component:secure_identity",
+        "predicate": "secure_identity::workload validates projected Kubernetes service-account JWTs from either one exact HTTPS JWKS URL with redirects disabled and bounded fail-closed caching, or one bounded inline public JWKS document with no network access; both paths pin RS256, require a bounded protected kid selecting exactly one public RSA signing key, verify signature, exact issuer, exact single audience, exp and nbf with zero implicit leeway, and return only a bounded canonical system:serviceaccount:<namespace>:<serviceaccount> subject without accepting tenant, role, or operation authority.",
+        "reasoning": "Implemented in crates/secure_identity/src/workload.rs behind the jwks feature and evidenced by 12 BDD scenarios in crates/secure_identity/tests/workload_jwt.rs plus focused workload module scenarios. The evidence covers production use without the dev feature; inline rejection of private/symmetric keys, malformed/oversized/duplicate/unsupported JWKS and invalid RSA components; HTTPS endpoint and effective-response-URL pinning; redirect/status refusal; declared and streamed response-size limits; key-count limits; stale-refresh failure; bounded unknown-kid rotation refresh; safe pre-epoch clock failure; valid subject-only output despite injected tenant/operation claims; algorithm and JWKS metadata confusion; missing/unknown/malformed/oversized kid; signature tampering; issuer/audience mismatch including surplus audiences; exp/nbf and required-claim failures; malformed/oversized JWTs; and noncanonical or unbounded Kubernetes subjects."
       }
     ]
   }

@@ -131,11 +131,36 @@ struct JwkKey {
     crv: Option<String>,
 }
 
-/// Fetches JWKS JSON from a URL using a simple HTTP GET.
+/// Production JWKS fetch over **HTTPS** via reqwest (rustls-tls). Enabled by the `jwks` feature.
+///
+/// The feature-less fallback below uses a raw plaintext TCP socket and CANNOT perform a TLS
+/// handshake, so against a real `https://` JWKS endpoint it reads back TLS-handshake bytes instead
+/// of JSON and every parse fails with `TokenMalformed` (no keys ever load). Any deployment that
+/// validates real OIDC/Cognito tokens MUST build with `--features jwks`.
+#[cfg(feature = "jwks")]
 async fn fetch_jwks_http(url: &str) -> Result<String, IdentityError> {
-    // Use a simple TCP-based HTTP client to avoid requiring reqwest at compile time.
-    // For production use with the `jwks` feature, this would use reqwest.
-    // This implementation handles http:// URLs for testing and is intentionally simple.
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(10))
+        .build()
+        .map_err(|_| IdentityError::ProviderUnavailable)?;
+    let resp = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|_| IdentityError::ProviderUnavailable)?;
+    if !resp.status().is_success() {
+        return Err(IdentityError::ProviderUnavailable);
+    }
+    resp.text()
+        .await
+        .map_err(|_| IdentityError::ProviderUnavailable)
+}
+
+/// Feature-less fallback: a minimal **plaintext-TCP** HTTP GET for `http://` test endpoints only.
+/// Does NOT support TLS — enable the `jwks` feature (above) for production `https://` endpoints.
+#[cfg(not(feature = "jwks"))]
+async fn fetch_jwks_http(url: &str) -> Result<String, IdentityError> {
+    // Intentionally simple; http:// test servers only. See the `jwks`-feature variant for HTTPS.
     let url_parsed = url::Url::parse(url).map_err(|_| IdentityError::ProviderUnavailable)?;
 
     let host = url_parsed
@@ -206,4 +231,29 @@ fn parse_jwks(json: &str) -> Result<HashMap<String, CachedKey>, IdentityError> {
     }
 
     Ok(keys)
+}
+
+#[cfg(all(test, feature = "jwks"))]
+mod jwks_https_proof {
+    use super::*;
+
+    /// Regression proof for the HTTPS JWKS fetch. The feature-less stub plaintext-TCP'd to :443
+    /// and read back TLS-handshake bytes (never JSON), so zero keys loaded and every OIDC/Cognito
+    /// token failed validation. With the `jwks` feature this fetches the REAL live Cognito JWKS
+    /// over HTTPS and confirms keys are parsed + cached. `#[ignore]` — makes a live network call.
+    #[tokio::test]
+    #[ignore = "network: hits the live Cognito JWKS endpoint"]
+    async fn fetches_live_cognito_jwks_over_https() {
+        let url =
+            "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_a5ROqvMOW/.well-known/jwks.json";
+        let store = JwksKeyStore::new(url, Duration::from_secs(3600));
+        store
+            .fetch()
+            .await
+            .expect("HTTPS JWKS fetch+parse must succeed with the `jwks` feature");
+        assert!(
+            store.is_cache_valid().await,
+            "cache must hold parsed keys after a successful HTTPS fetch"
+        );
+    }
 }
