@@ -27,6 +27,8 @@ pub mod session_redis;
 pub mod step_up;
 pub mod token;
 pub mod totp;
+#[cfg(feature = "jwks")]
+pub mod workload;
 
 pub use authenticator::{AuthenticationRequest, Authenticator, TokenKind};
 pub use boot::{assert_no_dev_identity_in_production, ProductionModeViolation};
@@ -45,4 +47,9 @@ pub use session::{InMemorySessionManager, Session, SessionManager};
 pub use token::{
     AlgorithmConfig, AsymmetricTokenValidator, AsymmetricTokenValidatorConfig, TokenValidator,
     TokenValidatorConfig,
+};
+#[cfg(feature = "jwks")]
+pub use workload::{
+    KubernetesServiceAccountSubject, WorkloadIdentityError, WorkloadJwtValidator,
+    MAX_WORKLOAD_JWT_BYTES, MAX_WORKLOAD_KEY_ID_BYTES,
 };
