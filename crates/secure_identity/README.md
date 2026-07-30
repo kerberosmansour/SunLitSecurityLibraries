@@ -20,16 +20,16 @@ Output is a `security_core::identity::AuthenticatedIdentity`, which `secure_auth
 
 ```toml
 [dependencies]
-secure_identity = "0.1.2"
+secure_identity = "0.1.6"
 
 # OIDC (PKCE) flows:
-# secure_identity = { version = "0.1.2", features = ["oidc"] }
+# secure_identity = { version = "0.1.6", features = ["oidc"] }
 
 # Redis-backed sessions:
-# secure_identity = { version = "0.1.2", features = ["session-redis"] }
+# secure_identity = { version = "0.1.6", features = ["session-redis"] }
 
 # Biometric / device-binding / step-up:
-# secure_identity = { version = "0.1.2", features = ["biometric"] }
+# secure_identity = { version = "0.1.6", features = ["biometric"] }
 ```
 
 ## Quick example — production boot check
@@ -66,7 +66,7 @@ fn main() {
 | `boot` | `assert_no_dev_identity_in_production` startup guard. |
 | `dev` | A `DevAuthenticator` for tests; production boot guards against this. |
 | `auth_events` | `security_events`-typed authentication audit events. |
-| `capability` | Strict single-use tenant+operation capabilities: RS256-only, ≤60s TTL, request-bound, jti consumed through a caller-supplied replay store. |
+| `capability` | Strict single-use tenant+operation capabilities: RS256-only, protected-`kid` exact key selection and rotation, ≤60s TTL, request-bound, jti consumed through a caller-supplied replay store. |
 
 ## Feature flags
 

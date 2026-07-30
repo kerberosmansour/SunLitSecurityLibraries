@@ -9,9 +9,10 @@
 use std::sync::Arc;
 
 use secure_identity::capability::{
-    CapabilityError, CapabilityIssuer, CapabilityRequest, CapabilityVerifier, Expected,
-    InMemoryReplayStore, Operation, ReplayStore, RsaCapabilitySigner,
+    CapabilityError, CapabilityIssuer, CapabilityRequest, CapabilityVerificationKey,
+    CapabilityVerifier, Expected, InMemoryReplayStore, Operation, ReplayStore, RsaCapabilitySigner,
 };
+use serde::Serialize;
 
 /// Throwaway test key material, stored as bare base64 WITHOUT PEM armour.
 ///
@@ -103,6 +104,198 @@ async fn happy_path_first_use_succeeds() {
     assert_eq!(verified.tenant(), "acct-42");
     assert_eq!(verified.operation(), Operation::Read);
     assert_eq!(verified.subject(), "svc-platform-api");
+}
+
+// --------------------------------------------------------- key selection
+
+#[tokio::test]
+async fn issuer_emits_a_protected_non_empty_key_id() {
+    let (priv_pem, _) = test_keys();
+    let token = issuer(&priv_pem)
+        .with_key_id("current".to_string())
+        .expect("valid key id")
+        .issue("svc-platform-api", &request(), 30)
+        .await
+        .expect("issue");
+    let header = jsonwebtoken::decode_header(&token).expect("protected header");
+
+    assert_eq!(
+        header.kid.as_deref(),
+        Some("current"),
+        "a rotation-safe capability must identify its configured signing key"
+    );
+}
+
+#[tokio::test]
+async fn attacker_selected_unknown_key_id_is_rejected_before_replay() {
+    let (priv_pem, pub_pem) = test_keys();
+    let token = token_with_kid("attacker-selected", &priv_pem);
+    let store = InMemoryReplayStore::default();
+
+    let keyed_verifier = CapabilityVerifier::from_keyset(
+        "https://auth.sunlit.test".to_string(),
+        "sunlit-broker".to_string(),
+        vec![
+            CapabilityVerificationKey::from_rsa_pem("current".to_string(), &pub_pem)
+                .expect("trusted key"),
+        ],
+    )
+    .expect("key set");
+    let result = keyed_verifier.verify(&token, &expected(), &store).await;
+
+    assert!(
+        matches!(result, Err(CapabilityError::UnknownKeyId)),
+        "an unknown protected kid must not fall back to the only configured key"
+    );
+    assert!(
+        store.is_empty(),
+        "key selection must fail before replay consumption"
+    );
+}
+
+#[test]
+fn empty_whitespace_or_oversized_key_ids_fail_closed() {
+    let (priv_pem, pub_pem) = test_keys();
+    for invalid in ["", "has whitespace", "\n", &"a".repeat(257)] {
+        let issuer_result = issuer(&priv_pem).with_key_id(invalid.to_string());
+        assert!(
+            matches!(issuer_result, Err(CapabilityError::InvalidKeyId)),
+            "issuer must reject invalid kid configuration"
+        );
+        let key_result = CapabilityVerificationKey::from_rsa_pem(invalid.to_string(), &pub_pem);
+        assert!(
+            matches!(key_result, Err(CapabilityError::InvalidKeyId)),
+            "verifier key must reject invalid kid configuration"
+        );
+    }
+}
+
+#[tokio::test]
+async fn keyset_rejects_missing_or_empty_key_id_before_replay() {
+    let (priv_pem, pub_pem) = test_keys();
+    let keyed_verifier = CapabilityVerifier::from_keyset(
+        "https://auth.sunlit.test".to_string(),
+        "sunlit-broker".to_string(),
+        vec![
+            CapabilityVerificationKey::from_rsa_pem("current".to_string(), &pub_pem)
+                .expect("trusted key"),
+        ],
+    )
+    .expect("key set");
+
+    let missing = issuer(&priv_pem)
+        .issue("svc-platform-api", &request(), 30)
+        .await
+        .expect("issue");
+    let empty = token_with_kid("", &priv_pem);
+
+    for (token, expected_error) in [
+        (missing, CapabilityError::MissingKeyId),
+        (empty, CapabilityError::InvalidKeyId),
+    ] {
+        let store = InMemoryReplayStore::default();
+        let result = keyed_verifier.verify(&token, &expected(), &store).await;
+        assert_eq!(result.expect_err("must reject"), expected_error);
+        assert!(
+            store.is_empty(),
+            "header rejection must happen before replay consumption"
+        );
+    }
+}
+
+#[test]
+fn duplicate_key_ids_are_rejected_as_ambiguous() {
+    let (_, pub_pem) = test_keys();
+    let result = CapabilityVerifier::from_keyset(
+        "https://auth.sunlit.test".to_string(),
+        "sunlit-broker".to_string(),
+        vec![
+            CapabilityVerificationKey::from_rsa_pem("duplicate".to_string(), &pub_pem)
+                .expect("first key"),
+            CapabilityVerificationKey::from_rsa_pem("duplicate".to_string(), &pub_pem)
+                .expect("second key"),
+        ],
+    );
+    assert!(matches!(result, Err(CapabilityError::DuplicateKeyId)));
+}
+
+#[tokio::test]
+async fn current_and_previous_rotation_keys_are_both_explicitly_accepted() {
+    let (priv_pem, pub_pem) = test_keys();
+    let keyed_verifier = CapabilityVerifier::from_keyset(
+        "https://auth.sunlit.test".to_string(),
+        "sunlit-broker".to_string(),
+        vec![
+            CapabilityVerificationKey::from_rsa_pem("current".to_string(), &pub_pem)
+                .expect("current key"),
+            CapabilityVerificationKey::from_rsa_pem("previous".to_string(), &pub_pem)
+                .expect("previous key"),
+        ],
+    )
+    .expect("rotation key set");
+
+    for key_id in ["current", "previous"] {
+        let token = issuer(&priv_pem)
+            .with_key_id(key_id.to_string())
+            .expect("valid key id")
+            .issue("svc-platform-api", &request(), 30)
+            .await
+            .expect("issue");
+        keyed_verifier
+            .verify(&token, &expected(), &InMemoryReplayStore::default())
+            .await
+            .expect("explicitly trusted rotation key must verify");
+    }
+}
+
+#[tokio::test]
+async fn matching_key_id_with_the_wrong_public_key_rejects_the_signature() {
+    let (priv_pem, _) = test_keys();
+    let other_pub = pem("PUBLIC KEY", OTHER_PUBLIC_SPKI_B64).into_bytes();
+    let token = issuer(&priv_pem)
+        .with_key_id("current".to_string())
+        .expect("valid key id")
+        .issue("svc-platform-api", &request(), 30)
+        .await
+        .expect("issue");
+    let keyed_verifier = CapabilityVerifier::from_keyset(
+        "https://auth.sunlit.test".to_string(),
+        "sunlit-broker".to_string(),
+        vec![
+            CapabilityVerificationKey::from_rsa_pem("current".to_string(), &other_pub)
+                .expect("unrelated trusted key"),
+        ],
+    )
+    .expect("key set");
+    let store = InMemoryReplayStore::default();
+
+    assert!(matches!(
+        keyed_verifier.verify(&token, &expected(), &store).await,
+        Err(CapabilityError::BadSignature)
+    ));
+    assert!(store.is_empty());
+}
+
+#[tokio::test]
+async fn legacy_single_key_mode_preserves_kidless_compatibility_only() {
+    let (priv_pem, pub_pem) = test_keys();
+    let legacy = issuer(&priv_pem)
+        .issue("svc-platform-api", &request(), 30)
+        .await
+        .expect("legacy issue");
+    verifier(&pub_pem)
+        .verify(&legacy, &expected(), &InMemoryReplayStore::default())
+        .await
+        .expect("existing kidless callers remain compatible");
+
+    let selected = token_with_kid("current", &priv_pem);
+    let result = verifier(&pub_pem)
+        .verify(&selected, &expected(), &InMemoryReplayStore::default())
+        .await;
+    assert!(
+        matches!(result, Err(CapabilityError::UnknownKeyId)),
+        "legacy mode must not silently ignore a selector"
+    );
 }
 
 // ------------------------------------------------------------ single use
@@ -402,7 +595,9 @@ async fn alg_none_is_rejected() {
         verifier(&pub_pem)
             .verify(&forged, &expected(), &store)
             .await,
-        Err(CapabilityError::BadSignature) | Err(CapabilityError::Malformed)
+        Err(CapabilityError::BadSignature)
+            | Err(CapabilityError::Malformed)
+            | Err(CapabilityError::AlgorithmMismatch)
     ));
 }
 
@@ -420,7 +615,9 @@ async fn hs256_algorithm_confusion_is_rejected() {
         verifier(&pub_pem)
             .verify(&forged, &expected(), &store)
             .await,
-        Err(CapabilityError::BadSignature) | Err(CapabilityError::Malformed)
+        Err(CapabilityError::BadSignature)
+            | Err(CapabilityError::Malformed)
+            | Err(CapabilityError::AlgorithmMismatch)
     ));
 }
 
@@ -510,6 +707,43 @@ fn unix_now() -> i64 {
 fn base64_url(bytes: &[u8]) -> String {
     use base64::Engine as _;
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
+}
+
+#[derive(Serialize)]
+struct TestClaims {
+    iss: &'static str,
+    aud: &'static str,
+    sub: &'static str,
+    tenant: &'static str,
+    op: Operation,
+    req: String,
+    iat: i64,
+    nbf: i64,
+    exp: i64,
+    jti: &'static str,
+}
+
+fn token_with_kid(kid: &str, private_pem: &[u8]) -> String {
+    let now = unix_now();
+    let mut header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256);
+    header.kid = Some(kid.to_string());
+    jsonwebtoken::encode(
+        &header,
+        &TestClaims {
+            iss: "https://auth.sunlit.test",
+            aud: "sunlit-broker",
+            sub: "svc-platform-api",
+            tenant: "acct-42",
+            op: Operation::Read,
+            req: base64_url(&request().digest()),
+            iat: now,
+            nbf: now,
+            exp: now + 30,
+            jti: "test-jti-with-kid",
+        },
+        &jsonwebtoken::EncodingKey::from_rsa_pem(private_pem).expect("test signing key"),
+    )
+    .expect("test token")
 }
 
 // ------------------------------------------------- key-size agreement (F3)

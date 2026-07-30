@@ -10,10 +10,10 @@
 
 ```toml
 [dependencies]
-secure_identity = "0.1.2"
+secure_identity = "0.1.6"
 
 # For development/testing only:
-secure_identity = { version = "0.1.2", features = ["dev"] }
+secure_identity = { version = "0.1.6", features = ["dev"] }
 ```
 
 ---
@@ -168,11 +168,12 @@ tenant, against this exact request, once, within at most 60 seconds*.
 
 ```rust,no_run
 use secure_identity::capability::{
-    CapabilityIssuer, CapabilityRequest, CapabilityVerifier, Expected,
-    InMemoryReplayStore, Operation, RsaCapabilitySigner,
+    CapabilityIssuer, CapabilityRequest, CapabilityVerificationKey,
+    CapabilityVerifier, Expected, InMemoryReplayStore, Operation,
+    RsaCapabilitySigner,
 };
 
-# fn main() -> Result<(), Box<dyn std::error::Error>> {
+# async fn example() -> Result<(), Box<dyn std::error::Error>> {
 let request = CapabilityRequest::new("acct-42", Operation::Read, b"SELECT 1");
 
 let token = CapabilityIssuer::new(
@@ -180,18 +181,25 @@ let token = CapabilityIssuer::new(
     "broker".to_string(),
     RsaCapabilitySigner::from_pkcs8_pem(&std::fs::read("signing.pem")?)?,
 )
-.issue("svc-api", &request, 30)?;
+.with_key_id("current".to_string())?
+.issue("svc-api", &request, 30)
+.await?;
 
-let verifier = CapabilityVerifier::from_rsa_pem(
+let verifier = CapabilityVerifier::from_keyset(
     "https://auth.example.com".to_string(),
     "broker".to_string(),
-    &std::fs::read("public.pem")?,
+    vec![
+        CapabilityVerificationKey::from_rsa_pem(
+            "current".to_string(),
+            &std::fs::read("public.pem")?,
+        )?,
+    ],
 )?;
 let store = InMemoryReplayStore::default();
 let expected = Expected::new("svc-api", "acct-42", Operation::Read, b"SELECT 1");
 
-let verified = verifier.verify(&token, &expected, &store)?;   // first use: Ok
-assert!(verifier.verify(&token, &expected, &store).is_err()); // replay: Err
+let verified = verifier.verify(&token, &expected, &store).await?; // first use: Ok
+assert!(verifier.verify(&token, &expected, &store).await.is_err()); // replay: Err
 # Ok(())
 # }
 ```
@@ -200,7 +208,8 @@ assert!(verifier.verify(&token, &expected, &store).is_err()); // replay: Err
 
 | Property | How |
 |---|---|
-| Algorithm | RS256 fixed in code. The token's own `alg` header is never consulted, so `alg: none` and HMAC confusion do not apply. |
+| Algorithm | RS256 fixed in code. A non-RS256 protected `alg` is rejected before key selection, so `alg: none` and HMAC confusion do not apply. |
+| Key selection | Rotation-safe issuers emit a configured protected `kid`; key-set verifiers require one exact trusted match and reject missing, unknown, duplicate, or malformed IDs without fallback. |
 | Lifetime | `MAX_TTL_SECONDS` = 60, refused by the issuer **and** independently by the verifier — it does not assume a conforming issuer. |
 | Request binding | Length-framed SHA-256 over (tenant, operation, body), so authority cannot be moved to a different statement. |
 | Single use | The `jti` is consumed through your [`ReplayStore`] as the final step of verification. |
@@ -221,6 +230,13 @@ assert!(verifier.verify(&token, &expected, &store).is_err()); // replay: Err
    binding are all checked *before* the `jti` is consumed, so a rejected
    capability is not spent. If that order is inverted, an attacker can burn a
    victim's capability by presenting it against the wrong expectation.
+
+4. **Use explicit key IDs for rotation.** Configure the issuer with
+   `with_key_id`, construct current and previous
+   `CapabilityVerificationKey` values, and pass them to
+   `CapabilityVerifier::from_keyset`. The legacy single-key constructors remain
+   available only for existing kidless tokens; they reject tokens that carry a
+   selector rather than silently ignoring it.
 
 ### Choosing a signer
 
@@ -355,7 +371,7 @@ impl SessionManager for RedisSessionManager {
 
 ```toml
 [dependencies]
-secure_identity = { version = "0.1.2", features = ["session-redis"] }
+secure_identity = { version = "0.1.6", features = ["session-redis"] }
 ```
 
 ```rust
@@ -374,7 +390,7 @@ OIDC integration is intentionally a thin wrapper over the `openidconnect` crate 
 
 ```toml
 [dependencies]
-secure_identity = { version = "0.1.2", features = ["oidc"] }
+secure_identity = { version = "0.1.6", features = ["oidc"] }
 ```
 
 ```rust
