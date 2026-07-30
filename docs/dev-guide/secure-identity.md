@@ -10,10 +10,13 @@
 
 ```toml
 [dependencies]
-secure_identity = "0.1.7"
+secure_identity = "0.1.8"
 
 # For development/testing only:
-secure_identity = { version = "0.1.7", features = ["dev"] }
+secure_identity = { version = "0.1.8", features = ["dev"] }
+
+# Projected Kubernetes workload JWTs:
+secure_identity = { version = "0.1.8", features = ["jwks"] }
 ```
 
 ---
@@ -156,6 +159,27 @@ if let Some(alg) = store.get_algorithm("my-key-id").await {
 // Cache is thread-safe (Arc<RwLock>) and auto-refreshes when TTL expires
 assert!(store.is_cache_valid().await);
 ```
+
+---
+
+## Projected Kubernetes Workload JWTs
+
+`WorkloadJwtValidator` validates projected service-account JWTs and returns
+only a bounded `system:serviceaccount:<namespace>:<serviceaccount>` subject.
+Use `WorkloadJwtValidator::new` for one exact HTTPS JWKS URL. For an
+egress-free issuer, use
+`WorkloadJwtValidator::from_static_jwks(issuer, audience, jwks_json)` with a
+bounded inline public JWKS document.
+
+Both paths pin RS256 and enforce exact issuer, single audience, signature,
+`exp`, `nbf`, and bounded unique `kid` checks. The inline path rejects private
+or symmetric key material, duplicate key IDs, unsupported algorithms, more
+than 64 keys, or documents larger than 1 MiB. It performs no network refresh;
+operators must restart or roll the workload to rotate the pinned document.
+
+This API authenticates the workload only. The consumer must map the returned
+subject to tenant and operation authority through a separate deny-by-default
+registry.
 
 ---
 
@@ -371,7 +395,7 @@ impl SessionManager for RedisSessionManager {
 
 ```toml
 [dependencies]
-secure_identity = { version = "0.1.7", features = ["session-redis"] }
+secure_identity = { version = "0.1.8", features = ["session-redis"] }
 ```
 
 ```rust
@@ -390,7 +414,7 @@ OIDC integration is intentionally a thin wrapper over the `openidconnect` crate 
 
 ```toml
 [dependencies]
-secure_identity = { version = "0.1.7", features = ["oidc"] }
+secure_identity = { version = "0.1.8", features = ["oidc"] }
 ```
 
 ```rust
@@ -579,6 +603,7 @@ impl IdentitySource for KeycloakAdapter {
 | `AlgorithmConfig` | `token` | Algorithm + key material |
 | `ApiKeyAuthenticator` | `api_key` | Constant-time API key auth |
 | `JwksKeyStore` | `jwks` | JWKS key fetch + cache |
+| `WorkloadJwtValidator` | `workload` | Projected Kubernetes JWT validation using exact HTTPS or bounded inline public JWKS |
 | `InMemorySessionManager` | `session` | In-memory session store |
 | `Session` | `session` | Session data struct |
 | `SessionManager` | `session` | Open trait for session stores |

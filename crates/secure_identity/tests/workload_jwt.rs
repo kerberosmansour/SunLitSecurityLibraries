@@ -1,4 +1,4 @@
-#![cfg(all(feature = "jwks", feature = "dev"))]
+#![cfg(feature = "jwks")]
 //! BDD contract for projected Kubernetes workload JWT validation.
 
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
@@ -8,7 +8,6 @@ use secure_identity::workload::{
 };
 use serde::Serialize;
 
-const JWKS_URL: &str = "https://kubernetes.default.svc/openid/v1/jwks";
 const ISSUER: &str = "https://kubernetes.default.svc";
 const AUDIENCE: &str = "sunlit-platform-api";
 const SUBJECT: &str = "system:serviceaccount:sunlit:otel-collector";
@@ -73,13 +72,8 @@ fn jwks_with_duplicate_key_id() -> String {
 }
 
 fn validator() -> WorkloadJwtValidator {
-    WorkloadJwtValidator::from_static_jwks_for_tests(
-        JWKS_URL,
-        ISSUER,
-        AUDIENCE,
-        &jwks_with_alg("RS256"),
-    )
-    .expect("valid test validator")
+    WorkloadJwtValidator::from_static_jwks(ISSUER, AUDIENCE, &jwks_with_alg("RS256"))
+        .expect("valid static validator")
 }
 
 fn valid_claims() -> Claims {
@@ -129,6 +123,59 @@ fn given_non_https_or_ambiguous_jwks_url_when_configured_then_rejected() {
 }
 
 #[tokio::test]
+async fn given_bounded_public_jwks_without_dev_feature_when_verified_then_available_in_production()
+{
+    let validator =
+        WorkloadJwtValidator::from_static_jwks(ISSUER, AUDIENCE, &jwks_with_alg("RS256"))
+            .expect("bounded public JWKS");
+    let token = sign(&valid_claims(), Algorithm::RS256, Some(KEY_ID));
+
+    let subject = validator.verify(&token).await.expect("valid workload JWT");
+
+    assert_eq!(subject.as_str(), SUBJECT);
+}
+
+#[test]
+fn given_unsafe_inline_jwks_when_configured_then_rejected_before_use() {
+    let private_rsa = format!(
+        r#"{{"keys":[{{"kty":"RSA","kid":"{KEY_ID}","use":"sig","alg":"RS256","n":"{TEST_RSA_N_B64URL}","e":"AQAB","d":"AQAB"}}]}}"#
+    );
+    let symmetric = format!(
+        r#"{{"keys":[{{"kty":"oct","kid":"{KEY_ID}","use":"sig","alg":"HS256","k":"bm90LWEtdHJ1c3RlZC1rZXk"}}]}}"#
+    );
+    let rsa_with_symmetric_secret = format!(
+        r#"{{"keys":[{{"kty":"RSA","kid":"{KEY_ID}","use":"sig","alg":"RS256","n":"{TEST_RSA_N_B64URL}","e":"AQAB","k":"bm90LWEtdHJ1c3RlZC1rZXk"}}]}}"#
+    );
+    let unsupported = format!(
+        r#"{{"keys":[{{"kty":"RSA","kid":"{KEY_ID}","use":"sig","alg":"RS384","n":"{TEST_RSA_N_B64URL}","e":"AQAB"}}]}}"#
+    );
+    let oversized = " ".repeat((1024 * 1024) + 1);
+    let cases = [
+        ("malformed", WorkloadIdentityError::JwksUnavailable),
+        (&oversized, WorkloadIdentityError::JwksUnavailable),
+        (&private_rsa, WorkloadIdentityError::JwksUnavailable),
+        (&symmetric, WorkloadIdentityError::JwksUnavailable),
+        (
+            &rsa_with_symmetric_secret,
+            WorkloadIdentityError::JwksUnavailable,
+        ),
+        (
+            &jwks_with_duplicate_key_id(),
+            WorkloadIdentityError::UnknownKeyId,
+        ),
+        (&unsupported, WorkloadIdentityError::JwksAlgorithmMismatch),
+    ];
+
+    for (jwks, expected) in cases {
+        assert_eq!(
+            WorkloadJwtValidator::from_static_jwks(ISSUER, AUDIENCE, jwks).err(),
+            Some(expected),
+            "unexpected result for inline JWKS case"
+        );
+    }
+}
+
+#[tokio::test]
 async fn given_valid_projected_jwt_when_verified_then_only_bounded_subject_is_returned() {
     let mut claims = valid_claims();
     claims.tenant = Some("attacker-chosen-tenant".to_string());
@@ -156,17 +203,9 @@ async fn given_wrong_algorithm_or_key_metadata_when_verified_then_rejected() {
         Err(WorkloadIdentityError::AlgorithmMismatch)
     );
 
-    let wrong_jwk_alg = WorkloadJwtValidator::from_static_jwks_for_tests(
-        JWKS_URL,
-        ISSUER,
-        AUDIENCE,
-        &jwks_with_alg("RS384"),
-    )
-    .expect("syntactically valid test validator");
-    let rs256 = sign(&claims, Algorithm::RS256, Some(KEY_ID));
     assert_eq!(
-        wrong_jwk_alg.verify(&rs256).await,
-        Err(WorkloadIdentityError::JwksAlgorithmMismatch)
+        WorkloadJwtValidator::from_static_jwks(ISSUER, AUDIENCE, &jwks_with_alg("RS384")).err(),
+        Some(WorkloadIdentityError::JwksAlgorithmMismatch)
     );
 }
 
@@ -204,17 +243,10 @@ async fn given_missing_unknown_or_unbounded_kid_when_verified_then_rejected() {
         assert_eq!(validator().verify(&token).await, Err(expected));
     }
 
-    let duplicate = WorkloadJwtValidator::from_static_jwks_for_tests(
-        JWKS_URL,
-        ISSUER,
-        AUDIENCE,
-        &jwks_with_duplicate_key_id(),
-    )
-    .expect("syntactically valid duplicate-key test set");
-    let token = sign(&claims, Algorithm::RS256, Some(KEY_ID));
     assert_eq!(
-        duplicate.verify(&token).await,
-        Err(WorkloadIdentityError::UnknownKeyId)
+        WorkloadJwtValidator::from_static_jwks(ISSUER, AUDIENCE, &jwks_with_duplicate_key_id())
+            .err(),
+        Some(WorkloadIdentityError::UnknownKeyId)
     );
 }
 
