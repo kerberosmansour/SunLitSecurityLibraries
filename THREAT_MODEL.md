@@ -75,7 +75,7 @@ The threat model serves four purposes:
 | `security_events` | C9 — Implement Security Logging and Monitoring | Structured audit events, per-event HMAC sealing, event correlation, and SIEM/file sink integration |
 | `secure_boundary` | C5/C8 — Validate All Inputs + Leverage Browser Security Features | Input validation, size limits, type-safe extractors, deny-by-default parsers, browser security headers, CORS, Fetch Metadata validation |
 | `secure_output` | C4 — Encode and Escape Data | Context-aware output encoding, security response headers, CSP management |
-| `secure_identity` | C6 — Implement Digital Identity | Pluggable authentication abstraction; supports OIDC, mTLS, API keys |
+| `secure_identity` | C6 — Implement Digital Identity | Pluggable authentication abstraction; supports OIDC, mTLS, API keys; strict single-use tenant+operation capabilities for brokered access |
 | `secure_authz` | C7 — Enforce Access Controls | Deny-by-default RBAC/ABAC; policy evaluation engine |
 | `secure_data` | C8 — Protect Data Everywhere | Data-at-rest and in-transit protection, secrets management, FIPS readiness |
 | `secure_reference_service` | Integration | Reference axum/tower integration showing all controls in concert |
