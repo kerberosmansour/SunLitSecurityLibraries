@@ -4,11 +4,12 @@
 [![docs.rs](https://docs.rs/secure_identity/badge.svg)](https://docs.rs/secure_identity)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-Authentication building blocks: JWT validation, JWKS, OIDC (PKCE), API keys, sessions, MFA/TOTP, biometric step-up, and passwordless flows. Part of the [SunLit Security Libraries](https://github.com/kerberosmansour/SunLitSecurityLibraries) workspace.
+Authentication building blocks: JWT validation, JWKS, projected Kubernetes workload identity, OIDC (PKCE), API keys, sessions, MFA/TOTP, biometric step-up, and passwordless flows. Part of the [SunLit Security Libraries](https://github.com/kerberosmansour/SunLitSecurityLibraries) workspace.
 
 ## When to reach for this crate
 
 - You're integrating an OIDC provider and want **PKCE-first authorization-code flow** with cached JWKS.
+- You need to authenticate a **projected Kubernetes service-account JWT** without trusting caller-selected tenant or operation claims.
 - You need **MFA/TOTP** with replay defense and clock-skew tolerance.
 - You need **API key issuance/validation** that survives a key-leak audit.
 - You want **biometric step-up** + device-binding (MASVS-AUTH-2/3).
@@ -24,6 +25,9 @@ secure_identity = "0.1.6"
 
 # OIDC (PKCE) flows:
 # secure_identity = { version = "0.1.6", features = ["oidc"] }
+
+# Projected Kubernetes workload JWTs over HTTPS JWKS:
+# secure_identity = { version = "0.1.6", features = ["jwks"] }
 
 # Redis-backed sessions:
 # secure_identity = { version = "0.1.6", features = ["session-redis"] }
@@ -49,12 +53,56 @@ fn main() {
 }
 ```
 
+## Projected Kubernetes workload identity
+
+`WorkloadJwtValidator` authenticates projected service-account JWTs against one
+caller-pinned JWKS URL:
+
+```rust,no_run
+use secure_identity::WorkloadJwtValidator;
+
+# async fn authenticate(token: &str) -> Result<(), Box<dyn std::error::Error>> {
+let validator = WorkloadJwtValidator::new(
+    "https://kubernetes.default.svc/openid/v1/jwks",
+    "https://kubernetes.default.svc",
+    "sunlit-platform-api",
+)?;
+let subject = validator.verify(token).await?;
+
+// Use the exact subject as a key in the consumer's deny-by-default authority
+// registry. The library intentionally supplies no tenant or operation.
+assert_eq!(
+    subject.as_str(),
+    "system:serviceaccount:sunlit:otel-collector"
+);
+# Ok(())
+# }
+```
+
+The production constructor requires an exact HTTPS URL, rejects credentials
+and fragments, refuses redirects, uses rustls, bounds a token at 16 KiB and a
+protected `kid` at 256 ASCII bytes, and accepts RS256 only. It requires and
+checks the signature, exact issuer, exact single audience, `exp`, and `nbf`
+with zero implicit clock-skew leeway. The returned
+`KubernetesServiceAccountSubject` is restricted to
+`system:serviceaccount:<namespace>:<serviceaccount>`, with a 63-byte
+Kubernetes DNS-label namespace and a 253-byte DNS-subdomain service-account
+name.
+
+This API is authentication-only. It ignores every caller-provided tenant,
+operation, role, or other authorization claim and provides no conversion to a
+UUID-backed `AuthenticatedIdentity`. Consumers remain responsible for mapping
+the bounded subject to tenant and operation authority. JWKS responses are
+bounded at 1 MiB and 64 keys; cache refresh failures fail closed rather than
+using expired keys.
+
 ## What's inside
 
 | Module | Use it for |
 |---|---|
 | `authenticator::Authenticator` / `AuthenticationRequest` / `TokenKind` | Pluggable authentication entry-point. |
 | `jwks` | JWKS discovery, caching, and RSA/EC signature verification. |
+| `workload` (`jwks` feature) | Projected Kubernetes JWT validation: exact HTTPS JWKS URL, RS256-only bounded `kid`, exact issuer/audience/time checks, and a bounded service-account subject with no tenant or operation authority. |
 | `token` | JWT issuance/validation with strict alg enforcement. |
 | `mfa` / `totp` | TOTP step-up with replay defense and skew tolerance. |
 | `api_key` | API key issuance and constant-time validation. |
@@ -72,6 +120,7 @@ fn main() {
 
 | Flag | Default | Enables |
 |---|---|---|
+| `jwks` | off | HTTPS JWKS retrieval and projected Kubernetes workload JWT validation via `workload`. |
 | `oidc` | off | `oidc` module — OIDC discovery and PKCE-first authentication via `openidconnect` + `reqwest`. |
 | `session-redis` | off | `session_redis` — Redis-backed session storage. |
 | `biometric` | off | `biometric`, `device_binding`, `step_up` (MASVS-AUTH-2, MASVS-AUTH-3). |
