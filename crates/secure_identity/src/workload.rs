@@ -231,6 +231,7 @@ impl ScriptedJwksSource {
 struct CachedJwks {
     key_set: Option<JwkSet>,
     fetched_at: Option<Instant>,
+    last_forced_refresh_attempt: Option<Instant>,
 }
 
 /// Validates projected Kubernetes service-account JWTs against a pinned JWKS endpoint.
@@ -447,12 +448,28 @@ impl WorkloadJwtValidator {
         }
 
         let _refresh_guard = self.refresh.lock().await;
-        let reusable_age = if force_refresh {
-            self.unknown_key_refresh_floor
-        } else {
-            self.cache_ttl
-        };
-        if let Some(key_set) = self.cached_key_set(reusable_age).await {
+        if force_refresh {
+            let mut cache = self.cache.write().await;
+            let successful_refresh_is_recent = cache
+                .fetched_at
+                .is_some_and(|fetched_at| fetched_at.elapsed() < self.unknown_key_refresh_floor);
+            let attempted_refresh_is_recent =
+                cache
+                    .last_forced_refresh_attempt
+                    .is_some_and(|attempted_at| {
+                        attempted_at.elapsed() < self.unknown_key_refresh_floor
+                    });
+            if successful_refresh_is_recent || attempted_refresh_is_recent {
+                return cache
+                    .key_set
+                    .clone()
+                    .ok_or(WorkloadIdentityError::JwksUnavailable);
+            }
+            // Record the attempt before remote I/O. A failed fetch must consume
+            // the same refresh window as a successful one, otherwise attacker-
+            // chosen unknown key IDs can amplify an upstream JWKS outage.
+            cache.last_forced_refresh_attempt = Some(Instant::now());
+        } else if let Some(key_set) = self.cached_key_set(self.cache_ttl).await {
             return Ok(key_set);
         }
 
@@ -866,6 +883,40 @@ mod tests {
             Some(WorkloadIdentityError::JwksUnavailable)
         );
         assert_eq!(source.request_count(), 2);
+    }
+
+    #[tokio::test]
+    async fn failed_unknown_key_refresh_is_rate_limited() {
+        let (validator, source) = scripted_validator(
+            [
+                Ok(successful_response(jwks_with_key_id(TEST_KEY_ID))),
+                Err(WorkloadIdentityError::JwksUnavailable),
+            ],
+            Duration::from_secs(120),
+            Duration::from_secs(60),
+        );
+        validator
+            .decoding_key(TEST_KEY_ID)
+            .await
+            .expect("initial key");
+        validator.cache.write().await.fetched_at =
+            Instant::now().checked_sub(Duration::from_secs(61));
+
+        assert_eq!(
+            validator.decoding_key("unknown-a").await.err(),
+            Some(WorkloadIdentityError::JwksUnavailable)
+        );
+        assert_eq!(source.request_count(), 2);
+
+        assert_eq!(
+            validator.decoding_key("unknown-b").await.err(),
+            Some(WorkloadIdentityError::UnknownKeyId)
+        );
+        assert_eq!(
+            source.request_count(),
+            2,
+            "a failed forced refresh must still consume the refresh window"
+        );
     }
 
     #[tokio::test]
