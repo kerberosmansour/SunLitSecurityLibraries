@@ -143,6 +143,9 @@ fn given_unsafe_inline_jwks_when_configured_then_rejected_before_use() {
     let symmetric = format!(
         r#"{{"keys":[{{"kty":"oct","kid":"{KEY_ID}","use":"sig","alg":"HS256","k":"bm90LWEtdHJ1c3RlZC1rZXk"}}]}}"#
     );
+    let rsa_with_symmetric_secret = format!(
+        r#"{{"keys":[{{"kty":"RSA","kid":"{KEY_ID}","use":"sig","alg":"RS256","n":"{TEST_RSA_N_B64URL}","e":"AQAB","k":"bm90LWEtdHJ1c3RlZC1rZXk"}}]}}"#
+    );
     let unsupported = format!(
         r#"{{"keys":[{{"kty":"RSA","kid":"{KEY_ID}","use":"sig","alg":"RS384","n":"{TEST_RSA_N_B64URL}","e":"AQAB"}}]}}"#
     );
@@ -151,7 +154,11 @@ fn given_unsafe_inline_jwks_when_configured_then_rejected_before_use() {
         ("malformed", WorkloadIdentityError::JwksUnavailable),
         (&oversized, WorkloadIdentityError::JwksUnavailable),
         (&private_rsa, WorkloadIdentityError::JwksUnavailable),
-        (&symmetric, WorkloadIdentityError::JwksAlgorithmMismatch),
+        (&symmetric, WorkloadIdentityError::JwksUnavailable),
+        (
+            &rsa_with_symmetric_secret,
+            WorkloadIdentityError::JwksUnavailable,
+        ),
         (
             &jwks_with_duplicate_key_id(),
             WorkloadIdentityError::UnknownKeyId,

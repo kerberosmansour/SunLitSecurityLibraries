@@ -697,7 +697,7 @@ fn parse_inline_public_jwks(document: &[u8]) -> Result<JwkSet, WorkloadIdentityE
         let fields = raw_key
             .as_object()
             .ok_or(WorkloadIdentityError::JwksUnavailable)?;
-        if ["d", "p", "q", "dp", "dq", "qi", "oth"]
+        if ["d", "p", "q", "dp", "dq", "qi", "oth", "k"]
             .iter()
             .any(|name| fields.contains_key(*name))
         {
