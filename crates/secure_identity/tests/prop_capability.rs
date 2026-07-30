@@ -12,8 +12,9 @@ fn rt() -> Runtime {
     Runtime::new().expect("runtime")
 }
 use secure_identity::capability::{
-    CapabilityError, CapabilityIssuer, CapabilityRequest, CapabilityVerifier, Expected,
-    InMemoryReplayStore, Operation, RsaCapabilitySigner, MAX_TTL_SECONDS,
+    CapabilityError, CapabilityIssuer, CapabilityRequest, CapabilityVerificationKey,
+    CapabilityVerifier, Expected, InMemoryReplayStore, Operation, RsaCapabilitySigner,
+    MAX_TTL_SECONDS,
 };
 
 /// Throwaway test key material, stored as bare base64 WITHOUT PEM armour.
@@ -76,14 +77,19 @@ fn any_operation() -> impl Strategy<Value = Operation> {
 }
 
 proptest! {
-    /// Anything the issuer mints within the TTL bound must verify exactly once.
+    /// Anything the issuer mints with enough remaining validity for runtime
+    /// scheduling must verify exactly once.
+    ///
+    /// One-second capabilities are valid API inputs, but a wall-clock-driven
+    /// property cannot promise they remain unexpired across RSA signing and a
+    /// scheduler pause. Named temporal tests cover the lower TTL boundary.
     #[test]
     fn any_valid_capability_verifies_once(
         subject in "[a-z0-9-]{1,40}",
         tenant in "[a-z0-9-]{1,40}",
         body in proptest::collection::vec(any::<u8>(), 0..512),
         op in any_operation(),
-        ttl in 1u64..=MAX_TTL_SECONDS,
+        ttl in 5u64..=MAX_TTL_SECONDS,
     ) {
         let (first, second) = rt().block_on(async {
             let request = CapabilityRequest::new(&tenant, op, &body);
@@ -190,6 +196,42 @@ proptest! {
         });
         prop_assert!(rejected);
         prop_assert!(then_usable, "a claim-check failure must not burn the jti");
+    }
+
+    /// Every syntactically valid configured key identifier is protected by the
+    /// signature, selects its exact trusted key, and remains single use.
+    #[test]
+    fn any_valid_key_id_selects_exactly_one_trusted_key(
+        key_id in "[A-Za-z0-9][A-Za-z0-9._:/+=@-]{0,63}",
+    ) {
+        let (first, second) = rt().block_on(async {
+            let request = CapabilityRequest::new("acct", Operation::Read, b"body");
+            let token = issuer()
+                .with_key_id(key_id.clone())
+                .expect("generated valid key id")
+                .issue("svc", &request, 30)
+                .await
+                .expect("issue");
+            let verifier = CapabilityVerifier::from_keyset(
+                ISS.to_string(),
+                AUD.to_string(),
+                vec![
+                    CapabilityVerificationKey::from_rsa_pem(
+                        key_id,
+                        test_public_pem().as_bytes(),
+                    )
+                    .expect("trusted key"),
+                ],
+            )
+            .expect("key set");
+            let expected = Expected::new("svc", "acct", Operation::Read, b"body");
+            let store = InMemoryReplayStore::default();
+            let first = verifier.verify(&token, &expected, &store).await.is_ok();
+            let second = verifier.verify(&token, &expected, &store).await;
+            (first, second)
+        });
+        prop_assert!(first);
+        prop_assert!(matches!(second, Err(CapabilityError::Replayed)));
     }
 
     /// Arbitrary bytes presented as a token must be rejected without panicking.

@@ -27,8 +27,9 @@
 //!
 //! ```no_run
 //! use secure_identity::capability::{
-//!     CapabilityIssuer, CapabilityRequest, CapabilityVerifier, Expected,
-//!     InMemoryReplayStore, Operation, RsaCapabilitySigner,
+//!     CapabilityIssuer, CapabilityRequest, CapabilityVerificationKey,
+//!     CapabilityVerifier, Expected, InMemoryReplayStore, Operation,
+//!     RsaCapabilitySigner,
 //! };
 //!
 //! # #[tokio::main]
@@ -43,13 +44,19 @@
 //!     "broker".to_string(),
 //!     RsaCapabilitySigner::from_pkcs8_pem(&signing_pem)?,
 //! )
+//! .with_key_id("current".to_string())?
 //! .issue("svc-api", &request, 30)
 //! .await?;
 //!
-//! let verifier = CapabilityVerifier::from_rsa_pem(
+//! let verifier = CapabilityVerifier::from_keyset(
 //!     "https://auth.example.com".to_string(),
 //!     "broker".to_string(),
-//!     &verify_pem,
+//!     vec![
+//!         CapabilityVerificationKey::from_rsa_pem(
+//!             "current".to_string(),
+//!             &verify_pem,
+//!         )?,
+//!     ],
 //! )?;
 //! let store = InMemoryReplayStore::default();
 //! let expected = Expected::new("svc-api", "acct-42", Operation::Read, b"SELECT 1");
@@ -67,7 +74,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use base64::Engine as _;
-use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
+use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Header, Validation};
 use ring::rand::SystemRandom;
 use ring::signature::{RsaKeyPair, RSA_PKCS1_SHA256};
 use serde::{Deserialize, Serialize};
@@ -172,6 +179,16 @@ pub enum CapabilityError {
     ReplayIndeterminate,
     /// The supplied key material could not be parsed.
     InvalidKey,
+    /// A configured or presented key identifier is empty or malformed.
+    InvalidKeyId,
+    /// A key-selected verifier received no protected `kid`.
+    MissingKeyId,
+    /// The protected `kid` did not identify a trusted key.
+    UnknownKeyId,
+    /// More than one trusted key used the same `kid`.
+    DuplicateKeyId,
+    /// The protected algorithm was not RS256.
+    AlgorithmMismatch,
     /// Signing failed.
     SigningFailed,
     /// The system clock is before the Unix epoch.
@@ -199,6 +216,11 @@ impl std::fmt::Display for CapabilityError {
                 "replay store outcome indeterminate; capability must be treated as spent"
             }
             Self::InvalidKey => "invalid key material",
+            Self::InvalidKeyId => "invalid capability key identifier",
+            Self::MissingKeyId => "capability has no key identifier",
+            Self::UnknownKeyId => "capability key identifier is not trusted",
+            Self::DuplicateKeyId => "capability key identifier is ambiguous",
+            Self::AlgorithmMismatch => "capability algorithm mismatch",
             Self::SigningFailed => "capability signing failed",
             Self::ClockUnavailable => "system clock unavailable",
         };
@@ -460,6 +482,19 @@ fn rsa_component_exponent_is_valid(exponent: &str) -> bool {
     value >= 3 && value % 2 == 1
 }
 
+/// Accepts bounded, printable identifiers suitable for a protected JWT header.
+///
+/// The character set covers UUIDs, KMS aliases/ARN-like identifiers, and
+/// base64-style JWKS key identifiers without admitting whitespace or controls.
+fn key_id_is_valid(key_id: &str) -> bool {
+    !key_id.is_empty()
+        && key_id.len() <= 256
+        && key_id.bytes().all(|byte| {
+            byte.is_ascii_alphanumeric()
+                || matches!(byte, b'-' | b'_' | b'.' | b':' | b'/' | b'+' | b'=' | b'@')
+        })
+}
+
 /// Strips PEM armour and base64-decodes the body.
 fn pem_body(pem: &[u8]) -> Option<Vec<u8>> {
     let text = std::str::from_utf8(pem).ok()?;
@@ -604,6 +639,7 @@ struct Claims {
 pub struct CapabilityIssuer<S: CapabilitySigner> {
     issuer: String,
     audience: String,
+    key_id: Option<String>,
     signer: S,
 }
 
@@ -613,6 +649,7 @@ impl<S: CapabilitySigner> std::fmt::Debug for CapabilityIssuer<S> {
         f.debug_struct("CapabilityIssuer")
             .field("issuer", &self.issuer)
             .field("audience", &self.audience)
+            .field("key_id", &self.key_id)
             .field("signer", &"<redacted>")
             .finish()
     }
@@ -625,8 +662,27 @@ impl<S: CapabilitySigner> CapabilityIssuer<S> {
         Self {
             issuer,
             audience,
+            key_id: None,
             signer,
         }
+    }
+
+    /// Configures the protected key identifier emitted on every capability.
+    ///
+    /// Existing single-key callers may keep using [`Self::new`]. Rotation-safe
+    /// callers must configure a non-empty identifier and verify through
+    /// [`CapabilityVerifier::from_keyset`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CapabilityError::InvalidKeyId`] for an empty, oversized, or
+    /// non-printable identifier.
+    pub fn with_key_id(mut self, key_id: String) -> Result<Self, CapabilityError> {
+        if !key_id_is_valid(&key_id) {
+            return Err(CapabilityError::InvalidKeyId);
+        }
+        self.key_id = Some(key_id);
+        Ok(self)
     }
 
     /// Issues a capability valid for `ttl_seconds` from now.
@@ -723,7 +779,11 @@ impl<S: CapabilitySigner> CapabilityIssuer<S> {
             jti: with_jti.then(new_jti),
         };
 
-        let header = B64.encode(br#"{"alg":"RS256","typ":"JWT"}"#);
+        let mut protected_header = Header::new(Algorithm::RS256);
+        protected_header.kid.clone_from(&self.key_id);
+        let header = B64.encode(
+            serde_json::to_vec(&protected_header).map_err(|_| CapabilityError::SigningFailed)?,
+        );
         let payload =
             B64.encode(serde_json::to_vec(&claims).map_err(|_| CapabilityError::SigningFailed)?);
         let signing_input = format!("{header}.{payload}");
@@ -792,11 +852,69 @@ impl std::fmt::Debug for VerifiedCapability {
     }
 }
 
+/// One pinned RSA verification key identified by a protected JWT `kid`.
+pub struct CapabilityVerificationKey {
+    key_id: String,
+    key: DecodingKey,
+}
+
+impl std::fmt::Debug for CapabilityVerificationKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CapabilityVerificationKey")
+            .field("key_id", &self.key_id)
+            .field("key", &"<redacted>")
+            .finish()
+    }
+}
+
+impl CapabilityVerificationKey {
+    /// Creates a key-set member from an inline RSA public key in PEM form.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CapabilityError::InvalidKeyId`] for an invalid identifier, or
+    /// [`CapabilityError::InvalidKey`] for malformed or weak key material.
+    pub fn from_rsa_pem(key_id: String, pem: &[u8]) -> Result<Self, CapabilityError> {
+        if !key_id_is_valid(&key_id) {
+            return Err(CapabilityError::InvalidKeyId);
+        }
+        Ok(Self {
+            key_id,
+            key: decoding_key_from_rsa_pem(pem)?,
+        })
+    }
+
+    /// Creates a key-set member from pinned RSA public-key components.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CapabilityError::InvalidKeyId`] for an invalid identifier, or
+    /// [`CapabilityError::InvalidKey`] for malformed or weak key material.
+    pub fn from_rsa_components(
+        key_id: String,
+        modulus: &str,
+        exponent: &str,
+    ) -> Result<Self, CapabilityError> {
+        if !key_id_is_valid(&key_id) {
+            return Err(CapabilityError::InvalidKeyId);
+        }
+        Ok(Self {
+            key_id,
+            key: decoding_key_from_rsa_components(modulus, exponent)?,
+        })
+    }
+}
+
+enum VerificationKeys {
+    LegacySingle(DecodingKey),
+    ById(HashMap<String, DecodingKey>),
+}
+
 /// Verifies capabilities against pinned public key material.
 pub struct CapabilityVerifier {
     issuer: String,
     audience: String,
-    key: DecodingKey,
+    keys: VerificationKeys,
 }
 
 impl std::fmt::Debug for CapabilityVerifier {
@@ -805,7 +923,7 @@ impl std::fmt::Debug for CapabilityVerifier {
         f.debug_struct("CapabilityVerifier")
             .field("issuer", &self.issuer)
             .field("audience", &self.audience)
-            .field("key", &"<redacted>")
+            .field("keys", &"<redacted>")
             .finish()
     }
 }
@@ -824,19 +942,10 @@ impl CapabilityVerifier {
         audience: String,
         pem: &[u8],
     ) -> Result<Self, CapabilityError> {
-        // Enforce the SAME modulus bounds as the signer. jsonwebtoken will
-        // happily accept a 1024-bit key; the signer will not. That asymmetry is
-        // exactly what an attacker who supplies the key would reach for.
-        let der = pem_body(pem).ok_or(CapabilityError::InvalidKey)?;
-        let bits = spki_rsa_modulus_bits(&der).ok_or(CapabilityError::InvalidKey)?;
-        if !(MIN_RSA_MODULUS_BITS..=MAX_RSA_MODULUS_BITS).contains(&bits) {
-            return Err(CapabilityError::InvalidKey);
-        }
-        let key = DecodingKey::from_rsa_pem(pem).map_err(|_| CapabilityError::InvalidKey)?;
         Ok(Self {
             issuer,
             audience,
-            key,
+            keys: VerificationKeys::LegacySingle(decoding_key_from_rsa_pem(pem)?),
         })
     }
 
@@ -857,18 +966,42 @@ impl CapabilityVerifier {
         modulus: &str,
         exponent: &str,
     ) -> Result<Self, CapabilityError> {
-        let bits = rsa_component_modulus_bits(modulus).ok_or(CapabilityError::InvalidKey)?;
-        if !(MIN_RSA_MODULUS_BITS..=MAX_RSA_MODULUS_BITS).contains(&bits)
-            || !rsa_component_exponent_is_valid(exponent)
-        {
-            return Err(CapabilityError::InvalidKey);
-        }
-        let key = DecodingKey::from_rsa_components(modulus, exponent)
-            .map_err(|_| CapabilityError::InvalidKey)?;
         Ok(Self {
             issuer,
             audience,
-            key,
+            keys: VerificationKeys::LegacySingle(decoding_key_from_rsa_components(
+                modulus, exponent,
+            )?),
+        })
+    }
+
+    /// Creates a rotation-safe verifier from explicitly trusted keys.
+    ///
+    /// A key-set verifier requires a protected `kid` on every token and selects
+    /// exactly one matching key. It never fetches keys and never falls back.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CapabilityError::InvalidKey`] for an empty set, or
+    /// [`CapabilityError::DuplicateKeyId`] when two keys share an identifier.
+    pub fn from_keyset(
+        issuer: String,
+        audience: String,
+        keys: Vec<CapabilityVerificationKey>,
+    ) -> Result<Self, CapabilityError> {
+        if keys.is_empty() {
+            return Err(CapabilityError::InvalidKey);
+        }
+        let mut by_id = HashMap::with_capacity(keys.len());
+        for candidate in keys {
+            if by_id.insert(candidate.key_id, candidate.key).is_some() {
+                return Err(CapabilityError::DuplicateKeyId);
+            }
+        }
+        Ok(Self {
+            issuer,
+            audience,
+            keys: VerificationKeys::ById(by_id),
         })
     }
 
@@ -896,7 +1029,27 @@ impl CapabilityVerifier {
         expected: &Expected,
         replay_store: &R,
     ) -> Result<VerifiedCapability, CapabilityError> {
-        // RS256 is fixed here; the token's own `alg` header is never consulted.
+        let header = decode_header(token).map_err(|_| CapabilityError::Malformed)?;
+        if header.alg != Algorithm::RS256 {
+            return Err(CapabilityError::AlgorithmMismatch);
+        }
+        let key = match &self.keys {
+            VerificationKeys::LegacySingle(key) => {
+                if header.kid.is_some() {
+                    return Err(CapabilityError::UnknownKeyId);
+                }
+                key
+            }
+            VerificationKeys::ById(keys) => {
+                let key_id = header.kid.ok_or(CapabilityError::MissingKeyId)?;
+                if !key_id_is_valid(&key_id) {
+                    return Err(CapabilityError::InvalidKeyId);
+                }
+                keys.get(&key_id).ok_or(CapabilityError::UnknownKeyId)?
+            }
+        };
+
+        // RS256 is fixed here; the token cannot choose another algorithm.
         let mut validation = Validation::new(Algorithm::RS256);
         validation.set_issuer(&[&self.issuer]);
         validation.set_audience(&[&self.audience]);
@@ -904,7 +1057,7 @@ impl CapabilityVerifier {
         validation.validate_nbf = false;
         validation.required_spec_claims.clear();
 
-        let claims = decode::<Claims>(token, &self.key, &validation)
+        let claims = decode::<Claims>(token, key, &validation)
             .map(|d| d.claims)
             .map_err(|e| {
                 use jsonwebtoken::errors::ErrorKind;
@@ -953,6 +1106,30 @@ impl CapabilityVerifier {
             expires_at: claims.exp,
         })
     }
+}
+
+fn decoding_key_from_rsa_pem(pem: &[u8]) -> Result<DecodingKey, CapabilityError> {
+    // Enforce the SAME modulus bounds as the signer. jsonwebtoken will happily
+    // accept a 1024-bit key; the signer will not.
+    let der = pem_body(pem).ok_or(CapabilityError::InvalidKey)?;
+    let bits = spki_rsa_modulus_bits(&der).ok_or(CapabilityError::InvalidKey)?;
+    if !(MIN_RSA_MODULUS_BITS..=MAX_RSA_MODULUS_BITS).contains(&bits) {
+        return Err(CapabilityError::InvalidKey);
+    }
+    DecodingKey::from_rsa_pem(pem).map_err(|_| CapabilityError::InvalidKey)
+}
+
+fn decoding_key_from_rsa_components(
+    modulus: &str,
+    exponent: &str,
+) -> Result<DecodingKey, CapabilityError> {
+    let bits = rsa_component_modulus_bits(modulus).ok_or(CapabilityError::InvalidKey)?;
+    if !(MIN_RSA_MODULUS_BITS..=MAX_RSA_MODULUS_BITS).contains(&bits)
+        || !rsa_component_exponent_is_valid(exponent)
+    {
+        return Err(CapabilityError::InvalidKey);
+    }
+    DecodingKey::from_rsa_components(modulus, exponent).map_err(|_| CapabilityError::InvalidKey)
 }
 
 /// Compares two byte strings without early return on the first difference.
