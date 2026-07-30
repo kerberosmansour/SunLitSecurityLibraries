@@ -21,19 +21,19 @@ Output is a `security_core::identity::AuthenticatedIdentity`, which `secure_auth
 
 ```toml
 [dependencies]
-secure_identity = "0.1.7"
+secure_identity = "0.1.8"
 
 # OIDC (PKCE) flows:
-# secure_identity = { version = "0.1.7", features = ["oidc"] }
+# secure_identity = { version = "0.1.8", features = ["oidc"] }
 
-# Projected Kubernetes workload JWTs over HTTPS JWKS:
-# secure_identity = { version = "0.1.7", features = ["jwks"] }
+# Projected Kubernetes workload JWTs over HTTPS or bounded inline public JWKS:
+# secure_identity = { version = "0.1.8", features = ["jwks"] }
 
 # Redis-backed sessions:
-# secure_identity = { version = "0.1.7", features = ["session-redis"] }
+# secure_identity = { version = "0.1.8", features = ["session-redis"] }
 
 # Biometric / device-binding / step-up:
-# secure_identity = { version = "0.1.7", features = ["biometric"] }
+# secure_identity = { version = "0.1.8", features = ["biometric"] }
 ```
 
 ## Quick example — production boot check
@@ -55,8 +55,8 @@ fn main() {
 
 ## Projected Kubernetes workload identity
 
-`WorkloadJwtValidator` authenticates projected service-account JWTs against one
-caller-pinned JWKS URL:
+`WorkloadJwtValidator` authenticates projected service-account JWTs against
+either one caller-pinned JWKS URL or a bounded inline public JWKS document:
 
 ```rust,no_run
 use secure_identity::WorkloadJwtValidator;
@@ -79,11 +79,16 @@ assert_eq!(
 # }
 ```
 
-The production constructor requires an exact HTTPS URL, rejects credentials
-and fragments, refuses redirects, uses rustls, bounds a token at 16 KiB and a
-protected `kid` at 256 ASCII bytes, and accepts RS256 only. It requires and
-checks the signature, exact issuer, exact single audience, `exp`, and `nbf`
-with zero implicit clock-skew leeway. The returned
+For egress-free deployments, construct the same validator with
+`WorkloadJwtValidator::from_static_jwks(issuer, audience, jwks_json)`. The
+inline document is bounded to 1 MiB and 64 keys and is rejected if it contains
+private or symmetric material, duplicate key IDs, or keys not pinned to RS256.
+
+The remote production constructor requires an exact HTTPS URL, rejects
+credentials and fragments, refuses redirects, and uses rustls. Both
+constructors bound a token at 16 KiB and a protected `kid` at 256 ASCII bytes,
+accept RS256 only, and require the signature, exact issuer, exact single
+audience, `exp`, and `nbf` with zero implicit clock-skew leeway. The returned
 `KubernetesServiceAccountSubject` is restricted to
 `system:serviceaccount:<namespace>:<serviceaccount>`, with a 63-byte
 Kubernetes DNS-label namespace and a 253-byte DNS-subdomain service-account
@@ -102,7 +107,7 @@ using expired keys.
 |---|---|
 | `authenticator::Authenticator` / `AuthenticationRequest` / `TokenKind` | Pluggable authentication entry-point. |
 | `jwks` | JWKS discovery, caching, and RSA/EC signature verification. |
-| `workload` (`jwks` feature) | Projected Kubernetes JWT validation: exact HTTPS JWKS URL, RS256-only bounded `kid`, exact issuer/audience/time checks, and a bounded service-account subject with no tenant or operation authority. |
+| `workload` (`jwks` feature) | Projected Kubernetes JWT validation: exact HTTPS or bounded inline public JWKS, RS256-only bounded `kid`, exact issuer/audience/time checks, and a bounded service-account subject with no tenant or operation authority. |
 | `token` | JWT issuance/validation with strict alg enforcement. |
 | `mfa` / `totp` | TOTP step-up with replay defense and skew tolerance. |
 | `api_key` | API key issuance and constant-time validation. |
