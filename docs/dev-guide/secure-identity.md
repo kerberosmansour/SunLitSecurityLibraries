@@ -10,10 +10,13 @@
 
 ```toml
 [dependencies]
-secure_identity = "0.1.2"
+secure_identity = "0.1.8"
 
 # For development/testing only:
-secure_identity = { version = "0.1.2", features = ["dev"] }
+secure_identity = { version = "0.1.8", features = ["dev"] }
+
+# Projected Kubernetes workload JWTs:
+secure_identity = { version = "0.1.8", features = ["jwks"] }
 ```
 
 ---
@@ -159,6 +162,114 @@ assert!(store.is_cache_valid().await);
 
 ---
 
+## Projected Kubernetes Workload JWTs
+
+`WorkloadJwtValidator` validates projected service-account JWTs and returns
+only a bounded `system:serviceaccount:<namespace>:<serviceaccount>` subject.
+Use `WorkloadJwtValidator::new` for one exact HTTPS JWKS URL. For an
+egress-free issuer, use
+`WorkloadJwtValidator::from_static_jwks(issuer, audience, jwks_json)` with a
+bounded inline public JWKS document.
+
+Both paths pin RS256 and enforce exact issuer, single audience, signature,
+`exp`, `nbf`, and bounded unique `kid` checks. The inline path rejects private
+or symmetric key material, duplicate key IDs, unsupported algorithms, more
+than 64 keys, or documents larger than 1 MiB. It performs no network refresh;
+operators must restart or roll the workload to rotate the pinned document.
+
+This API authenticates the workload only. The consumer must map the returned
+subject to tenant and operation authority through a separate deny-by-default
+registry.
+
+---
+
+## Single-Use Tenant+Operation Capabilities
+
+For brokered access — where the calling process holds **no** database credential
+and **no** network path to the data store — `capability` issues a narrow bearer
+statement a broker can act on: *this subject may perform this operation, for this
+tenant, against this exact request, once, within at most 60 seconds*.
+
+```rust,no_run
+use secure_identity::capability::{
+    CapabilityIssuer, CapabilityRequest, CapabilityVerificationKey,
+    CapabilityVerifier, Expected, InMemoryReplayStore, Operation,
+    RsaCapabilitySigner,
+};
+
+# async fn example() -> Result<(), Box<dyn std::error::Error>> {
+let request = CapabilityRequest::new("acct-42", Operation::Read, b"SELECT 1");
+
+let token = CapabilityIssuer::new(
+    "https://auth.example.com".to_string(),
+    "broker".to_string(),
+    RsaCapabilitySigner::from_pkcs8_pem(&std::fs::read("signing.pem")?)?,
+)
+.with_key_id("current".to_string())?
+.issue("svc-api", &request, 30)
+.await?;
+
+let verifier = CapabilityVerifier::from_keyset(
+    "https://auth.example.com".to_string(),
+    "broker".to_string(),
+    vec![
+        CapabilityVerificationKey::from_rsa_pem(
+            "current".to_string(),
+            &std::fs::read("public.pem")?,
+        )?,
+    ],
+)?;
+let store = InMemoryReplayStore::default();
+let expected = Expected::new("svc-api", "acct-42", Operation::Read, b"SELECT 1");
+
+let verified = verifier.verify(&token, &expected, &store).await?; // first use: Ok
+assert!(verifier.verify(&token, &expected, &store).await.is_err()); // replay: Err
+# Ok(())
+# }
+```
+
+### What is enforced
+
+| Property | How |
+|---|---|
+| Algorithm | RS256 fixed in code. A non-RS256 protected `alg` is rejected before key selection, so `alg: none` and HMAC confusion do not apply. |
+| Key selection | Rotation-safe issuers emit a configured protected `kid`; key-set verifiers require one exact trusted match and reject missing, unknown, duplicate, or malformed IDs without fallback. |
+| Lifetime | `MAX_TTL_SECONDS` = 60, refused by the issuer **and** independently by the verifier — it does not assume a conforming issuer. |
+| Request binding | Length-framed SHA-256 over (tenant, operation, body), so authority cannot be moved to a different statement. |
+| Single use | The `jti` is consumed through your [`ReplayStore`] as the final step of verification. |
+| Redaction | No token, claim, request body or `jti` appears in `Debug` or error output. |
+
+### Three things to get right in your integration
+
+1. **Supply your own `ReplayStore` if you run more than one replica.**
+   `InMemoryReplayStore` is single-process; it cannot see uses made by another
+   instance, so with multiple replicas the single-use guarantee silently weakens
+   to per-process. Back it with shared state — a conditional write is the usual
+   shape.
+
+2. **Make `consume` atomic.** Check-then-write races admit two winners under
+   concurrency, which is exactly the case a replay guard exists to stop.
+
+3. **Do not reorder verification in a wrapper.** Signature, claims and request
+   binding are all checked *before* the `jti` is consumed, so a rejected
+   capability is not spent. If that order is inverted, an attacker can burn a
+   victim's capability by presenting it against the wrong expectation.
+
+4. **Use explicit key IDs for rotation.** Configure the issuer with
+   `with_key_id`, construct current and previous
+   `CapabilityVerificationKey` values, and pass them to
+   `CapabilityVerifier::from_keyset`. The legacy single-key constructors remain
+   available only for existing kidless tokens; they reject tokens that carry a
+   selector rather than silently ignoring it.
+
+### Choosing a signer
+
+`CapabilitySigner` is a trait rather than a key so a KMS-backed signer — one that
+never exposes private material to the process — can replace
+`RsaCapabilitySigner` without changing callers.
+
+---
+
 ## API Key Authentication
 
 Constant-time API key comparison to prevent timing side-channel attacks:
@@ -284,7 +395,7 @@ impl SessionManager for RedisSessionManager {
 
 ```toml
 [dependencies]
-secure_identity = { version = "0.1.2", features = ["session-redis"] }
+secure_identity = { version = "0.1.8", features = ["session-redis"] }
 ```
 
 ```rust
@@ -303,7 +414,7 @@ OIDC integration is intentionally a thin wrapper over the `openidconnect` crate 
 
 ```toml
 [dependencies]
-secure_identity = { version = "0.1.2", features = ["oidc"] }
+secure_identity = { version = "0.1.8", features = ["oidc"] }
 ```
 
 ```rust
@@ -492,6 +603,7 @@ impl IdentitySource for KeycloakAdapter {
 | `AlgorithmConfig` | `token` | Algorithm + key material |
 | `ApiKeyAuthenticator` | `api_key` | Constant-time API key auth |
 | `JwksKeyStore` | `jwks` | JWKS key fetch + cache |
+| `WorkloadJwtValidator` | `workload` | Projected Kubernetes JWT validation using exact HTTPS or bounded inline public JWKS |
 | `InMemorySessionManager` | `session` | In-memory session store |
 | `Session` | `session` | Session data struct |
 | `SessionManager` | `session` | Open trait for session stores |

@@ -1,6 +1,6 @@
 [package]
 name = "secure_identity"
-version = "0.1.2"
+version = "0.1.8"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Authentication helpers for JWT, OIDC, MFA, API keys, sessions, and step-up policy."
@@ -16,10 +16,12 @@ name = "secure_identity"
 default = []
 dev = []
 biometric = []
+jwks = ["dep:reqwest"]
 oidc = ["dep:openidconnect", "dep:reqwest"]
 session-redis = ["dep:redis"]
 
 [dependencies]
+base64 = "0.22"
 jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
 tokio = { version = "1", features = ["sync", "time", "net", "io-util"] }
 ring = "0.17"

@@ -16,3 +16,15 @@ name = "fuzz_token_validate"
 path = "fuzz_targets/fuzz_token_validate.rs"
 test = false
 bench = false
+
+[[bin]]
+name = "fuzz_capability_verify"
+path = "fuzz_targets/fuzz_capability_verify.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "fuzz_capability_jwks"
+path = "fuzz_targets/fuzz_capability_jwks.rs"
+test = false
+bench = false
