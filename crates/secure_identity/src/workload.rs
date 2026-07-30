@@ -6,10 +6,10 @@
 //! tenant, role, operation, or other authorization claim. Consumers must map
 //! the returned subject to authority in their own deny-by-default registry.
 //!
-//! Remote key retrieval is available only through the crate's `jwks` feature.
-//! The configured endpoint must be an exact HTTPS URL, redirects are refused,
-//! response size and key count are bounded, and stale keys are never used after
-//! a failed refresh.
+//! Remote key retrieval and bounded inline public JWKS configuration are
+//! available only through the crate's `jwks` feature. Remote endpoints must be
+//! exact HTTPS URLs, redirects are refused, response size and key count are
+//! bounded, and stale keys are never used after a failed refresh.
 
 use std::time::{Duration, Instant};
 
@@ -164,7 +164,6 @@ enum JwksSource {
         client: reqwest::Client,
         url: Url,
     },
-    #[cfg(feature = "dev")]
     Static(JwkSet),
     #[cfg(test)]
     Scripted {
@@ -308,6 +307,36 @@ impl WorkloadJwtValidator {
         })
     }
 
+    /// Creates a production validator from a bounded inline public JWKS document.
+    ///
+    /// Inline keys are parsed with the same document-size and key-count bounds
+    /// as remote keys, then every key is required to be a uniquely identified
+    /// public RSA verification key explicitly pinned to RS256. Private or
+    /// symmetric material and unsupported key metadata are rejected before the
+    /// validator is returned. No network request or key refresh is performed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the issuer, audience, document, or any key is
+    /// malformed, ambiguous, private, symmetric, or unsupported.
+    pub fn from_static_jwks(
+        issuer: &str,
+        audience: &str,
+        jwks_json: &str,
+    ) -> Result<Self, WorkloadIdentityError> {
+        validate_configuration(issuer, audience, DEFAULT_JWKS_CACHE_TTL)?;
+        let key_set = parse_inline_public_jwks(jwks_json.as_bytes())?;
+        Ok(Self {
+            issuer: issuer.to_owned(),
+            audience: audience.to_owned(),
+            cache_ttl: DEFAULT_JWKS_CACHE_TTL,
+            unknown_key_refresh_floor: UNKNOWN_KEY_REFRESH_FLOOR,
+            source: JwksSource::Static(key_set),
+            cache: RwLock::new(CachedJwks::default()),
+            refresh: Mutex::new(()),
+        })
+    }
+
     /// Builds a validator with an in-memory JWKS document for tests.
     ///
     /// This bypasses HTTPS retrieval and is available only with the explicitly
@@ -325,17 +354,7 @@ impl WorkloadJwtValidator {
         jwks_json: &str,
     ) -> Result<Self, WorkloadIdentityError> {
         validate_jwks_url(jwks_url)?;
-        validate_configuration(issuer, audience, DEFAULT_JWKS_CACHE_TTL)?;
-        let key_set = parse_jwks(jwks_json.as_bytes())?;
-        Ok(Self {
-            issuer: issuer.to_owned(),
-            audience: audience.to_owned(),
-            cache_ttl: DEFAULT_JWKS_CACHE_TTL,
-            unknown_key_refresh_floor: UNKNOWN_KEY_REFRESH_FLOOR,
-            source: JwksSource::Static(key_set),
-            cache: RwLock::new(CachedJwks::default()),
-            refresh: Mutex::new(()),
-        })
+        Self::from_static_jwks(issuer, audience, jwks_json)
     }
 
     #[cfg(test)]
@@ -436,7 +455,6 @@ impl WorkloadJwtValidator {
     }
 
     async fn key_set(&self, force_refresh: bool) -> Result<JwkSet, WorkloadIdentityError> {
-        #[cfg(feature = "dev")]
         if let JwksSource::Static(key_set) = &self.source {
             return Ok(key_set.clone());
         }
@@ -475,7 +493,6 @@ impl WorkloadJwtValidator {
 
         let key_set = match &self.source {
             JwksSource::Remote { client, url } => fetch_jwks(client, url).await?,
-            #[cfg(feature = "dev")]
             JwksSource::Static(key_set) => key_set.clone(),
             #[cfg(test)]
             JwksSource::Scripted { source, url } => source.fetch(url).await?,
@@ -501,7 +518,6 @@ impl WorkloadJwtValidator {
             JwksSource::Remote { .. } => true,
             #[cfg(test)]
             JwksSource::Scripted { .. } => true,
-            #[cfg(feature = "dev")]
             JwksSource::Static(_) => false,
         }
     }
@@ -662,6 +678,43 @@ fn parse_jwks(document: &[u8]) -> Result<JwkSet, WorkloadIdentityError> {
     if key_set.keys.is_empty() || key_set.keys.len() > MAX_JWKS_KEYS {
         return Err(WorkloadIdentityError::JwksUnavailable);
     }
+    Ok(key_set)
+}
+
+fn parse_inline_public_jwks(document: &[u8]) -> Result<JwkSet, WorkloadIdentityError> {
+    let key_set = parse_jwks(document)?;
+    let raw_document: serde_json::Value =
+        serde_json::from_slice(document).map_err(|_| WorkloadIdentityError::JwksUnavailable)?;
+    let raw_keys = raw_document
+        .get("keys")
+        .and_then(serde_json::Value::as_array)
+        .ok_or(WorkloadIdentityError::JwksUnavailable)?;
+    if raw_keys.len() != key_set.keys.len() {
+        return Err(WorkloadIdentityError::JwksUnavailable);
+    }
+
+    for (raw_key, jwk) in raw_keys.iter().zip(&key_set.keys) {
+        let fields = raw_key
+            .as_object()
+            .ok_or(WorkloadIdentityError::JwksUnavailable)?;
+        if ["d", "p", "q", "dp", "dq", "qi", "oth"]
+            .iter()
+            .any(|name| fields.contains_key(*name))
+        {
+            return Err(WorkloadIdentityError::JwksUnavailable);
+        }
+
+        let key_id = jwk
+            .common
+            .key_id
+            .as_deref()
+            .ok_or(WorkloadIdentityError::JwksUnavailable)?;
+        if !key_id_is_valid(key_id) {
+            return Err(WorkloadIdentityError::InvalidKeyId);
+        }
+        select_decoding_key(&key_set, key_id)?;
+    }
+
     Ok(key_set)
 }
 
