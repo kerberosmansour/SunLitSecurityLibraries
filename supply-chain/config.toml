@@ -305,10 +305,6 @@ criteria = "safe-to-deploy"
 version = "4.6.7"
 criteria = "safe-to-deploy"
 
-[[exemptions.concurrent-queue]]
-version = "2.5.0"
-criteria = "safe-to-deploy"
-
 [[exemptions.const-oid]]
 version = "0.9.6"
 criteria = "safe-to-deploy"
@@ -450,7 +446,7 @@ version = "0.13.8"
 criteria = "safe-to-deploy"
 
 [[exemptions.event-listener]]
-version = "5.4.1"
+version = "5.4.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.event-listener-strategy]]
@@ -666,7 +662,7 @@ version = "0.3.97"
 criteria = "safe-to-deploy"
 
 [[exemptions.jsonwebtoken]]
-version = "10.3.0"
+version = "11.0.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.keccak]]

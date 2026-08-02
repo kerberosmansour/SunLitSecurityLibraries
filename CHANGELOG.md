@@ -11,6 +11,41 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 - No unreleased changes.
 
+## secure_identity 0.1.9 - 2026-08-01
+
+### Changed
+
+- `jsonwebtoken` 10.3 -> 11.0. The feature selection is **unchanged**:
+  `features = ["rust_crypto"]` is kept, because those features still exist in
+  v11 and dropping them would remove the crypto provider — ed25519-dalek, hmac,
+  p256, p384, rsa and sha2 — from a security crate. Nothing errors on a
+  *missing* feature, so that mistake would have compiled cleanly and lost
+  algorithm support at runtime.
+
+  An earlier reading of the crates.io API suggested v11 had removed all cargo
+  features. That reading came from parsing an API *error* response with
+  `.get('version',{}).get('features',{})`, which renders a failed request as an
+  empty map. Verified three ways before this bump, the decisive one being a real
+  resolve: `jsonwebtoken 11` with `features = ["use_pem","rust_crypto"]` is
+  accepted by `cargo metadata` (exit 0), while a fabricated feature name is
+  rejected (exit 101) — the second is the control that makes the first mean
+  something.
+
+- No source changes were required. v11's breaking list does not touch anything
+  this crate uses: it has no `insecure_disable_signature_validation`, no
+  `Jwk::thumbprint`, no `try_get_hmac_secret`, no `JwkUtils`, and no exhaustive
+  `match` over `Algorithm` — which matters, because a wildcard arm added to
+  silence `#[non_exhaustive]` is how an unexpected algorithm gets silently
+  accepted.
+
+### Why this release exists
+
+`secure_identity 0.1.8` pinned `jsonwebtoken 10.3.0`, which constrained the
+whole dependency graph of every consumer. A downstream bump to v11 resolved
+both majors together and failed with `expected DecodingKey, found
+jsonwebtoken::decoding::DecodingKey` — two distinct types with one name. That
+could not be fixed downstream; it needed this release.
+
 ## secure_authz 0.1.3 - 2026-05-21
 
 - Reliability/deployment fix: `secure_authz` no longer reads the Casbin RBAC

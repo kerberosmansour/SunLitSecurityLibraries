@@ -37,7 +37,7 @@ secure_boundary = { path = "crates/secure_boundary", version = "0.1.3" }
 secure_authz = { path = "crates/secure_authz", version = "0.1.2" }
 secure_data = { path = "crates/secure_data", version = "0.1.2" }
 secure_output = { path = "crates/secure_output", version = "0.1.2" }
-secure_identity = { path = "crates/secure_identity", version = "0.1.8" }
+secure_identity = { path = "crates/secure_identity", version = "0.1.9" }
 secure_device_trust = { path = "crates/secure_device_trust", version = "0.1.2" }
 secure_network = { path = "crates/secure_network", version = "0.1.2" }
 secure_resilience = { path = "crates/secure_resilience", version = "0.1.2" }
