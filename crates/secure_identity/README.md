@@ -106,7 +106,7 @@ using expired keys.
 | Module | Use it for |
 |---|---|
 | `authenticator::Authenticator` / `AuthenticationRequest` / `TokenKind` | Pluggable authentication entry-point. |
-| `jwks` | JWKS discovery, caching, and RSA/EC signature verification. |
+| `jwks` | JWKS discovery, caching, and RSA/EC signature verification, with a single-flight, rate-limited refresh on unknown `kid` so signing-key rotation does not wait for cache expiry. |
 | `workload` (`jwks` feature) | Projected Kubernetes JWT validation: exact HTTPS or bounded inline public JWKS, RS256-only bounded `kid`, exact issuer/audience/time checks, and a bounded service-account subject with no tenant or operation authority. |
 | `token` | JWT issuance/validation with strict alg enforcement. |
 | `mfa` / `totp` | TOTP step-up with replay defense and skew tolerance. |
