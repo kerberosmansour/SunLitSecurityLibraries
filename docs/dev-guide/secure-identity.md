@@ -160,6 +160,12 @@ if let Some(alg) = store.get_algorithm("my-key-id").await {
 assert!(store.is_cache_valid().await);
 ```
 
+A lookup for an unknown `kid` also performs one immediate, single-flight
+refresh even while the cache is fresh. This is the signing-key rotation path:
+a newly issued token does not need to wait for the ordinary TTL to expire.
+Because JWT headers are attacker-controlled, further unknown-key refreshes are
+globally limited to one attempt per 30 seconds, including failed attempts.
+
 ---
 
 ## Projected Kubernetes Workload JWTs

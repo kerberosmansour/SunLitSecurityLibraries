@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use jsonwebtoken::DecodingKey;
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 
 use crate::error::IdentityError;
 
@@ -22,6 +22,22 @@ struct CachedKey {
 struct CacheState {
     keys: HashMap<String, CachedKey>,
     fetched_at: Option<Instant>,
+    /// Last refresh triggered specifically by an unknown `kid`.
+    ///
+    /// Recorded before remote I/O so attacker-chosen key IDs cannot amplify an
+    /// upstream outage into one JWKS request per invalid bearer.
+    last_unknown_key_refresh_attempt: Option<Instant>,
+}
+
+/// Unknown-key misses are the normal signal for an issuer signing-key rotation,
+/// but they are also attacker-controlled JWT header input. Permit an immediate
+/// rotation refresh, then globally rate-limit further miss-driven refreshes.
+const UNKNOWN_KEY_REFRESH_FLOOR: Duration = Duration::from_secs(30);
+
+enum CacheLookup {
+    Hit(DecodingKey),
+    FreshMiss,
+    ExpiredOrEmpty,
 }
 
 /// A JWKS key store that fetches and caches public keys from a JWKS endpoint.
@@ -33,6 +49,9 @@ pub struct JwksKeyStore {
     url: String,
     ttl: Duration,
     cache: Arc<RwLock<CacheState>>,
+    /// Single-flight guard for cache refreshes. Without this, a key rotation can
+    /// make every concurrent request fetch the same JWKS document.
+    refresh: Arc<Mutex<()>>,
 }
 
 impl JwksKeyStore {
@@ -45,7 +64,9 @@ impl JwksKeyStore {
             cache: Arc::new(RwLock::new(CacheState {
                 keys: HashMap::new(),
                 fetched_at: None,
+                last_unknown_key_refresh_attempt: None,
             })),
+            refresh: Arc::new(Mutex::new(())),
         }
     }
 
@@ -64,19 +85,36 @@ impl JwksKeyStore {
     }
 
     /// Returns the [`DecodingKey`] for the given `kid`, fetching from the endpoint if
-    /// the cache is expired or empty.
+    /// the cache is expired or empty. A `kid` miss in an otherwise fresh cache forces
+    /// one bounded refresh so issuer signing-key rotation does not reject newly issued
+    /// tokens until the ordinary TTL expires.
     pub async fn get_key(&self, kid: &str) -> Option<DecodingKey> {
-        // Check cache first
-        {
-            let cache = self.cache.read().await;
-            if let Some(fetched_at) = cache.fetched_at {
-                if fetched_at.elapsed() < self.ttl {
-                    return cache.keys.get(kid).map(|k| k.decoding_key.clone());
-                }
-            }
+        if let CacheLookup::Hit(key) = self.cache_lookup(kid).await {
+            return Some(key);
         }
 
-        // Cache expired or empty — try to refresh
+        // Serialize refreshes, then re-check: another request may have loaded the
+        // rotated key while this request waited for the guard.
+        let _refresh_guard = self.refresh.lock().await;
+        let force_for_unknown_key = match self.cache_lookup(kid).await {
+            CacheLookup::Hit(key) => return Some(key),
+            CacheLookup::FreshMiss => true,
+            CacheLookup::ExpiredOrEmpty => false,
+        };
+
+        if force_for_unknown_key {
+            let mut cache = self.cache.write().await;
+            if cache
+                .last_unknown_key_refresh_attempt
+                .is_some_and(|attempted_at| attempted_at.elapsed() < UNKNOWN_KEY_REFRESH_FLOOR)
+            {
+                return None;
+            }
+            // Consume the rate-limit window before remote I/O. A failed refresh is
+            // still an attempt; otherwise an attacker can hammer an unavailable issuer.
+            cache.last_unknown_key_refresh_attempt = Some(Instant::now());
+        }
+
         if let Err(e) = self.fetch().await {
             tracing::warn!("JWKS refresh failed: {e}, using stale cache if available");
             // Fall back to stale cache
@@ -86,6 +124,18 @@ impl JwksKeyStore {
 
         let cache = self.cache.read().await;
         cache.keys.get(kid).map(|k| k.decoding_key.clone())
+    }
+
+    async fn cache_lookup(&self, kid: &str) -> CacheLookup {
+        let cache = self.cache.read().await;
+        match cache.fetched_at {
+            Some(fetched_at) if fetched_at.elapsed() < self.ttl => cache
+                .keys
+                .get(kid)
+                .map(|key| CacheLookup::Hit(key.decoding_key.clone()))
+                .unwrap_or(CacheLookup::FreshMiss),
+            _ => CacheLookup::ExpiredOrEmpty,
+        }
     }
 
     /// Returns the algorithm string for the given `kid`, if cached.
