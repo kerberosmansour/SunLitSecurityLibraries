@@ -12,15 +12,17 @@ Security logging, monitoring, and tamper-evident audit trail (OWASP C9). Part of
 - You need a **tamper-evident audit chain** (HMAC-sealed events) for compliance contexts.
 - You're shipping events to multiple sinks (stdout JSON, OpenTelemetry, HTTP collector) and want one schema to feed them.
 - You want **PII redaction** and rate-limiting at the event layer rather than scattered across call sites.
+- A dependency traces prompts, tool arguments, results, or provider bodies and you need a **global
+  target boundary** that verbose filtering cannot override.
 
 ## Install
 
 ```toml
 [dependencies]
-security_events = "0.1.2"
+security_events = "0.1.3"
 
 # OpenTelemetry integration:
-# security_events = { version = "0.1.2", features = ["otel"] }
+# security_events = { version = "0.1.3", features = ["otel"] }
 ```
 
 ## What's inside
@@ -35,6 +37,7 @@ security_events = "0.1.2"
 | `hmac::HmacEventSigner` | HMAC-seal events for integrity-verified shipping to a remote collector. |
 | `correlation` | Parent/child correlation IDs (`with_parent`, `attach_parent`, `filter_by_parent`). |
 | `redact::RedactionEngine` | Programmatic redaction policy for PII fields. |
+| `hard_deny::HardDenyTargetsLayer` | Whole-subscriber fail-closed boundary for dependency tracing targets. |
 | `mobile_redaction::MobileRedactionEngine` | Stricter mobile-OS log-level enforcement. |
 | `rate_limit` | Drop or aggregate noisy event sources without losing high-severity signals. |
 | `sink` | Pluggable event sinks (stdout, JSON, OTel, HTTP). |
@@ -62,6 +65,34 @@ let event = SecurityEvent::builder()
 // Emit to whichever sink(s) you've configured.
 // (See `security_events::sink` for stdout / JSON / OTel / HTTP sinks.)
 ```
+
+## Hard-deny dependency tracing targets
+
+Some dependencies instrument content that an application must never retain or export, including
+prompts, tool arguments, tool results, and provider response bodies. Install
+`HardDenyTargetsLayer` as a global layer before formatter and OpenTelemetry layers:
+
+```rust
+use security_events::HardDenyTargetsLayer;
+use tracing_subscriber::layer::SubscriberExt;
+
+let dependency_boundary =
+    HardDenyTargetsLayer::try_new(["dependency", "dependency_core"])?;
+let subscriber = tracing_subscriber::registry()
+    .with(tracing_subscriber::EnvFilter::new("trace"))
+    .with(dependency_boundary)
+    .with(tracing_subscriber::fmt::layer());
+
+# let _ = subscriber;
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+Each configured root matches exactly and across a `::` module boundary: `dependency` and
+`dependency::client` are denied, while `dependency_extra` is not. The layer rejects malformed or
+empty configuration and enforces the decision in both callsite registration and runtime enablement,
+so an `EnvFilter` such as `trace,dependency=trace` cannot re-enable it. Emit replacement operational
+events from an application-owned target with only reviewed fields such as operation name, outcome,
+duration, byte counts, failure class, and correlation ID.
 
 ## Feature flags
 

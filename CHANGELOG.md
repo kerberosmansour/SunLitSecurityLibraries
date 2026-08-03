@@ -9,7 +9,13 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ## Unreleased
 
-- No unreleased changes.
+### Added
+
+- `security_events 0.1.3` adds `HardDenyTargetsLayer`, a vendor-agnostic global
+  `tracing-subscriber` boundary for dependency targets that may carry prompts, tool arguments,
+  results, provider bodies, paths, or identities. Exact roots and their `::` descendants are denied
+  from both callsite registration and runtime enablement, so verbose `EnvFilter` directives cannot
+  re-enable them. Near-prefix and unlisted targets remain visible by design.
 
 ## secure_identity 0.1.9 - 2026-08-01
 

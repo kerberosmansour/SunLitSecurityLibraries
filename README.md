@@ -38,7 +38,7 @@ Compliance mappings: **NIST 800-53** (AC, AU, IA, SC, SI), **IEC 62443**, **SOC 
 |---|---|---|
 | `security_core` | C1 foundation | Shared types, ID newtypes, `IdentitySource` trait, typed variant-analysis report schema |
 | `secure_errors` | C10 | Centralized error handling, no internal detail leakage |
-| `security_events` | C9 | Security telemetry, classification-driven redaction, per-event HMAC sealing, event correlation, log-injection prevention, AppSensor detection points, NDJSON/tracing/file/batched sinks |
+| `security_events` | C9 | Security telemetry, classification-driven redaction, global hard-deny tracing targets, per-event HMAC sealing, event correlation, log-injection prevention, AppSensor detection points, NDJSON/tracing/file/batched sinks |
 | `secure_boundary` | C5/C8 | Input validation, axum extractors, size/depth/field limits, prompt-boundary literal fencing, HTML sanitization, browser security headers, CORS, Fetch Metadata |
 | `secure_output` | C4 | Context-aware output encoding, security headers |
 | `secure_identity` | C6, MASVS-AUTH | Pluggable authentication (one `IdentitySource` implementation), biometric auth validation, step-up auth, single-use tenant+operation capabilities |
@@ -162,7 +162,7 @@ Comprehensive guides for integrating each crate into your Rust applications:
 |---|---|
 | [`security_core`](./docs/dev-guide/security-core.md) | Shared types, ID newtypes, `CorrelationContext`, `IdentitySource` trait, `DataClassification`, typed variant-analysis report schema |
 | [`secure_errors`](./docs/dev-guide/secure-errors.md) | Three-layer error model, `ErrorMappingLayer` middleware, panic boundary, incident IDs |
-| [`security_events`](./docs/dev-guide/security-events.md) | Security telemetry, `SecurityEvent` schema, HMAC signing, event correlation, file/batching sinks, redaction, detection engine |
+| [`security_events`](./docs/dev-guide/security-events.md) | Security telemetry, `SecurityEvent` schema, hard-deny dependency tracing targets, HMAC signing, event correlation, file/batching sinks, redaction, detection engine |
 | [`secure_boundary`](./docs/dev-guide/secure-boundary.md) | Input validation extractors, safe types, prompt-boundary literal fencing, security headers, CORS, Fetch Metadata, request limits |
 | [`secure_output`](./docs/dev-guide/secure-output.md) | Context-aware output encoding (HTML, JSON, URL, JS, CSS, XML, LDAP, shell), URI scheme sanitization |
 | [`secure_identity`](./docs/dev-guide/secure-identity.md) | JWT validation (HS256/RS256/ES256), JWKS, OIDC discovery (feature-gated), TOTP MFA, API keys, in-memory + Redis sessions, auth audit events, pluggable identity, biometric auth validation, step-up auth (MASVS-AUTH) |

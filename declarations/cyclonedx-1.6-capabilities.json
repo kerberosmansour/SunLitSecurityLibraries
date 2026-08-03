@@ -2,9 +2,9 @@
   "$schema": "https://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "version": 3,
+  "version": 4,
   "metadata": {
-    "timestamp": "2026-07-30T00:00:00Z",
+    "timestamp": "2026-08-03T00:00:00Z",
     "component": {
       "type": "application",
       "name": "SunLitSecurityLibraries"
@@ -83,6 +83,14 @@
             {
               "name": "cdx:sunlit:capability",
               "value": "classification-redaction"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "hard-deny-tracing-targets"
+            },
+            {
+              "name": "cdx:sunlit:limit",
+              "value": "Hard-deny matching covers only consumer-configured exact target roots and their :: descendants. Near-prefix and unlisted targets remain enabled, so consumers must inventory dependency targets and maintain runtime canaries."
             }
           ]
         },
@@ -316,8 +324,8 @@
       {
         "bom-ref": "claim:security_events:capabilities",
         "target": "component:security_events",
-        "predicate": "Advertises security-telemetry, hmac-sealed-events, classification-redaction for control coverage C9.",
-        "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+        "predicate": "Advertises security-telemetry, hmac-sealed-events, classification-redaction, and hard-deny-tracing-targets for control coverage C9.",
+        "reasoning": "Repository and crate README documentation maps each advertised security_events capability to OWASP C9 and its audit-confidentiality purpose."
       },
       {
         "bom-ref": "claim:secure_boundary:capabilities",
@@ -366,6 +374,12 @@
         "target": "component:secure_privacy",
         "predicate": "Advertises privacy-redaction, data-classification-handling for control coverage C8.",
         "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+      },
+      {
+        "bom-ref": "claim:security_events:hard-deny-tracing-targets",
+        "target": "component:security_events",
+        "predicate": "security_events::HardDenyTargetsLayer globally rejects consumer-configured exact tracing target roots and their :: descendants from both Layer::register_callsite and Layer::enabled, while preserving near-prefix and application-owned targets; invalid or empty configuration is rejected before subscriber installation.",
+        "reasoning": "Implemented in crates/security_events/src/hard_deny.rs and evidenced by crates/security_events/tests/hard_deny_targets.rs. Four focused tests prove exact/descendant matching without prefix overreach, constructor fail-closed behavior, register_callsite and enabled denial under a trace-level EnvFilter, a positive-control dependency-content leak without the layer, and complete suppression of denied span fields, event fields, and human messages while safe application metadata remains visible."
       },
       {
         "bom-ref": "claim:secure_identity:single-use-tenant-operation-capability",

@@ -3,7 +3,7 @@
 > **Classification:** INTERNAL — Security Sensitive  
 > **Version:** 1.0.0  
 > **Status:** Approved  
-> **Last Updated:** 2025  
+> **Last Updated:** 2026-08-03
 > **Authors:** SunLit Security Libraries Security Team
 > **Review Cycle:** Quarterly or on major architectural change
 
@@ -72,7 +72,7 @@ The threat model serves four purposes:
 |---|---|---|
 | `security_core` | C1 — Define Security Requirements | Shared ID types, data classification, severity levels, `IdentitySource` trait |
 | `secure_errors` | C10 — Handle All Errors and Exceptions | Centralised, context-rich error handling; prevents information leakage |
-| `security_events` | C9 — Implement Security Logging and Monitoring | Structured audit events, per-event HMAC sealing, event correlation, and SIEM/file sink integration |
+| `security_events` | C9 — Implement Security Logging and Monitoring | Structured audit events, per-event HMAC sealing, event correlation, dependency tracing target quarantine, and SIEM/file sink integration |
 | `secure_boundary` | C5/C8 — Validate All Inputs + Leverage Browser Security Features | Input validation, size limits, type-safe extractors, deny-by-default parsers, browser security headers, CORS, Fetch Metadata validation |
 | `secure_output` | C4 — Encode and Escape Data | Context-aware output encoding, security response headers, CSP management |
 | `secure_identity` | C6 — Implement Digital Identity | Pluggable authentication abstraction; supports OIDC, mTLS, API keys; strict single-use tenant+operation capabilities for brokered access |
@@ -149,7 +149,7 @@ The threat model serves four purposes:
 | DF-3 | secure_identity | secure_authz | Verified identity + claims | C7 policy evaluation |
 | DF-4 | secure_authz | Application logic | Authorisation decision | Deny-by-default |
 | DF-5 | Application logic | secure_output / secure_boundary | Response data | C4 encoding + headers + CSP nonces + Permissions-Policy |
-| DF-6 | Any component | security_events | Audit record | C9 tamper-evident log |
+| DF-6 | Any component or instrumented dependency | security_events | Audit or tracing record | C9 tamper-evident log; hard-deny target boundary for untrusted dependency content |
 | DF-7 | Any component | secure_errors | Error context | C10 safe error propagation |
 | DF-8 | secure_data | Data Zone | Secrets / PII / classified | C8 encryption + FIPS |
 
@@ -366,6 +366,20 @@ Information Disclosure threats expose data to unauthorised parties.
 | **Trust Boundary Crossed** | TB-4 |
 | **STRIDE Category** | Information Disclosure |
 | **Affected Data Flows** | DF-8 |
+
+#### THREAT-I-05: Dependency Instrumentation Exports Sensitive Runtime Content
+
+| Field | Detail |
+|---|---|
+| **ID** | THREAT-I-05 |
+| **Category** | Information Disclosure |
+| **Component** | `security_events` (M3) |
+| **Description** | An instrumented dependency records prompts, tool arguments, tool results, provider response bodies, local paths, or identities as span fields or human-readable tracing messages. A consumer then enables verbose logging or OpenTelemetry and exports that content to a local log or third-party collector. Field redaction at a later sink is insufficient because every formatter/exporter must implement it consistently and arbitrary human messages have no reliable schema. `HardDenyTargetsLayer` mitigates this by globally rejecting configured exact target roots and their `::` descendants during both callsite registration and runtime enablement. Unlisted dependency targets remain a consumer enumeration risk and require canary regression coverage. |
+| **Likelihood** | H |
+| **Impact** | H |
+| **Trust Boundary Crossed** | TB-3, TB-4 |
+| **STRIDE Category** | Information Disclosure |
+| **Affected Data Flows** | DF-6 |
 
 ---
 
@@ -686,6 +700,7 @@ A competitor subscribes to the same SaaS platform and attempts to access another
 | THREAT-I-02 | Timing attack on auth | | | | | | ◉ (primary) | | ◉ (const-time) | ◉ (demo) | ◉ (timing audit) |
 | THREAT-I-03 | PII leakage via serialisation | ◉ (data class) | | | | ◉ (primary) | | ◉ (policy scope) | | ◉ (demo) | ◉ (data flow review) |
 | THREAT-I-04 | Secrets in memory / process dump | | | | | | | | ◉ (primary) | ◉ (demo) | ◉ (seccomp / mlock) |
+| THREAT-I-05 | Sensitive dependency tracing export | | | ◉ (primary) | | | | | | | ◉ (target inventory review) |
 | THREAT-D-01 | Algorithmic complexity DoS | | ◉ (timeout guard) | | ◉ (primary) | | | | | ◉ (demo) | ◉ (fuzzing) |
 | THREAT-D-02 | Audit log flood DoS | | | ◉ (primary) | ◉ (rate limit) | | | | | ◉ (demo) | ◉ (back-pressure) |
 | THREAT-D-03 | Secrets manager throttling DoS | | ◉ (fallback err) | | | | | | ◉ (primary) | ◉ (demo) | ◉ (caching / circuit) |
@@ -702,14 +717,14 @@ A competitor subscribes to the same SaaS platform and attempts to access another
 |---|---|---|
 | M1 `security_core` | 6 | Typed IDs, data classification, severity types |
 | M2 `secure_errors` | 5 | Safe error boundaries, timeout guards, fallback errors |
-| M3 `security_events` | 13 | Audit trail, tamper detection, alerts, timestamps |
+| M3 `security_events` | 14 | Audit trail, tamper detection, alerts, timestamps, dependency target quarantine |
 | M4 `secure_boundary` | 8 | Input validation, size limits, rate limiting, path validation |
 | M5 `secure_output` | 4 | Safe headers, encoding, classification-aware serialisation |
 | M6 `secure_identity` | 8 | Token validation, algorithm pinning, constant-time ops |
 | M7 `secure_authz` | 7 | Deny-by-default, ABAC, mandatory audit, policy scope |
 | M8 `secure_data` | 7 | Key versioning, HMAC chain, const-time, memory protection |
 | M9 `ref_service` | 19 | Integration demonstration of all controls |
-| M10 Hardening | 20 | All threats addressed in hardening pass |
+| M10 Hardening | 21 | All threats addressed in hardening pass |
 
 ---
 
@@ -720,7 +735,7 @@ A competitor subscribes to the same SaaS platform and attempts to access another
 | Control Family | Controls | Threats Addressed | Implementing Crates |
 |---|---|---|---|
 | **AC — Access Control** | AC-2 Account Management, AC-3 Access Enforcement, AC-4 Information Flow, AC-6 Least Privilege, AC-17 Remote Access | THREAT-E-01, THREAT-E-02, THREAT-E-03, THREAT-S-01 | `secure_authz` (M7), `secure_identity` (M6) |
-| **AU — Audit and Accountability** | AU-2 Event Logging, AU-3 Content of Audit Records, AU-9 Protection of Audit Info, AU-10 Non-repudiation, AU-12 Audit Record Generation | THREAT-T-01, THREAT-R-01, THREAT-R-02, THREAT-R-03 | `security_events` (M3), `secure_data` (M8) |
+| **AU — Audit and Accountability** | AU-2 Event Logging, AU-3 Content of Audit Records, AU-9 Protection of Audit Info, AU-10 Non-repudiation, AU-12 Audit Record Generation | THREAT-T-01, THREAT-R-01, THREAT-R-02, THREAT-R-03, THREAT-I-05 | `security_events` (M3), `secure_data` (M8) |
 | **IA — Identification and Authentication** | IA-2 Identification/Authentication, IA-5 Authenticator Management, IA-7 Cryptographic Module Authentication, IA-8 Non-Org Users | THREAT-S-01, THREAT-S-02, THREAT-S-03, THREAT-I-02, THREAT-E-02 | `secure_identity` (M6), `secure_data` (M8) |
 | **SC — System and Communications Protection** | SC-8 Transmission Confidentiality, SC-12 Cryptographic Key Management, SC-13 Cryptographic Protection, SC-28 Protection at Rest | THREAT-I-04, THREAT-T-03, THREAT-D-03, THREAT-S-03 | `secure_data` (M8), `secure_identity` (M6) |
 | **SI — System and Information Integrity** | SI-2 Flaw Remediation, SI-3 Malicious Code Protection, SI-10 Info Input Validation, SI-12 Info Output Handling | THREAT-D-01, THREAT-T-02, THREAT-I-01, THREAT-I-03, THREAT-E-04 | `secure_boundary` (M4), `secure_output` (M5), `secure_errors` (M2) |
@@ -748,7 +763,7 @@ Applicable to energy and industrial deployments of SunLit Security Libraries.
 | **CC6.3** Role-based access control | THREAT-E-01, THREAT-E-03 | `secure_authz` (M7) |
 | **CC7.2** Monitoring for anomalies | THREAT-R-01, THREAT-D-02 | `security_events` (M3) |
 | **CC8.1** Change management | THREAT-E-04, THREAT-T-03 | M10 Hardening |
-| **C1.1** Confidentiality of information | THREAT-I-01, THREAT-I-03, THREAT-I-04 | `secure_errors` (M2), `secure_output` (M5), `secure_data` (M8) |
+| **C1.1** Confidentiality of information | THREAT-I-01, THREAT-I-03, THREAT-I-04, THREAT-I-05 | `secure_errors` (M2), `secure_output` (M5), `secure_data` (M8), `security_events` (M3) |
 
 Additional secure-coding evidence:
 
@@ -869,11 +884,11 @@ This checklist must be reviewed and signed off by at least two security engineer
 
 | # | Checklist Item | Status |
 |---|---|---|
-| 1 | All STRIDE categories (S, T, R, I, D, E) have at least 2 documented threats | ✅ Satisfied — S: 3, T: 3, R: 3, I: 4, D: 3, E: 4 |
-| 2 | Every threat has a unique ID, component mapping, likelihood, and impact rating | ✅ Satisfied — 20 threats documented with full metadata |
+| 1 | All STRIDE categories (S, T, R, I, D, E) have at least 2 documented threats | ✅ Satisfied — S: 3, T: 3, R: 3, I: 5, D: 3, E: 4 |
+| 2 | Every threat has a unique ID, component mapping, likelihood, and impact rating | ✅ Satisfied — 21 threats documented with full metadata |
 | 3 | Control-to-Threat Traceability Matrix covers all milestones M1–M10 | ✅ Satisfied — all 10 milestones have at least one threat mapped |
 | 4 | Every milestone maps to at least one threat in the traceability matrix | ✅ Satisfied — see Section 5 Milestone Coverage Summary |
-| 5 | Every threat maps to at least one milestone/crate | ✅ Satisfied — all 20 threats have primary milestone coverage |
+| 5 | Every threat maps to at least one milestone/crate | ✅ Satisfied — all 21 threats have primary milestone coverage |
 | 6 | At least 6 abuse cases documented with full attacker profile | ✅ Satisfied — 6 abuse cases (AC-01 through AC-06) |
 | 7 | Every abuse case includes attacker motivation, preconditions, attack steps, and impact | ✅ Satisfied — all 6 abuse cases include all four fields |
 | 8 | At least 3 residual risks with compensating controls | ✅ Satisfied — 5 residual risks (RR-01 through RR-05) |

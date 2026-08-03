@@ -2,7 +2,7 @@
 
 > **OWASP C9**: Security telemetry with classification-driven redaction, tamper-evident audit chains, and anomaly detection.
 
-`security_events` provides structured security logging that ensures sensitive data is automatically redacted based on its classification. It includes AppSensor-style anomaly detection, threshold-based alerting, rate limiting, injection-safe formatting, per-event HMAC tamper evidence, event correlation helpers, and pluggable sinks for stdout, tracing, files, batching, and optional HTTP webhooks.
+`security_events` provides structured security logging that ensures sensitive data is automatically redacted based on its classification. It includes AppSensor-style anomaly detection, threshold-based alerting, rate limiting, injection-safe formatting, per-event HMAC tamper evidence, event correlation helpers, a fail-closed dependency tracing boundary, and pluggable sinks for stdout, tracing, files, batching, and optional HTTP webhooks.
 
 ---
 
@@ -10,8 +10,38 @@
 
 ```toml
 [dependencies]
-security_events = "0.1.2"
+security_events = "0.1.3"
 ```
+
+---
+
+## Quarantining Dependency Tracing
+
+If a dependency records prompts, tool arguments, tool results, provider bodies, paths, or identities,
+drop its tracing target before any formatter or exporter sees it. This is a target boundary, not a
+best-effort content scrubber:
+
+```rust
+use security_events::HardDenyTargetsLayer;
+use tracing_subscriber::layer::SubscriberExt;
+
+let hard_deny = HardDenyTargetsLayer::try_new(["dependency", "dependency_core"])?;
+let subscriber = tracing_subscriber::registry()
+    .with(tracing_subscriber::EnvFilter::new(
+        "info,dependency=trace,dependency_core=trace",
+    ))
+    .with(hard_deny)
+    .with(tracing_subscriber::fmt::layer());
+
+# let _ = subscriber;
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+`dependency` and `dependency::child` are denied; `dependency_extra` remains visible. Both static
+callsite registration and dynamic enablement fail closed, so verbose `EnvFilter` directives cannot
+restore denied events. The consumer must enumerate every dependency target root it intends to
+quarantine. Emit a separate application-owned event containing only reviewed metadata such as a
+canonical operation name, outcome, duration, counts, failure class, and correlation ID.
 
 ---
 
