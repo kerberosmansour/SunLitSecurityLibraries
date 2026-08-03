@@ -1,6 +1,6 @@
 # SunLit Security Libraries — Architecture
 
-> **Last updated**: Milestone 21 (`secure_boundary` — Browser Security Headers & CORS, OWASP C8)
+> **Last updated**: 2026-08-03 (`security_events` hard-deny tracing boundary, OWASP C9)
 
 ## Overview
 
@@ -14,7 +14,7 @@ The workspace provides first-class adapters for `axum`/`tower`, adversarial test
 
 A formal STRIDE threat model governs all design and implementation decisions. See [`THREAT_MODEL.md`](./THREAT_MODEL.md) for:
 
-- Full STRIDE analysis (20 threats across S, T, R, I, D, E categories)
+- Full STRIDE analysis (21 threats across S, T, R, I, D, E categories)
 - Abuse cases with attacker motivation, preconditions, steps, and impact
 - Control-to-threat traceability matrix (M1–M10)
 - Attack trees for identity, authorization, data protection, and input/output paths
@@ -28,7 +28,7 @@ A formal STRIDE threat model governs all design and implementation decisions. Se
 | Spoofing | 3 | `secure_identity` (M5), `security_core` (M1) |
 | Tampering | 3 | `security_events` (M3), `secure_data` (M7) |
 | Repudiation | 3 | `security_events` (M3) |
-| Information Disclosure | 4 | `secure_errors` (M2), `secure_data` (M7), `security_events` (M3) |
+| Information Disclosure | 5 | `secure_errors` (M2), `secure_data` (M7), `security_events` (M3) |
 | Denial of Service | 3 | `secure_boundary` (M4), `security_events` (M3) |
 | Elevation of Privilege | 4 | `secure_authz` (M6), `secure_boundary` (M4) |
 
@@ -155,6 +155,21 @@ Redaction is policy-driven, not ad hoc. The `RedactionEngine` applies a `Redacti
 | `Regulated` | Hash → `SHA256:<hex>` |
 | `Secret` | Redact → `[REDACTED]` |
 | `Credentials` | Drop (label removed entirely) |
+
+#### Dependency Tracing Boundary
+
+`HardDenyTargetsLayer` is a vendor-agnostic, whole-subscriber confidentiality boundary for
+dependencies whose instrumentation may contain prompts, tool arguments, results, provider bodies,
+paths, or identities. Consumers configure exact target roots; a root also matches its `::`
+descendants but not a textual near-prefix. The layer returns `Interest::never()` from callsite
+registration and `false` from runtime enablement for every match. Because those decisions filter the
+entire subscriber stack, a permissive `EnvFilter` cannot restore a denied event to formatters, local
+logs, or OpenTelemetry exporters.
+
+The boundary deliberately drops dependency content rather than attempting arbitrary-value
+redaction. Consumers emit separate application-owned events with reviewed typed metadata. Empty or
+malformed target configuration is rejected at construction. Unlisted targets remain visible, so
+dependency target enumeration and regression canaries are consumer responsibilities.
 
 #### Mobile Log Sanitization (MASVS-M7)
 
