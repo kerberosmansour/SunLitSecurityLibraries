@@ -45,7 +45,7 @@ jobs:
           private-key: ${{ secrets.SCA_MERGER_PRIVATE_KEY }}
 
       - name: Checkout as remediator
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           token: ${{ steps.remediator_token.outputs.token }}
@@ -234,7 +234,7 @@ jobs:
 
       - name: Claude security reviewer
         if: steps.active_pr.outputs.pr_number != '' && steps.claude_auth.outputs.credential_mode != '' && steps.current_review.outputs.claude_approved != 'true'
-        uses: anthropics/claude-code-action@44423bdec74b97d67543eb16c110546762c110b2 # v1
+        uses: anthropics/claude-code-action@be7b93b1907a4abad570368f3c74b6fe3807510b # v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -267,7 +267,7 @@ jobs:
 
       - name: Claude remediation fixer
         if: steps.active_pr.outputs.pr_number != '' && steps.claude_auth.outputs.credential_mode != '' && steps.review.outputs.decision != 'APPROVED'
-        uses: anthropics/claude-code-action@44423bdec74b97d67543eb16c110546762c110b2 # v1
+        uses: anthropics/claude-code-action@be7b93b1907a4abad570368f3c74b6fe3807510b # v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -289,7 +289,7 @@ jobs:
 
       - name: Claude security reviewer after fixer
         if: steps.active_pr.outputs.pr_number != '' && steps.claude_auth.outputs.credential_mode != '' && steps.review.outputs.decision != 'APPROVED'
-        uses: anthropics/claude-code-action@44423bdec74b97d67543eb16c110546762c110b2 # v1
+        uses: anthropics/claude-code-action@be7b93b1907a4abad570368f3c74b6fe3807510b # v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
