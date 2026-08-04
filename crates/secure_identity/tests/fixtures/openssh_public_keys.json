@@ -1,0 +1,27 @@
+[
+  {
+    "algorithm": "ssh-ed25519",
+    "payload": "AAAAC3NzaC1lZDI1NTE5AAAAILz0w2FOvLZuM/rmJyqsXLDcJeq+AJJCyQVmm5SUbus1",
+    "source": "ssh-keygen -t ed25519"
+  },
+  {
+    "algorithm": "ssh-rsa",
+    "payload": "AAAAB3NzaC1yc2EAAAADAQABAAAAgQDYGXqEnGVQBMQ64KGDcIfeeNZO+lbh7dtlTHL3toYGQdO1uiXGsF843TkmIeEj5sd/z2d4cUTqFpRNBWDYU0AfjFrT7jx3iW2haFtk8skB5DIMeSa4KZiJiqgYI0g0cJ4ntueauXvc2Nluq4QT0SVJTu1/VDyHxri9Jzf27L8Rqw==",
+    "source": "ssh-keygen -t rsa -b 1024"
+  },
+  {
+    "algorithm": "ecdsa-sha2-nistp256",
+    "payload": "AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBLFEDMv6DJqKQGiCcZgfawA8UIB+3ERTgRThwn5No7y3p2aC8g3CHdj+sEZbm8POhzdFyWV+l23/Te2W8BrJPqI=",
+    "source": "ssh-keygen -t ecdsa -b 256"
+  },
+  {
+    "algorithm": "ecdsa-sha2-nistp384",
+    "payload": "AAAAE2VjZHNhLXNoYTItbmlzdHAzODQAAAAIbmlzdHAzODQAAABhBDyD63VyqE8d3qE3O7G8jchm8NqXibYFO4q73GzOxElvnp853A2TTyrWF3MpCRlJAKONyLwRpXBeqwgZlDPzR2ECO9F7dpXARAs7ZF1lnhZMkTVLvm+io8UK+D7/0BmC5g==",
+    "source": "ssh-keygen -t ecdsa -b 384"
+  },
+  {
+    "algorithm": "ecdsa-sha2-nistp521",
+    "payload": "AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAAAIbmlzdHA1MjEAAACFBADMpnvURA/4FLB6TnwvjtZb///PUOx1NXD1xLEClOxIrOLZDHUDBCSYdIG3gKDYJCJ9dONvU+fCd6WAmBzKcj9eSAAL0A+qnq6Iq7g95vIIpi4K70CK3/VdWD9Vfzt/7nhkiTg39tdY4fjiy8oPrUnJ93BJnR5kD6XAcGKFTG+w1ywxkQ==",
+    "source": "ssh-keygen -t ecdsa -b 521"
+  }
+]

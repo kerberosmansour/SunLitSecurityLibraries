@@ -257,6 +257,21 @@ Tampering threats target the integrity of data, code, and audit records.
 | **STRIDE Category** | Tampering |
 | **Affected Data Flows** | DF-8 |
 
+#### THREAT-T-04: Key-Shaped Blob Accepted as Valid OpenSSH Material
+
+| Field | Detail |
+|---|---|
+| **ID** | THREAT-T-04 |
+| **Category** | Tampering |
+| **Component** | `secure_identity` |
+| **Description** | An attacker supplies an algorithm-shaped Base64 blob whose SSH framing is plausible but whose RSA parameters or elliptic-curve point are invalid. A consumer that treats shape as cryptographic validity can then assign ownership to an adjacent comment or suppress a credential-like value. |
+| **Likelihood** | M |
+| **Impact** | H |
+| **Trust Boundary Crossed** | TB-2 |
+| **STRIDE Category** | Tampering |
+| **Affected Data Flows** | DF-1 |
+| **Mitigations** | `secure_identity::openssh` decodes into a fixed 16 KiB buffer, parses borrowed canonical SSH fields with no trailing data or length-directed allocation, byte-pins the supplied and embedded algorithms, and validates Ed25519, policy-bounded RSA, and NIST public parameters with audited RustCrypto primitives without returning or logging key/comment material. |
+
 ---
 
 ### 3.3 Repudiation
@@ -693,6 +708,7 @@ A competitor subscribes to the same SaaS platform and attempts to access another
 | THREAT-T-01 | Audit log tampering | | | ◉ (primary) | | | | | ◉ (HMAC chain) | ◉ (demo) | ◉ (WORM storage) |
 | THREAT-T-02 | Input TOCTOU mutation | ◉ (typed IDs) | ◉ (error guard) | | ◉ (primary) | | | | | ◉ (demo) | ◉ (immutable types) |
 | THREAT-T-03 | Crypto key substitution | | | ◉ (alert) | | | | | ◉ (primary) | ◉ (demo) | ◉ (key versioning) |
+| THREAT-T-04 | Invalid OpenSSH key-shaped blob | | | | | | ◉ (primary) | | | | ◉ (fuzzing / dependency review) |
 | THREAT-R-01 | Missing audit trail | ◉ (severity types) | | ◉ (primary) | | | | ◉ (mandatory audit) | | ◉ (demo) | ◉ (compliance audit) |
 | THREAT-R-02 | Log injection / forgery | | | ◉ (primary) | ◉ (sanitise input) | ◉ (encode output) | | | | ◉ (demo) | ◉ (structured logs) |
 | THREAT-R-03 | Clock skew / replay deniability | | | ◉ (timestamps) | | | ◉ (nbf/exp) | | | ◉ (demo) | ◉ (NTP monitoring) |

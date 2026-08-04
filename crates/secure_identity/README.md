@@ -4,12 +4,13 @@
 [![docs.rs](https://docs.rs/secure_identity/badge.svg)](https://docs.rs/secure_identity)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-Authentication building blocks: JWT validation, JWKS, projected Kubernetes workload identity, OIDC (PKCE), API keys, sessions, MFA/TOTP, biometric step-up, and passwordless flows. Part of the [SunLit Security Libraries](https://github.com/kerberosmansour/SunLitSecurityLibraries) workspace.
+Authentication building blocks: JWT validation, JWKS, projected Kubernetes workload identity, bounded OpenSSH public-key validation, OIDC (PKCE), API keys, sessions, MFA/TOTP, biometric step-up, and passwordless flows. Part of the [SunLit Security Libraries](https://github.com/kerberosmansour/SunLitSecurityLibraries) workspace.
 
 ## When to reach for this crate
 
 - You're integrating an OIDC provider and want **PKCE-first authorization-code flow** with cached JWKS.
 - You need to authenticate a **projected Kubernetes service-account JWT** without trusting caller-selected tenant or operation claims.
+- You need to distinguish a cryptographically valid **OpenSSH public-key blob** from a merely key-shaped string without retaining its key or comment.
 - You need **MFA/TOTP** with replay defense and clock-skew tolerance.
 - You need **API key issuance/validation** that survives a key-leak audit.
 - You want **biometric step-up** + device-binding (MASVS-AUTH-2/3).
@@ -21,19 +22,19 @@ Output is a `security_core::identity::AuthenticatedIdentity`, which `secure_auth
 
 ```toml
 [dependencies]
-secure_identity = "0.1.8"
+secure_identity = "0.1.10"
 
 # OIDC (PKCE) flows:
-# secure_identity = { version = "0.1.8", features = ["oidc"] }
+# secure_identity = { version = "0.1.10", features = ["oidc"] }
 
 # Projected Kubernetes workload JWTs over HTTPS or bounded inline public JWKS:
-# secure_identity = { version = "0.1.8", features = ["jwks"] }
+# secure_identity = { version = "0.1.10", features = ["jwks"] }
 
 # Redis-backed sessions:
-# secure_identity = { version = "0.1.8", features = ["session-redis"] }
+# secure_identity = { version = "0.1.10", features = ["session-redis"] }
 
 # Biometric / device-binding / step-up:
-# secure_identity = { version = "0.1.8", features = ["biometric"] }
+# secure_identity = { version = "0.1.10", features = ["biometric"] }
 ```
 
 ## Quick example — production boot check
@@ -101,6 +102,40 @@ the bounded subject to tenant and operation authority. JWKS responses are
 bounded at 1 MiB and 64 keys; cache refresh failures fail closed rather than
 using expired keys.
 
+## OpenSSH public-key validation
+
+Pass only the algorithm and Base64 fields from a parsed OpenSSH public-key
+line. Options and comments stay under the consumer's ownership:
+
+```rust
+use secure_identity::validate_openssh_public_key;
+
+let algorithm = "ssh-ed25519";
+let payload = "AAAAC3NzaC1lZDI1NTE5AAAAILz0w2FOvLZuM/rmJyqsXLDcJeq+AJJCyQVmm5SUbus1";
+validate_openssh_public_key(algorithm, payload)?;
+# Ok::<(), secure_identity::OpenSshPublicKeyError>(())
+```
+
+The call decodes into a fixed 16 KiB buffer, borrows each bounded SSH field,
+requires byte-exact outer/embedded algorithm agreement and no trailing wire
+data, and validates Ed25519, RSA, or NIST curve public parameters with audited
+RustCrypto primitives. It returns only `Ok(())`; decoded key material is
+neither returned nor logged. RSA keys from 1,024 through 16,384 bits are
+accepted by the compatibility entry point. Enforce a stronger minimum during
+validation with `validate_openssh_public_key_with_rsa_minimum_bits`:
+
+```rust
+use secure_identity::{
+    validate_openssh_public_key_with_rsa_minimum_bits, OpenSshPublicKeyError,
+};
+
+# let payload = "AAAAB3NzaC1yc2EAAAADAQABAAAAgQDYGXqEnGVQBMQ64KGDcIfeeNZO+lbh7dtlTHL3toYGQdO1uiXGsF843TkmIeEj5sd/z2d4cUTqFpRNBWDYU0AfjFrT7jx3iW2haFtk8skB5DIMeSa4KZiJiqgYI0g0cJ4ntueauXvc2Nluq4QT0SVJTu1/VDyHxri9Jzf27L8Rqw==";
+assert_eq!(
+    validate_openssh_public_key_with_rsa_minimum_bits("ssh-rsa", payload, 2_048),
+    Err(OpenSshPublicKeyError::InvalidKeyParameters),
+);
+```
+
 ## What's inside
 
 | Module | Use it for |
@@ -108,6 +143,7 @@ using expired keys.
 | `authenticator::Authenticator` / `AuthenticationRequest` / `TokenKind` | Pluggable authentication entry-point. |
 | `jwks` | JWKS discovery, caching, and RSA/EC signature verification, with a single-flight, rate-limited refresh on unknown `kid` so signing-key rotation does not wait for cache expiry. |
 | `workload` (`jwks` feature) | Projected Kubernetes JWT validation: exact HTTPS or bounded inline public JWKS, RS256-only bounded `kid`, exact issuer/audience/time checks, and a bounded service-account subject with no tenant or operation authority. |
+| `openssh` | Bounded OpenSSH algorithm+Base64 validation with exact algorithm binding, RSA parameter policy, Ed25519 point validation, and NIST curve membership. |
 | `token` | JWT issuance/validation with strict alg enforcement. |
 | `mfa` / `totp` | TOTP step-up with replay defense and skew tolerance. |
 | `api_key` | API key issuance and constant-time validation. |

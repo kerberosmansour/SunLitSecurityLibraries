@@ -1,6 +1,6 @@
 [package]
 name = "secure_identity"
-version = "0.1.9"
+version = "0.1.10"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Authentication helpers for JWT, OIDC, MFA, API keys, sessions, and step-up policy."
@@ -22,7 +22,12 @@ session-redis = ["dep:redis"]
 
 [dependencies]
 base64 = "0.22"
+ed25519-dalek = { version = "=2.2.0", default-features = false }
 jsonwebtoken = { version = "11.0.0", features = ["rust_crypto"] }
+p256 = { version = "=0.13.2", default-features = false, features = ["arithmetic"] }
+p384 = { version = "=0.13.1", default-features = false, features = ["arithmetic"] }
+p521 = { version = "=0.13.3", default-features = false, features = ["arithmetic"] }
+rsa = { version = "=0.9.10", default-features = false, features = ["std", "u64_digit"] }
 tokio = { version = "1", features = ["sync", "time", "net", "io-util"] }
 ring = "0.17"
 subtle = "2"
