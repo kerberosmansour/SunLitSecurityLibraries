@@ -10,13 +10,13 @@
 
 ```toml
 [dependencies]
-secure_identity = "0.1.8"
+secure_identity = "0.1.10"
 
 # For development/testing only:
-secure_identity = { version = "0.1.8", features = ["dev"] }
+secure_identity = { version = "0.1.10", features = ["dev"] }
 
 # Projected Kubernetes workload JWTs:
-secure_identity = { version = "0.1.8", features = ["jwks"] }
+secure_identity = { version = "0.1.10", features = ["jwks"] }
 ```
 
 ---
@@ -188,6 +188,46 @@ subject to tenant and operation authority through a separate deny-by-default
 registry.
 
 ---
+
+## OpenSSH Public-Key Validation
+
+Use `validate_openssh_public_key` after your own line parser has isolated the
+algorithm and Base64 fields. Do not include `authorized_keys` options or a
+comment:
+
+```rust
+use secure_identity::validate_openssh_public_key;
+
+validate_openssh_public_key(
+    "ssh-ed25519",
+    "AAAAC3NzaC1lZDI1NTE5AAAAILz0w2FOvLZuM/rmJyqsXLDcJeq+AJJCyQVmm5SUbus1",
+)?;
+# Ok::<(), secure_identity::OpenSshPublicKeyError>(())
+```
+
+The API accepts only `ssh-ed25519`, `ssh-rsa`, and ECDSA NIST
+P-256/P-384/P-521. It decodes into one fixed 16 KiB buffer and parses borrowed
+SSH fields, so attacker-controlled lengths cannot amplify parser allocation.
+It rejects noncanonical or trailing SSH wire data and byte-level
+outer/embedded algorithm confusion, then uses RustCrypto primitives to validate
+public parameters and actual curve membership. A successful call returns no
+key data, comment, or fingerprint.
+
+The compatibility entry point accepts RSA moduli from 1,024 through 16,384
+bits. Enforce a stronger minimum in the same operation rather than trying to
+infer key size from `Ok(())`:
+
+```rust
+use secure_identity::{
+    validate_openssh_public_key_with_rsa_minimum_bits, OpenSshPublicKeyError,
+};
+
+# let payload = "AAAAB3NzaC1yc2EAAAADAQABAAAAgQDYGXqEnGVQBMQ64KGDcIfeeNZO+lbh7dtlTHL3toYGQdO1uiXGsF843TkmIeEj5sd/z2d4cUTqFpRNBWDYU0AfjFrT7jx3iW2haFtk8skB5DIMeSa4KZiJiqgYI0g0cJ4ntueauXvc2Nluq4QT0SVJTu1/VDyHxri9Jzf27L8Rqw==";
+assert_eq!(
+    validate_openssh_public_key_with_rsa_minimum_bits("ssh-rsa", payload, 2_048),
+    Err(OpenSshPublicKeyError::InvalidKeyParameters),
+);
+```
 
 ## Single-Use Tenant+Operation Capabilities
 
@@ -401,7 +441,7 @@ impl SessionManager for RedisSessionManager {
 
 ```toml
 [dependencies]
-secure_identity = { version = "0.1.8", features = ["session-redis"] }
+secure_identity = { version = "0.1.10", features = ["session-redis"] }
 ```
 
 ```rust
@@ -420,7 +460,7 @@ OIDC integration is intentionally a thin wrapper over the `openidconnect` crate 
 
 ```toml
 [dependencies]
-secure_identity = { version = "0.1.8", features = ["oidc"] }
+secure_identity = { version = "0.1.10", features = ["oidc"] }
 ```
 
 ```rust

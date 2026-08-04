@@ -11,6 +11,14 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ### Added
 
+- `secure_identity 0.1.10` adds a bounded, fail-closed OpenSSH public-key
+  validator for `ssh-ed25519`, `ssh-rsa`, and ECDSA NIST P-256/P-384/P-521.
+  A fixed-capacity decoder and borrowed-slice field parser pin raw outer and
+  embedded algorithms, reject trailing wire data without length-directed
+  allocations, validate public-key parameters and curve membership with
+  audited RustCrypto primitives, and return no decoded key or comment material.
+  RSA parser compatibility defaults to OpenSSH's 1,024–16,384-bit range; the
+  companion minimum-bits API enforces stronger deployment policy in-call.
 - `security_events 0.1.3` adds `HardDenyTargetsLayer`, a vendor-agnostic global
   `tracing-subscriber` boundary for dependency targets that may carry prompts, tool arguments,
   results, provider bodies, paths, or identities. Exact roots and their `::` descendants are denied

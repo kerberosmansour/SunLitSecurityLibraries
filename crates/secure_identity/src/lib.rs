@@ -19,6 +19,7 @@ pub mod jwks;
 pub mod mfa;
 #[cfg(feature = "oidc")]
 pub mod oidc;
+pub mod openssh;
 pub mod passwordless;
 pub mod session;
 #[cfg(feature = "session-redis")]
@@ -38,6 +39,12 @@ pub use capability::{
     MAX_TTL_SECONDS,
 };
 pub use error::IdentityError;
+pub use openssh::{
+    validate_openssh_public_key, validate_openssh_public_key_with_rsa_minimum_bits,
+    OpenSshPublicKeyError, MAX_OPENSSH_PUBLIC_KEY_BASE64_BYTES,
+    MAX_OPENSSH_PUBLIC_KEY_DECODED_BYTES, OPENSSH_RSA_MAX_MODULUS_BITS,
+    OPENSSH_RSA_MIN_MODULUS_BITS,
+};
 pub use passwordless::{
     BoundUserSession, DeviceSessionBinding, PasskeySupport, PasswordlessChallenge,
     PasswordlessChallengeRequest, PasswordlessChallengeService, PasswordlessError,

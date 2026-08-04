@@ -41,7 +41,7 @@ Compliance mappings: **NIST 800-53** (AC, AU, IA, SC, SI), **IEC 62443**, **SOC 
 | `security_events` | C9 | Security telemetry, classification-driven redaction, global hard-deny tracing targets, per-event HMAC sealing, event correlation, log-injection prevention, AppSensor detection points, NDJSON/tracing/file/batched sinks |
 | `secure_boundary` | C5/C8 | Input validation, axum extractors, size/depth/field limits, prompt-boundary literal fencing, HTML sanitization, browser security headers, CORS, Fetch Metadata |
 | `secure_output` | C4 | Context-aware output encoding, security headers |
-| `secure_identity` | C6, MASVS-AUTH | Pluggable authentication (one `IdentitySource` implementation), biometric auth validation, step-up auth, single-use tenant+operation capabilities |
+| `secure_identity` | C6, MASVS-AUTH | Pluggable authentication (one `IdentitySource` implementation), bounded OpenSSH public-key validation, biometric auth validation, step-up auth, single-use tenant+operation capabilities |
 | `secure_device_trust` | C6/C7, MASVS-AUTH | Native-client device trust decisions: bootstrap identity, client type/platform, attestation mode, trust tiers |
 | `secure_authz` | C7 | Deny-by-default authorization, identity-agnostic policy engine |
 | `secure_data` | C2/C7/C8, MASVS-STORAGE | Secret management, envelope encryption, crypto agility, password hashing (Argon2id), FIPS readiness, mobile secure storage |
@@ -165,7 +165,7 @@ Comprehensive guides for integrating each crate into your Rust applications:
 | [`security_events`](./docs/dev-guide/security-events.md) | Security telemetry, `SecurityEvent` schema, hard-deny dependency tracing targets, HMAC signing, event correlation, file/batching sinks, redaction, detection engine |
 | [`secure_boundary`](./docs/dev-guide/secure-boundary.md) | Input validation extractors, safe types, prompt-boundary literal fencing, security headers, CORS, Fetch Metadata, request limits |
 | [`secure_output`](./docs/dev-guide/secure-output.md) | Context-aware output encoding (HTML, JSON, URL, JS, CSS, XML, LDAP, shell), URI scheme sanitization |
-| [`secure_identity`](./docs/dev-guide/secure-identity.md) | JWT validation (HS256/RS256/ES256), JWKS, OIDC discovery (feature-gated), TOTP MFA, API keys, in-memory + Redis sessions, auth audit events, pluggable identity, biometric auth validation, step-up auth (MASVS-AUTH) |
+| [`secure_identity`](./docs/dev-guide/secure-identity.md) | JWT validation (HS256/RS256/ES256), JWKS, bounded OpenSSH public-key validation, OIDC discovery (feature-gated), TOTP MFA, API keys, in-memory + Redis sessions, auth audit events, pluggable identity, biometric auth validation, step-up auth (MASVS-AUTH) |
 | [`secure_device_trust`](./docs/dev-guide/secure-device-trust.md) | Native-client bootstrap identity, client type/platform, backend attestation mode, trust-tier decisions |
 | [`secure_authz`](./docs/dev-guide/secure-authz.md) | Deny-by-default authorization, RBAC + ABAC + temporal permissions, tenant isolation, bulk checks, `AuthzLayer` middleware |
 | [`secure_data`](./docs/dev-guide/secure-data.md) | Secret types, envelope encryption, key rotation, KMS providers (Vault, AWS), FIPS readiness |

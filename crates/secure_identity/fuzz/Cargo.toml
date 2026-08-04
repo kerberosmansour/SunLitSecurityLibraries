@@ -28,3 +28,9 @@ name = "fuzz_capability_jwks"
 path = "fuzz_targets/fuzz_capability_jwks.rs"
 test = false
 bench = false
+
+[[bin]]
+name = "fuzz_openssh_public_key"
+path = "fuzz_targets/fuzz_openssh_public_key.rs"
+test = false
+bench = false

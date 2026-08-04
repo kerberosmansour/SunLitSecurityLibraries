@@ -55,6 +55,12 @@ criteria = "safe-to-deploy"
 delta = "0.9.115 -> 0.9.116"
 notes = "Delta review. Build-script changes only: macOS Homebrew detection now prefers openssl@4, falls back to openssl@3/3.0, and drops openssl@1.1 (build/find_normal.rs); header validation comment now notes OpenSSL 4.x support (build/main.rs); CHANGELOG + version bump. No runtime code, unsafe, or capability changes. Reviewed via `cargo vet diff`."
 
+[[audits.p521]]
+who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.13.3"
+notes = "Full source review of exact p521 0.13.3 for bounded untrusted P-521 public-point validation. The crate forbids unsafe code and has no build script or ambient authority. This workspace uses default-features=false with arithmetic only; the exercised 133-byte uncompressed SEC1 path canonically bounds coordinates, checks the curve equation, and rejects identity. Exact-feature, NIST group-vector, all-feature, FIPS, and Wycheproof tests passed; a fresh RustSec scan found no p521 advisory. This safe-to-deploy audit is not a crypto-reviewed certification: upstream's unaudited constant-time warning and unimplemented Scalar::sqrt do not affect this public-only path. Do not expand to secret/scalar/compressed use without a new review."
+
 [[audits.phf_codegen]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
 criteria = "safe-to-deploy"
