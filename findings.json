@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": 17,
+  "revision": 18,
   "findings": {
     "crates.io:quinn-proto@0.11.14:RUSTSEC-2026-0185": {
       "findingKey": "crates.io:quinn-proto@0.11.14:RUSTSEC-2026-0185",
@@ -289,6 +289,23 @@
       ],
       "firstSeen": "2026-09-14T16:25:29.754Z",
       "lastSeen": "2026-09-14T16:25:29.754Z",
+      "reason": "no fix"
+    },
+    "crates.io:xxhash-rust@0.8.15:GHSA-6g2r-675j-hx59": {
+      "findingKey": "crates.io:xxhash-rust@0.8.15:GHSA-6g2r-675j-hx59",
+      "advisoryId": "GHSA-6g2r-675j-hx59",
+      "ecosystem": "crates.io",
+      "package": "xxhash-rust",
+      "affectedVersion": "0.8.15",
+      "class": "critical",
+      "track": "dropped",
+      "fixedVersion": null,
+      "state": "dropped",
+      "manifestPaths": [
+        "Cargo.lock"
+      ],
+      "firstSeen": "2026-10-02T18:52:35.580Z",
+      "lastSeen": "2026-10-02T18:52:35.580Z",
       "reason": "no fix"
     }
   }
