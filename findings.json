@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": 18,
+  "revision": 19,
   "findings": {
     "crates.io:quinn-proto@0.11.14:RUSTSEC-2026-0185": {
       "findingKey": "crates.io:quinn-proto@0.11.14:RUSTSEC-2026-0185",
@@ -306,6 +306,23 @@
       ],
       "firstSeen": "2026-10-02T18:52:35.580Z",
       "lastSeen": "2026-10-02T18:52:35.580Z",
+      "reason": "no fix"
+    },
+    "crates.io:aws-smithy-json@0.62.5:GHSA-8ffr-xgwf-xj56": {
+      "findingKey": "crates.io:aws-smithy-json@0.62.5:GHSA-8ffr-xgwf-xj56",
+      "advisoryId": "GHSA-8ffr-xgwf-xj56",
+      "ecosystem": "crates.io",
+      "package": "aws-smithy-json",
+      "affectedVersion": "0.62.5",
+      "class": "critical",
+      "track": "dropped",
+      "fixedVersion": null,
+      "state": "dropped",
+      "manifestPaths": [
+        "Cargo.lock"
+      ],
+      "firstSeen": "2026-10-02T23:06:00.388Z",
+      "lastSeen": "2026-10-02T23:06:00.388Z",
       "reason": "no fix"
     }
   }
