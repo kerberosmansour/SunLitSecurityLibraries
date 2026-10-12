@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": 20,
+  "revision": 26,
   "findings": {
     "crates.io:quinn-proto@0.11.14:RUSTSEC-2026-0185": {
       "findingKey": "crates.io:quinn-proto@0.11.14:RUSTSEC-2026-0185",
@@ -340,6 +340,108 @@
       ],
       "firstSeen": "2026-10-05T23:47:12.935Z",
       "lastSeen": "2026-10-05T23:47:12.935Z",
+      "reason": "no fix"
+    },
+    "crates.io:ammonia@4.1.4:RUSTSEC-2021-0157": {
+      "findingKey": "crates.io:ammonia@4.1.4:RUSTSEC-2021-0157",
+      "advisoryId": "RUSTSEC-2021-0157",
+      "ecosystem": "crates.io",
+      "package": "ammonia",
+      "affectedVersion": "4.1.4",
+      "class": "critical",
+      "track": "dropped",
+      "fixedVersion": null,
+      "state": "dropped",
+      "manifestPaths": [
+        "Cargo.lock"
+      ],
+      "firstSeen": "2026-10-12T18:32:53.831Z",
+      "lastSeen": "2026-10-12T18:32:53.831Z",
+      "reason": "no fix"
+    },
+    "crates.io:quinn-proto@0.11.15:RUSTSEC-2026-0338": {
+      "findingKey": "crates.io:quinn-proto@0.11.15:RUSTSEC-2026-0338",
+      "advisoryId": "RUSTSEC-2026-0338",
+      "ecosystem": "crates.io",
+      "package": "quinn-proto",
+      "affectedVersion": "0.11.15",
+      "class": "critical",
+      "track": "dropped",
+      "fixedVersion": null,
+      "state": "dropped",
+      "manifestPaths": [
+        "Cargo.lock"
+      ],
+      "firstSeen": "2026-10-12T18:32:53.831Z",
+      "lastSeen": "2026-10-12T18:32:53.831Z",
+      "reason": "no fix"
+    },
+    "crates.io:quinn-proto@0.11.15:RUSTSEC-2026-0339": {
+      "findingKey": "crates.io:quinn-proto@0.11.15:RUSTSEC-2026-0339",
+      "advisoryId": "RUSTSEC-2026-0339",
+      "ecosystem": "crates.io",
+      "package": "quinn-proto",
+      "affectedVersion": "0.11.15",
+      "class": "critical",
+      "track": "dropped",
+      "fixedVersion": null,
+      "state": "dropped",
+      "manifestPaths": [
+        "Cargo.lock"
+      ],
+      "firstSeen": "2026-10-12T18:32:53.831Z",
+      "lastSeen": "2026-10-12T18:32:53.831Z",
+      "reason": "no fix"
+    },
+    "crates.io:quinn-proto@0.11.15:RUSTSEC-2026-0340": {
+      "findingKey": "crates.io:quinn-proto@0.11.15:RUSTSEC-2026-0340",
+      "advisoryId": "RUSTSEC-2026-0340",
+      "ecosystem": "crates.io",
+      "package": "quinn-proto",
+      "affectedVersion": "0.11.15",
+      "class": "critical",
+      "track": "dropped",
+      "fixedVersion": null,
+      "state": "dropped",
+      "manifestPaths": [
+        "Cargo.lock"
+      ],
+      "firstSeen": "2026-10-12T18:32:53.831Z",
+      "lastSeen": "2026-10-12T18:32:53.831Z",
+      "reason": "no fix"
+    },
+    "crates.io:quinn-proto@0.11.15:RUSTSEC-2026-0341": {
+      "findingKey": "crates.io:quinn-proto@0.11.15:RUSTSEC-2026-0341",
+      "advisoryId": "RUSTSEC-2026-0341",
+      "ecosystem": "crates.io",
+      "package": "quinn-proto",
+      "affectedVersion": "0.11.15",
+      "class": "critical",
+      "track": "dropped",
+      "fixedVersion": null,
+      "state": "dropped",
+      "manifestPaths": [
+        "Cargo.lock"
+      ],
+      "firstSeen": "2026-10-12T18:32:53.831Z",
+      "lastSeen": "2026-10-12T18:32:53.831Z",
+      "reason": "no fix"
+    },
+    "crates.io:quinn-proto@0.11.15:RUSTSEC-2026-0342": {
+      "findingKey": "crates.io:quinn-proto@0.11.15:RUSTSEC-2026-0342",
+      "advisoryId": "RUSTSEC-2026-0342",
+      "ecosystem": "crates.io",
+      "package": "quinn-proto",
+      "affectedVersion": "0.11.15",
+      "class": "critical",
+      "track": "dropped",
+      "fixedVersion": null,
+      "state": "dropped",
+      "manifestPaths": [
+        "Cargo.lock"
+      ],
+      "firstSeen": "2026-10-12T18:32:53.831Z",
+      "lastSeen": "2026-10-12T18:32:53.831Z",
       "reason": "no fix"
     }
   }
