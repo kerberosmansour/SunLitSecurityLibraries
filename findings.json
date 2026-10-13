@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": 26,
+  "revision": 27,
   "findings": {
     "crates.io:quinn-proto@0.11.14:RUSTSEC-2026-0185": {
       "findingKey": "crates.io:quinn-proto@0.11.14:RUSTSEC-2026-0185",
@@ -442,6 +442,23 @@
       ],
       "firstSeen": "2026-10-12T18:32:53.831Z",
       "lastSeen": "2026-10-12T18:32:53.831Z",
+      "reason": "no fix"
+    },
+    "crates.io:ammonia@4.1.4:RUSTSEC-2021-0158": {
+      "findingKey": "crates.io:ammonia@4.1.4:RUSTSEC-2021-0158",
+      "advisoryId": "RUSTSEC-2021-0158",
+      "ecosystem": "crates.io",
+      "package": "ammonia",
+      "affectedVersion": "4.1.4",
+      "class": "critical",
+      "track": "dropped",
+      "fixedVersion": null,
+      "state": "dropped",
+      "manifestPaths": [
+        "Cargo.lock"
+      ],
+      "firstSeen": "2026-10-13T07:34:01.223Z",
+      "lastSeen": "2026-10-13T07:34:01.223Z",
       "reason": "no fix"
     }
   }
