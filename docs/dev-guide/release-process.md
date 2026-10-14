@@ -24,3 +24,5 @@ Keep workflow tokens read-only by default, checks and dependency changes reviewe
 
 
 The 0.2.0 signing recovery uses a manual main run after archive repacking on CI changed file-mode metadata for two packages despite identical contents. The v0.2.0 source tag remains bf52c98180ca4794cc01ca06b3ca71d2981737ef. Verify the recovered bundles against the exact release-sign.yml identity at refs/heads/main and the documented signing run; checksums must match the committed release record and crates.io. Fresh repackaging is not a substitute for the immutable registry bytes. The producer downloads/reads archives but never builds or executes crate code; OIDC remains confined to the signing job.
+
+Verified 0.2.0 recovery: [run 38570598294](https://github.com/kerberosmansour/SunLitSecurityLibraries/actions/runs/38570598294), workflow commit ef4d41a8d08f3376301ace1020f71036b3ee165f. All twelve signed archive bytes match crates.io; 27 payload signatures/digest manifest and twelve official-schema SBOMs verify.
