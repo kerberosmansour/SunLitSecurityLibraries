@@ -121,6 +121,9 @@ def candidate(archive, root, commit, published):
             if tar.extractfile(member).read() != expected_bytes:
                 raise ValueError("Packaged source differs from the clean Git commit")
         normalized = tomllib.loads(read("Cargo.toml").decode("utf-8"))
+        allowed_tables={"package","lib","bin","test","example","bench","dependencies","dev-dependencies","build-dependencies","target","features","lints"}
+        if set(normalized) - allowed_tables:
+            raise ValueError("Unexpected top-level normalized manifest authority")
         workspace = tomllib.loads((root / "Cargo.toml").read_text())
         if normalized_dependencies(normalized, workspace, normalized=True) != normalized_dependencies(manifest, workspace) or normalized.get("features", {}) != manifest.get("features", {}):
             raise ValueError("Normalized dependency/feature authority differs from clean source")
@@ -238,7 +241,7 @@ def main():
     # Only after source and exact checksum-subset review can the same legitimate
     # product exception apply. Tool graphs cannot use this archive-bound path.
     reviewed = [dict(p, _admission_source=str(ROOT / "Cargo.lock")) for p in packages]
-    if gate.unaccepted_findings(reviewed, exceptions):
+    if gate.scan_exit_status(result.returncode, reviewed, exceptions) != 0:
         raise ValueError("Candidate has unaccepted vulnerability/malware findings")
     subprocess.run([sys.executable, str(ROOT / "scripts/check-native-dependencies.py")], cwd=ROOT, check=True, timeout=120)
     verify_unchanged_archive(args.archive, archive_digest)
