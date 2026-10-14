@@ -66,3 +66,26 @@ and scanner exit 1 without represented advisories fails closed. 39 Python tests
 now pass. Actual core package verification compiled only after admission and
 preserved its exact admitted archive bytes. The inherited secure_data README's
 obsolete constructor/argument order was corrected without adding mobile APIs.
+
+
+## Publication evidence — 2026-10-14
+
+Source PR131 merged at d5142b70275f45f2ee2ffa0ed24aad9976583547; all 27 CI checks
+passed. All twelve 0.2.1 crates are published. Every exact packaged graph was
+resolved without build verification, matched to clean source and the admitted
+root/sibling checksums, scanned with official pinned OSV, then compiled and
+uploaded. Downloaded immutable registry bytes/checksums and VCS source all match.
+`declarations/release-0.2.1-packages.json` records the exact public package set.
+Root external graph remains unchanged; six lockfiles / 1,448 package occurrences
+passed. The source checkout remained frozen at the release commit throughout.
+
+The gate stopped publication after two crates when Cargo's explicit default lint
+priority and source-declared example feature requirements were over-rejected.
+Two red-first regressions repaired normalization without bypassing authority:
+priority 1 and changed required-features still fail. All 42 Python tests pass.
+The corrected clean gate tool commit f03185d2fbddbb2b55ba840fe4316423623c85e1
+inspected the frozen source checkout; each receipt binds d5142b7 and exact archive,
+lock and scanner-report hashes. No library source/archive was changed to repair
+the tool. Real secure_errors admission covered 202 package identities.
+Publication records preserve that tool provenance. Signing/schema/tag evidence
+and final issue55 closure remain pending until independently verified.
