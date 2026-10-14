@@ -10,10 +10,132 @@ from pathlib import Path, PureWindowsPath
 import os
 import subprocess
 import sys
+import tempfile
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "fixtures/jwt-hmac-consumer"
+
+POLICIES = {
+    "key_acceptance_has_required_length_and_allocation_bounds": "assertion failed: kind.key_fits(length) == length >= required && length <= 1024",
+    "signing_size_never_wraps_or_exceeds_complete_token_bound": "assertion failed: kind.message_fits(length) == complete.is_some_and(|total| total <= 65536)",
+}
+KEY_COVERS = ["JHK_KEY_ZERO", "JHK_KEY_256_MIN", "JHK_KEY_384_MIN", "JHK_KEY_512_MIN",
+              "JHK_KEY_MAX", "JHK_KEY_OVER_MAX", "JHK_KEY_USIZE_MAX"]
+MESSAGE_COVERS = ["JHK_MESSAGE_ZERO", "JHK_MESSAGE_256_MAX", "JHK_MESSAGE_384_MAX",
+                  "JHK_MESSAGE_512_MAX", "JHK_MESSAGE_OVER_MAX", "JHK_MESSAGE_USIZE_MAX"]
+
+
+def owned_path(path):
+    if (path.is_symlink() or not path.is_file() or ROOT not in path.resolve().parents
+            or any((ROOT / parent).is_symlink() for parent in path.relative_to(ROOT).parents if parent != Path("."))):
+        raise ValueError("Admission/proof path must be a real owned repository file")
+    return path
+
+
+def consumer_lock():
+    owned_path(FIXTURE / "Cargo.toml")
+    return owned_path(FIXTURE / "Cargo.lock")
+
+
+def valid_kani_output(text, label, returncode):
+    text = re.sub(r"\x1b\[[0-9;]*m", "", text)
+    summary = "Complete - " + ("0 successfully verified harnesses, 2 failures, 2 total." if label == "red" else "2 successfully verified harnesses, 0 failures, 2 total.")
+    lines = text.splitlines()
+    if (label not in {"red", "green"} or returncode != (1 if label == "red" else 0)
+            or [line for line in lines if line.startswith("Kani Rust Verifier")] != ["Kani Rust Verifier 0.68.0 (cargo plugin)"]
+            or [line for line in lines if line.startswith("Complete -")] != [summary]
+            or not text.rstrip().endswith(summary)):
+        return False
+    expected = {"jwt_hmac::proofs::" + name for name in POLICIES}
+    headers = re.findall(r"(?m)^Checking harness ([^\n]+)\.\.\.$", text)
+    if len(headers) != 2 or set(headers) != expected:
+        return False
+    blocks = re.findall(r"(?ms)^Checking harness ([^\n]+)\.\.\.\n(.*?)(?=^Checking harness |^Manual Harness Summary:|^Complete -|\Z)", text)
+    if len(blocks) != 2:
+        return False
+    counted = 0
+    for harness, body in blocks:
+        checks = re.findall(r'(?m)^Check (\d+): ([^\n]+)\n[ \t]+- Status: (\w+)\n[ \t]+- Description: "([^\n]*)"', body)
+        counted += len(checks)
+        if (not checks or len(checks) != len(re.findall(r"(?m)^Check ", body))
+                or [int(item[0]) for item in checks] != list(range(1, len(checks) + 1))
+                or len({item[1] for item in checks}) != len(checks)):
+            return False
+        description = POLICIES[harness.removeprefix("jwt_hmac::proofs::")]
+        policy = [item for item in checks if item[3] == description]
+        required = "FAILURE" if label == "red" else "SUCCESS"
+        if len(policy) != 1 or policy[0][2] != required or not re.fullmatch(re.escape(harness) + r"\.assertion\.\d+", policy[0][1]):
+            return False
+        allowed = {"SUCCESS", "SATISFIED", "UNREACHABLE"}
+        if any(item[2] not in allowed and item != policy[0] for item in checks):
+            return False
+        if label == "green":
+            covers = [item for item in checks if ".cover." in item[1]]
+            wanted = KEY_COVERS if harness.endswith("allocation_bounds") else MESSAGE_COVERS
+            labels = [item[3].removeprefix("cover condition: ") for item in covers]
+            if (len(covers) != len(wanted) or set(labels) != set(wanted)
+                    or any(item[2] != "SATISFIED" or not re.fullmatch(re.escape(harness) + r"\.cover\.\d+", item[1]) for item in covers)):
+                return False
+    return counted == len(re.findall(r"(?m)^Check ", text))
+
+
+def proof_parser_self_test():
+    # Synthetic syntax fixtures only, never a verifier/proof result.
+    def fixture(label):
+        result = "Kani Rust Verifier 0.68.0 (cargo plugin)\n"
+        for index, (name, description) in enumerate(POLICIES.items()):
+            harness = "jwt_hmac::proofs::" + name
+            result += "Checking harness " + harness + "...\n"
+            status = "FAILURE" if label == "red" else "SUCCESS"
+            result += f'Check 1: {harness}.assertion.1\n\t - Status: {status}\n\t - Description: "{description}"\n'
+            for number, cover in enumerate(KEY_COVERS if index == 0 else MESSAGE_COVERS, 2):
+                result += f'Check {number}: {harness}.cover.{number}\n\t - Status: SATISFIED\n\t - Description: "{cover}"\n'
+        return result + "Complete - " + ("0 successfully verified harnesses, 2 failures, 2 total." if label == "red" else "2 successfully verified harnesses, 0 failures, 2 total.") + "\n"
+    good = fixture("green")
+    if not valid_kani_output(good, "green", 0) or not valid_kani_output(fixture("red"), "red", 1):
+        raise ValueError("Canonical synthetic Kani syntax fixtures rejected")
+    name = next(iter(POLICIES))
+    duplicate = f'Check 9: jwt_hmac::proofs::{name}.assertion.1\n\t - Status: FAILURE\n\t - Description: "{POLICIES[name]}"\n'
+    hostile = [good.replace("Checking harness jwt_hmac::proofs::signing", duplicate + "Checking harness jwt_hmac::proofs::signing", 1),
+               good.replace("JHK_KEY_ZERO", "JHK_KEY_ZERO JHK_KEY_256_MIN", 1),
+               good.replace("JHK_KEY_ZERO", "JHK_KEY_256_MIN", 1),
+               good.replace("Status: SATISFIED", "Status: UNDETERMINED", 1),
+               good.replace("Status: SUCCESS", "Status: UNREACHABLE", 1),
+               good + good.splitlines()[-1] + "\n",
+               "Kani Rust Verifier 0.68.0 (cargo plugin)\n" + good,
+               good.replace(" - Status: SATISFIED", " - Status SATISFIED", 1),
+               good + duplicate]
+    if any(valid_kani_output(text, "green", 0) for text in hostile) or valid_kani_output(good, "green", 1):
+        raise ValueError("Kani parser accepted duplicate/mixed/missing/unsupported result")
+    return {"syntheticParserNegativeCases": len(hostile) + 1}
+
+
+def ownership_self_test():
+    if os.name == "nt":
+        return {"ownershipSymlinkCases": "POSIX fixture; guard remains enabled on Windows"}
+    cache = ROOT / ".cache"
+    if cache.is_symlink():
+        raise ValueError("Ownership regression cache must be real")
+    cache.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="jwt-hmac-ownership-", dir=cache) as directory:
+        folder = Path(directory)
+        actual = folder / "owned"
+        actual.mkdir()
+        lock = actual / "Cargo.lock"
+        lock.write_text("same bytes\n")
+        owned_path(lock)
+        alias = folder / "alias.lock"
+        alias.symlink_to(lock)
+        link = folder / "alias-directory"
+        link.symlink_to(actual, target_is_directory=True)
+        for path in [alias, link / "Cargo.lock"]:
+            try:
+                owned_path(path)
+            except ValueError:
+                continue
+            raise ValueError("Ownership regression admitted same-byte alias")
+    return {"ownershipSymlinkCases": 2}
 
 
 def scanner_inventory(validator, report, paths, windows):
@@ -57,6 +179,7 @@ def inventory_self_test():
 
 
 def inspect_graph():
+    consumer_lock()
     metadata = json.loads(subprocess.check_output([
         "cargo", "metadata", "--manifest-path", str(FIXTURE / "Cargo.toml"),
         "--format-version", "1", "--locked",
@@ -95,11 +218,7 @@ def admit_all_locks(output):
     # Generic admission excludes deliberately vulnerable fixture directories.
     # This exact executable consumer is not a vulnerable fixture: graph review
     # must pass before admitting its lock alongside every production/tool lock.
-    path = FIXTURE / "Cargo.lock"
-    if path.is_symlink() or not path.is_file() or any(parent.is_symlink() for parent in (FIXTURE, FIXTURE.parent)):
-        raise ValueError("Consumer lock must be an owned real repository file")
-    if ROOT not in path.resolve().parents:
-        raise ValueError("Consumer lock escaped repository")
+    path = consumer_lock()
     spec = importlib.util.spec_from_file_location("hmac_osv_gate", ROOT / "scripts/osv-dependency-gate.py")
     gate = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gate)
@@ -122,8 +241,8 @@ def prove_kani(output, report, receipt):
     admission = json.loads(receipt.read_text())
     if admission.get("admissionExitCode") != 0 or admission.get("reportSHA256") != hashlib.sha256(report.read_bytes()).hexdigest():
         raise ValueError("Kani needs successful unchanged all-lock admission")
-    expected = {path.relative_to(ROOT).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
-                for path in [*ordinary_locks_for_proof(), FIXTURE / "Cargo.lock"]}
+    expected = {path.relative_to(ROOT).as_posix(): hashlib.sha256(owned_path(path).read_bytes()).hexdigest()
+                for path in [*ordinary_locks_for_proof(), consumer_lock()]}
     actual = {item["path"]: item["sha256"] for item in admission["lockfiles"]}
     if actual != expected or len(admission["lockfiles"]) != len(expected):
         raise ValueError("Kani admission omits, duplicates or changed a root/tool/consumer lock")
@@ -144,45 +263,28 @@ def prove_kani(output, report, receipt):
     command = [sys.executable, str(ROOT / "scripts/run-security-tool.py"), "--report", str(report),
                "--receipt", str(receipt), "kani-verifier", "--", "-p", "secure_identity",
                "--no-default-features", "--features", "jwt-hmac", "--output-format", "regular"]
-    names = ["key_acceptance_has_required_length_and_allocation_bounds", "signing_size_never_wraps_or_exceeds_complete_token_bound"]
-    covers = ["JHK_KEY_ZERO", "JHK_KEY_256_MIN", "JHK_KEY_384_MIN", "JHK_KEY_512_MIN",
-              "JHK_KEY_MAX", "JHK_KEY_OVER_MAX", "JHK_KEY_USIZE_MAX", "JHK_MESSAGE_ZERO",
-              "JHK_MESSAGE_256_MAX", "JHK_MESSAGE_384_MAX", "JHK_MESSAGE_512_MAX",
-              "JHK_MESSAGE_OVER_MAX", "JHK_MESSAGE_USIZE_MAX"]
-    def run(label, expected_return, expected_summary):
+    def run(label):
         log = output.with_name(output.stem + "." + label + ".log")
         with log.open("w") as stream:
             result = subprocess.run(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT, timeout=900, shell=False)
         text = log.read_text()
         text = re.sub(r"\x1b\[[0-9;]*m", "", text)
-        # Regular output uses Kani's own property classification. Old output
-        # uses raw CBMC exits and misclassifies successful reachability probes.
-        checks = re.findall(r'(?m)^Check \d+: ([^\n]+)\n[ \t]+- Status: (\w+)\n[ \t]+- Description: "([^\n]*)"', text)
-        required_status = "FAILURE" if label == "red" else "SUCCESS"
-        policy_status = all(any(name + ".assertion." in identity and status == required_status
-                               and "assertion failed: kind." in description
-                               for identity, status, description in checks) for name in names)
-        actual_covers = [(identity, status, description) for identity, status, description in checks if ".cover." in identity]
-        covered = len(actual_covers) == len(covers) and all(any(status == "SATISFIED" and name in description
-                    for _, status, description in actual_covers) for name in covers)
-        if (result.returncode != expected_return or "Kani Rust Verifier 0.68.0" not in text
-                or expected_summary not in text or not policy_status or (label == "green" and not covered)
-                or not all("Checking harness jwt_hmac::proofs::" + name in text for name in names)):
+        if not valid_kani_output(text, label, result.returncode):
             # Bound diagnostics; these pure-policy logs contain only source,
             # symbolic kinds/lengths and verifier output, never production keys.
             print("Kani " + label + " exit=" + str(result.returncode) + " log tail:\n" + text[-32768:], file=sys.stderr)
             raise ValueError("Kani " + label + " did not positively classify both expected harnesses; inspect saved log")
     try:
         source.write_text(mutant)
-        run("red", 1, "Complete - 0 successfully verified harnesses, 2 failures, 2 total.")
+        run("red")
     finally:
         source.write_text(original)
-    run("green", 0, "Complete - 2 successfully verified harnesses, 0 failures, 2 total.")
+    run("green")
     if source.read_text() != original:
         raise ValueError("Kani mutation did not restore source")
     return {"version": "0.68.0", "mutantFailures": 2, "provedHarnesses": 2,
             "kinds": 3, "lengthDomain": "all usize values on x86_64", "noHeapOrLoopBound": True,
-            "stubs": [], "nonVacuityCovers": covers, "automaticAssertionReachability": True,
+            "stubs": [], "nonVacuityCovers": KEY_COVERS + MESSAGE_COVERS, "automaticAssertionReachability": True,
             "concurrencyOrCryptographyProved": False, "sourceRestored": True}
 
 
@@ -207,7 +309,7 @@ def main():
     if args.self_test:
         if args.admit or args.prove_kani:
             raise ValueError("Inventory regressions are separate from admission/proof")
-        args.output.write_text(json.dumps({"status": "pass", **inventory_self_test()}, indent=2) + "\n")
+        args.output.write_text(json.dumps({"status": "pass", **inventory_self_test(), **proof_parser_self_test(), **ownership_self_test()}, indent=2) + "\n")
         return 0
     result = inspect_graph()
     if args.prove_kani:

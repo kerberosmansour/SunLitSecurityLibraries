@@ -173,7 +173,7 @@ Design: hold scope. Unreleased guide must distinguish legacy/default and minimal
 | Baseline runtime | Focused all-feature secure_identity baseline passed; current 1395-test workspace 0.3.0 evidence retained for identical source. |
 | Candidate admission | Official OSV v2.7.0 all seven locks/1643 package occurrences passed after explicit positive consumer admission. No fixture exception inheritance; root external dictionaries identical and consumer 195-package lock has no rsa. |
 | Real JWT/startup/race/bounds | Two selected real JWT/bounds tests, one private key utility test and six actual isolated consumer/startup scenarios pass. Cold-cache graph resolution failed before fix and passes with locked build-free fetching. |
-| Kani/workspace/static | Legacy all-feature workspace 1395 tests and workspace/selected-profile/consumer Clippy pass; formatter/workflow regressions pass. Kani red/green Linux 0.68 kernels remain pending CI. |
+| Kani/workspace/static | Legacy all-feature workspace 1395 tests and workspace/selected-profile/consumer Clippy pass; formatter/workflow regressions pass. Actual CI38643646234 Linux 0.68 red/green kernels verified: both mutant assertions fail, both original kernels pass, all thirteen covers SATISFIED, automatic assertion reachability enabled and no stubs. Final hardened-classifier/platform revalidation pending. |
 | Scope/docs/verify/retro | Pending. |
 
 User AGENTS dependency admission takes precedence over a fixture-runtime red run: unrepaired standalone fixture cannot inherit root RSA exceptions. The real outcome graph assertion is red first; behavioral scenarios are authored before implementation and execute only after the reduced graph is admitted. No compile/setup error or unadmitted vulnerable fixture is presented as passing evidence.
@@ -200,7 +200,7 @@ complete token <=65536 bytes. Kernels compare independent expectations, not thei
 own byte helpers. Red test weakens key minimum and ignores separator/tag budget;
 require exactly two positively classified failures with expected harness names,
 restore source even on failure, then require exactly two SUCCESSFUL green results.
-Current verdict pending CI. No assertion/property, counterexample or solver
+Actual kernel verdict verified in CI38643646234; final hardened-classifier CI pending. No assertion/property, counterexample or solver
 failure is hidden. Crypto, entropy, process interleavings, I/O and memory erasure
 remain unproved; real runtime/subprocess evidence covers selected behaviors.
 
@@ -227,3 +227,18 @@ SATISFIED. Covers include all three algorithm boundaries, empty/oversize and
 usize::MAX domains. No assertion, memory/overflow check or source/tool graph is
 disabled; final actual regular-mode verdict remains pending CI. The hidden-file
 artifact correction now retains raw reports/logs on every completed platform.
+
+Actual proof evidence: https://github.com/kerberosmansour/SunLitSecurityLibraries/actions/runs/38643646234
+Verified Linux 0.68 result: two actual mutant policy failures; both restored
+kernels verified, thirteen explicit covers SATISFIED, automatic assertion
+reachability enabled, no stubs and source restored. Exact raw red/green logs
+also pass the subsequently hardened production classifier. No concurrency,
+cryptographic strength, entropy or key-copy-erasure proof is claimed.
+
+Independent review's concrete classifier and ownership findings are fixed.
+A synthetic fixture exercised the actual old nested classifier and reproduced
+contradictory-result acceptance before correction. Ten mixed/malformed/duplicate/
+post-summary/unsupported/unreachable-policy cases now reject; both real logs
+accept. Two same-byte POSIX file/parent symlink regressions reject, and all
+consumer/ordinary locks are ownership-checked before metadata and again at proof.
+Final exact-source CI, independent handoff and merged closeout remain pending.

@@ -49,3 +49,18 @@ SATISFIED. Covers include all three algorithm boundaries, empty/oversize and
 usize::MAX domains. No assertion, memory/overflow check or source/tool graph is
 disabled; final actual regular-mode verdict remains pending CI. The hidden-file
 artifact correction now retains raw reports/logs on every completed platform.
+
+Actual proof evidence: https://github.com/kerberosmansour/SunLitSecurityLibraries/actions/runs/38643646234
+Verified Linux 0.68 result: two actual mutant policy failures; both restored
+kernels verified, thirteen explicit covers SATISFIED, automatic assertion
+reachability enabled, no stubs and source restored. Exact raw red/green logs
+also pass the subsequently hardened production classifier. No concurrency,
+cryptographic strength, entropy or key-copy-erasure proof is claimed.
+
+Independent review's concrete classifier and ownership findings are fixed.
+A synthetic fixture exercised the actual old nested classifier and reproduced
+contradictory-result acceptance before correction. Ten mixed/malformed/duplicate/
+post-summary/unsupported/unreachable-policy cases now reject; both real logs
+accept. Two same-byte POSIX file/parent symlink regressions reject, and all
+consumer/ordinary locks are ownership-checked before metadata and again at proof.
+Final exact-source CI, independent handoff and merged closeout remain pending.
