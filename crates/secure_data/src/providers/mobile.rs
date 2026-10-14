@@ -280,7 +280,7 @@ mod tests {
         aead::{Aead, KeyInit, Payload},
         Aes256Gcm, Nonce,
     };
-    use rand::RngCore;
+    use rand::{Rng, RngCore};
     use security_core::classification::DataClassification;
     use std::sync::{
         atomic::{AtomicUsize, Ordering},
@@ -322,8 +322,7 @@ mod tests {
             }
             // Test-only native stand-in; never exposed as a production backend.
             let cipher = Aes256Gcm::new_from_slice(s.key.as_ref()).unwrap();
-            let mut nonce = [0u8; 12];
-            rand::rngs::OsRng.fill_bytes(&mut nonce);
+            let nonce: [u8; 12] = rand::rngs::OsRng.gen();
             let aad = format!("{alias}:v1");
             let mut frame = nonce.to_vec();
             frame.extend(
