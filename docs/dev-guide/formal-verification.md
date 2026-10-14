@@ -62,7 +62,9 @@ Promotion is itself a runbook — not a one-line CI flip — so the criteria are
 
 ```bash
 # One-time install — pin the version to match CI
-cargo install --locked kani-verifier --version 0.67.0
+python3 scripts/osv-dependency-gate.py --output .cache/osv-dependency-gate/findings.json
+python3 scripts/install-security-tool.py kani-verifier --report .cache/osv-dependency-gate/findings.json --receipt .cache/osv-dependency-gate/findings.receipt.json
+export PATH="$PWD/.cache/security-tools/installed/bin:$PATH"
 cargo kani setup
 
 # Run all secure_data harnesses

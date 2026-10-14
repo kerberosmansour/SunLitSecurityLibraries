@@ -38,7 +38,7 @@ echo ""
 # ── Step 1: cargo audit ───────────────────────────────────────────────────────
 echo "--- cargo audit ---"
 if ! command -v cargo-audit &>/dev/null; then
-    warn "cargo-audit not installed. Run: cargo install cargo-audit"
+    warn "cargo-audit not installed. Use the scanned source-tool installer; see tools/security-toolchains/README.md"
     ERRORS=$((ERRORS + 1))
 else
     if cargo audit; then
@@ -53,7 +53,7 @@ echo ""
 # ── Step 2: cargo deny ────────────────────────────────────────────────────────
 echo "--- cargo deny check ---"
 if ! command -v cargo-deny &>/dev/null; then
-    warn "cargo-deny not installed. Run: cargo install cargo-deny"
+    warn "cargo-deny not installed. Use the scanned source-tool installer; see tools/security-toolchains/README.md"
     ERRORS=$((ERRORS + 1))
 else
     if cargo deny check; then
@@ -68,7 +68,7 @@ echo ""
 # ── Step 3: cargo vet ────────────────────────────────────────────────────────
 echo "--- cargo vet ---"
 if ! command -v cargo-vet &>/dev/null; then
-    warn "cargo-vet not installed. Run: cargo install cargo-vet"
+    warn "cargo-vet not installed. Use the scanned source-tool installer; see tools/security-toolchains/README.md"
     ERRORS=$((ERRORS + 1))
 else
     if cargo vet; then
@@ -80,47 +80,17 @@ else
 fi
 echo ""
 
-# ── Step 4: OSV Scanner ─────────────────────────────────────────────────────
-echo "--- OSV Scanner ---"
-if ! command -v osv-scanner &>/dev/null; then
-    warn "osv-scanner not installed. Install OSV Scanner v2.3.6 from https://github.com/google/osv-scanner/releases/tag/v2.3.6"
+# ── OSV admission (mandatory, pinned bootstrap) ───────────────────────────────
+echo "--- OSV dependency admission ---"
+if python3 scripts/osv-dependency-gate.py; then
+    pass "OSV — complete resolved graph admitted"
+else
+    fail "OSV — dependency admission failed"
     ERRORS=$((ERRORS + 1))
-else
-    if osv-scanner scan source -r .; then
-        pass "OSV Scanner — no unaccepted dependency vulnerabilities"
-    else
-        fail "OSV Scanner — unaccepted dependency vulnerabilities found"
-        ERRORS=$((ERRORS + 1))
-    fi
 fi
-echo ""
 
-# ── Step 5: cargo geiger (advisory) ──────────────────────────────────────────
-# Surfaces transitive `unsafe` usage in the dependency tree. SunLit source is
-# forbid(unsafe_code), so this measures what deps bring in. Advisory: failure
-# does not count toward ERRORS. JSON artifact is the audit evidence.
-#
-# cargo-geiger requires a root package (it cannot consume a virtual manifest).
-# We use secure_reference_service because it depends on every library crate
-# and is the closest analogue to a downstream consumer's BOM.
-#
-# See docs/dev-guide/unsafe-budget.md.
-echo "--- cargo geiger (advisory) ---"
-if ! command -v cargo-geiger &>/dev/null; then
-    warn "cargo-geiger not installed. Run: cargo install --locked cargo-geiger --version 0.13.0"
-else
-    mkdir -p output
-    if (cd crates/secure_reference_service && cargo geiger \
-        --all-features \
-        --output-format Json \
-        --update-readme=false \
-        > "$WORKSPACE_ROOT/output/cargo-geiger.json"); then
-        pass "cargo geiger — JSON artifact written to output/cargo-geiger.json"
-    else
-        warn "cargo geiger — non-zero exit (advisory); see output/cargo-geiger.json for details"
-    fi
-fi
-echo ""
+# cargo-geiger is parked: its latest graph retains unpatched advisories.
+# Existing source/native/SAST/formal guards remain active; no waiver is added.
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 echo "=== Audit Summary ==="

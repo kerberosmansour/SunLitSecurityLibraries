@@ -64,3 +64,9 @@ specs/**/MC.cfg
 specs/**/*.dot
 specs/**/*.toolbox/
 states/
+
+# Verified scanner cache and local JSON evidence
+/.cache/osv-dependency-gate/
+
+# Source-verified security tool builds
+/.cache/security-tools/

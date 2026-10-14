@@ -1,0 +1,47 @@
+{
+  "cargo-audit": {
+    "version": "0.22.2",
+    "archiveSHA256": "700c2b240f7fd330c24b675fe429f73a5b676531fcc6300400b2b67f155ba12a",
+    "repository": "https://github.com/rustsec/rustsec",
+    "sourceCommit": "281452c35cf0870969042374110f099a411bc185",
+    "lockfileSHA256": "6151e79756a019ecc8cffdc2cd0c09739c7efb9e54ac105dca87b9f0ac784e1c",
+    "manifestVersionEdits": {},
+    "binary": "cargo-audit"
+  },
+  "cargo-deny": {
+    "version": "0.20.2",
+    "archiveSHA256": "e528dfcbe739af7ce37a77d3d6df1b29dd6887b1c701d888820c0f16b864f737",
+    "repository": "https://github.com/EmbarkStudios/cargo-deny",
+    "sourceCommit": "bca0dde53651ee946720e4540b5ce2610bec8f06",
+    "lockfileSHA256": "f1bbbdc0b1223a3dace366000016f457390f5ad96b0a66f755a9ad67dace6182",
+    "manifestVersionEdits": {},
+    "binary": "cargo-deny"
+  },
+  "cargo-vet": {
+    "version": "0.10.2",
+    "archiveSHA256": "dd93790018205cbbfa161f078ca4631afa8ed57fc8f32482268bcfdf0c0d7499",
+    "repository": "https://github.com/mozilla/cargo-vet",
+    "sourceCommit": "28f617ea97392d527799649db588a6dbb695da8d",
+    "lockfileSHA256": "5a9aec2d4c6d64017d39a2aca8eb7bed105e83218d3ffc672f35cef314aea228",
+    "manifestVersionEdits": {
+      "reqwest": {
+        "from": "0.11.10",
+        "to": "=0.12.28"
+      },
+      "indicatif": {
+        "from": "0.17.0",
+        "to": "=0.18.3"
+      }
+    },
+    "binary": "cargo-vet"
+  },
+  "kani-verifier": {
+    "version": "0.68.0",
+    "archiveSHA256": "842fabd2ba8b13babab862e21fef2946b581d493f23062d5ce86266630f1d1ae",
+    "repository": "https://github.com/model-checking/kani",
+    "sourceCommit": "0d2328a93f0e0ff66132d6bfa1a7d884877cf862",
+    "lockfileSHA256": "23d0a864c793eb34b198590163ac1821f4e06e6e2bc0a5899ce21b471a0fbaa5",
+    "manifestVersionEdits": {},
+    "binary": "cargo-kani"
+  }
+}

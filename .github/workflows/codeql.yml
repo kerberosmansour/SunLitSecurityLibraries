@@ -19,7 +19,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  dependency-admission:
+    name: Dependency admission
+    uses: ./.github/workflows/osv-dependency-gate.yml
+    permissions:
+      contents: read
+
   analyze:
+    needs: dependency-admission
     name: CodeQL Rust
     if: ${{ github.event.repository.private == false }}
     runs-on: ubuntu-latest

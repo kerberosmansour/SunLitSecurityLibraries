@@ -187,6 +187,12 @@ criteria = "safe-to-deploy"
 delta = "0.23.40 -> 0.23.45"
 notes = "AI-assisted exact forward delta review of handshake client/server/encryption-level deframer, message parsing, certificate/compression/provider/suite selection, stream buffering and key-log paths. is_aligned now rejects any pending handshake span before key changes, fixing cross-encryption-level acceptance; ticket requests are optional and server-capped with default zero. Signature schemes and suites remain filtered for the selected protocol; buffers use checked bounds. Crate forbids unsafe. Existing caller-opted SSLKEYLOGFILE authority now creates Unix files mode 0600; no automatic key logging is introduced. Provider/WebPKI review is separate, with explicit native feature/build boundaries and temporary native audit exceptions. Project HTTPS/JWKS/all-features tests passed; not full TLS or cryptographic verification."
 
+[[audits.rustls]]
+who = "Codex (AI-assisted maintenance delta review)"
+criteria = "safe-to-deploy"
+delta = "0.23.45 -> 0.23.46"
+notes = "Exact authenticated registry delta reviewed across all 18 changed production source files and two version-only manifests, plus independent read-only Codex review. Fixes four same-day advisories: secret Debug redaction, ECH rejection before traffic, strict bounded certificate decompression, authenticated KX hint persistence. No new dependencies/features/build authority/unsafe blocks/process execution/ambient access. Review limits: this does not certify end-to-end application delivery at traffic-key record exhaustion or extensively reused standalone HPKE contexts; retained SDK/reqwest paths do not create the latter. Brotli is not enabled by this workspace; strict decoding still has internal-window overhead. Project all-feature tests and live OSV scan passed. Existing seven exact temporary exceptions are unchanged. This is a delta audit, not full TLS/cryptographic verification."
+
 [[audits.rustls-webpki]]
 who = "Codex (AI-assisted maintenance review)"
 criteria = "safe-to-deploy"
