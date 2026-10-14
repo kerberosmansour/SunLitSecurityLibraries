@@ -7,7 +7,7 @@ M2: validate negative boundaries, live inventory, workflow permissions/order and
 
 | Contract | Constraint |
 |---|---|
-| Allow-list | scripts/osv-dependency-gate.py, scripts/test_osv_dependency_gate.py, scripts/check-maintenance-workflows.py; .github/workflows/osv-dependency-gate.yml; existing dependency-executing workflows; .gitignore; AGENTS.md; CLAUDE.md; README.md; this contract. Rust additionally scripts/install-security-tool.py, scripts/run-security-tool.py, scripts/check-native-dependencies.py, scripts/test_install_security_tool.py, scripts/audit.sh, scripts/audit.ps1, sca-scope.json, scripts/locked-cargo.py, scripts/lock-kani-cargo.py, scripts/check-dast-report.py, scripts/test_ci_integrations.py, tools/security-toolchains/semgrep/requirements.txt, tools/security-toolchains/README.md, tools/security-toolchains/recipes.json, tools/security-toolchains/cargo-audit/Cargo.lock, tools/security-toolchains/cargo-deny/Cargo.lock, tools/security-toolchains/cargo-vet/Cargo.lock, tools/security-toolchains/kani-verifier/Cargo.lock, docs/dev-guide/unsafe-budget.md, docs/dev-guide/formal-verification.md, Cargo.lock, supply-chain/audits.toml, CHANGELOG.md for the exact rustls repair. |
+| Allow-list | scripts/osv-dependency-gate.py, scripts/test_osv_dependency_gate.py, scripts/check-maintenance-workflows.py; .github/workflows/osv-dependency-gate.yml; existing dependency-executing workflows; .gitignore; AGENTS.md; CLAUDE.md; README.md; docs/dev-guide/branch-protection.md; this contract. Rust additionally scripts/install-security-tool.py, scripts/run-security-tool.py, scripts/check-native-dependencies.py, scripts/test_install_security_tool.py, scripts/audit.sh, scripts/audit.ps1, sca-scope.json, scripts/locked-cargo.py, scripts/lock-kani-cargo.py, scripts/test_ci_integrations.py, tools/security-toolchains/semgrep/requirements.txt, tools/security-toolchains/README.md, tools/security-toolchains/recipes.json, tools/security-toolchains/cargo-audit/Cargo.lock, tools/security-toolchains/cargo-deny/Cargo.lock, tools/security-toolchains/cargo-vet/Cargo.lock, tools/security-toolchains/kani-verifier/Cargo.lock, docs/dev-guide/unsafe-budget.md, docs/dev-guide/formal-verification.md, Cargo.lock, supply-chain/audits.toml, CHANGELOG.md for the exact rustls repair. |
 | Read-list | All changed workflows and root manifests/locks, existing scope and exception files, official OSV release metadata/SHA256SUMS/source documentation, existing workflow regressions. |
 | Dependencies | No new project dependency; official scanner is a verified build tool. OSV version and six platform digests matched to official release metadata and published SHA256SUMS. |
 | Compatibility | Existing test/check names retained. Read-only scans do not remediate, merge, execute install scripts or perform call analysis. Deliberate vulnerable fixture locks stay excluded and uninstalled. |
@@ -67,3 +67,10 @@ Kani driver source confirms release setup/metadata/build selects
 Real Kani/DAST GitHub execution remains required before merge. Host network
 access for loopback DAST and mutable upstream Semgrep rules are disclosed tool
 containment/reproducibility limits; no source or credentials are sent to a model.
+
+Maintainer decision: remove the redundant example-service DAST workflow after
+its anonymous registry data quota repeatedly prevented the image pull. The
+unused newly introduced XML helper/tests were removed too; no passing DAST
+result is claimed. The required-check entry is replaced by OSV admission, while
+all other protections remain. Local DAST helpers are research-only. All14 Kani
+harnesses genuinely executed and passed in run38594854285; Semgrep/scope pass.

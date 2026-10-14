@@ -778,8 +778,9 @@ OpenAPI 3.1 spec for OWASP ZAP: `crates/secure_smoke_service/openapi.yaml`.
 The workspace keeps local DAST (Dynamic Application Security Testing) tooling
 for [OWASP ZAP](https://www.zaproxy.org/) (Checkmarx ZAP). ZAP scans the smoke
 service's OpenAPI spec and can gate on high/critical findings when run locally.
-CI uses Dastardly as the single PR DAST lane to avoid duplicate long-running
-GitHub Actions scans.
+The example-service DAST job was removed from CI by maintainer decision: it
+scanned a generated fixture and depended on an anonymously rate-limited registry.
+Library tests, OSV, SAST, CodeQL, native guards and Kani remain the automated gates.
 
 ### Prerequisites
 
@@ -810,8 +811,8 @@ bash scripts/zap_scan.sh --keep-service
 ### CI Integration
 
 ZAP does not run automatically in GitHub Actions. Use the local script when a
-change needs OpenAPI-driven ZAP coverage. Pull requests use the Dastardly
-workflow below as the CI DAST gate.
+change needs OpenAPI-driven ZAP coverage. There is no automatic example-service
+DAST job; qualify the scanner dependency graph before executing local tooling.
 
 ### Customisation
 
@@ -824,8 +825,8 @@ workflow below as the CI DAST gate.
 ## Dastardly (Burp Suite) DAST Scanning
 
 [Dastardly](https://portswigger.net/burp/dastardly) is a free, lightweight DAST
-scanner from PortSwigger, powered by the same engine as Burp Suite. It is the
-CI DAST gate for pull requests and checks for XSS (reflected & stored), SQL
+scanner from PortSwigger, powered by the same engine as Burp Suite. The retained
+local example-service helper can check XSS (reflected & stored), SQL
 injection, OS command injection, path traversal, SSRF, XXE, and improper input
 handling.
 
@@ -850,12 +851,10 @@ bash scripts/dastardly_scan.sh --keep-service
 
 ### CI Integration
 
-The Dastardly scan runs automatically in CI via `.github/workflows/dastardly.yml` on every push and PR to `main`. The workflow:
-
-1. Builds and starts `secure_smoke_service`
-2. Runs Dastardly via the official `PortSwigger/dastardly-github-action`
-3. Publishes results as a JUnit test report
-4. Uploads the XML report as a build artifact
+The automatic example-service Dastardly workflow has been removed. It did not
+represent a deployed product boundary and failed on ECR Public anonymous quotas.
+No failed/missing scan is recorded as a clean result. Local helpers remain
+optional research tools and do not constitute a qualified production DAST gate.
 
 ---
 
