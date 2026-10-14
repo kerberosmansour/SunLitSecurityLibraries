@@ -1,6 +1,6 @@
 # Release process
 
-The repository is public. Twelve independently installable libraries share version 0.2.0; secure_reference_service and secure_smoke_service have publish=false and are integration fixtures.
+The repository is public. Twelve independently installable libraries share version 0.2.1; secure_reference_service and secure_smoke_service have publish=false and are integration fixtures.
 
 ## Verification
 
@@ -8,7 +8,36 @@ Use a clean release commit on main. Run workspace tests, feature tests, Clippy, 
 
 ## Publishing
 
-Publish in dependency order: security_core, security_events, secure_errors, secure_output, secure_network, secure_device_trust, secure_boundary, secure_data, secure_resilience, secure_privacy, secure_identity, secure_authz. Use cargo package --list for each crate to inspect contents. Before each upload run cargo publish --dry-run --locked -p <crate>, then cargo publish --locked -p <crate>. Cargo resolves versioned sibling path dependencies from crates.io for verification, so each prerequisite must reach the registry index first. Cargo waits for availability after an upload; use bounded registry checks or honor Retry-After if throttled rather than a fixed ten-minute delay for every crate.
+Publish in dependency order: security_core, security_events, secure_errors,
+secure_output, secure_network, secure_device_trust, secure_boundary, secure_data,
+secure_resilience, secure_privacy, secure_identity, secure_authz.
+
+1. On the clean reviewed release commit, run `python3 scripts/osv-dependency-gate.py
+   --output .cache/release-root-osv.json`. Review the complete graph/provenance.
+2. Resolve each candidate without compilation: `cargo publish --dry-run --no-verify
+   --locked -p <crate>`. Inspect the generated archive's file list and metadata.
+3. Run `python3 scripts/admit-release-package.py target/package/<name>-<version>.crate
+   --root-report .cache/release-root-osv.json --root-receipt
+   .cache/release-root-osv.receipt.json --published-records <verified-prerequisites.json>`.
+   The records are a JSON list of exact previously published sibling names,
+   versions, sourceCommit and registry-matched archive checksum. Start with `[]`.
+   The helper binds every shipped source byte to clean Git, checks normalized
+   manifest authority and exact checksum-subset membership, then scans the
+   packaged Cargo.lock with the official pinned scanner. Same product exceptions
+   apply only after this review; tool graphs cannot inherit them. Keep reports.
+4. Only after admission, run `cargo package --locked -p <crate>` for normal
+   compile verification. Check that the archive still matches its admission
+   receipt before `cargo publish --no-verify --locked -p <crate>`; no second build
+   is needed. Verify immutable registry checksum,
+   archive source/contents and candidate receipt against the admitted bytes.
+   Record each prerequisite before the next dependent crate is considered.
+
+Cargo resolves versioned sibling path dependencies from crates.io, so each
+prerequisite must reach the index first. Use bounded registry checks and honor
+Retry-After rather than fixed ten-minute delays. Any new package/version/checksum
+outside the admitted workspace graph fails closed; review it explicitly before
+verification, procedural macro/build-script execution or publication.
+
 
 Publishing a version is permanent. A multi-crate release is sequential and can be partial; confirm the registry version/checksum before retrying an interrupted run. Never overwrite or blindly republish an existing version. If a secret enters a published crate, revoke it: yanking cannot erase its contents.
 

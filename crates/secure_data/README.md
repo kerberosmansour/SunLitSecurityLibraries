@@ -18,7 +18,7 @@ Secrets management, envelope encryption, and password hashing (OWASP C8). Part o
 
 ```toml
 [dependencies]
-secure_data = { version = "0.2.0", features = ["password"] }
+secure_data = { version = "0.2.1", features = ["password"] }
 ```
 
 ## Quick examples
