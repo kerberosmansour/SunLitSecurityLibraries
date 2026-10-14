@@ -9,12 +9,24 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ## Unreleased
 
-### Security
+### Security and dependency admission
 
 - Fix issue #55: `secure_authz::DefaultAuthorizer` binds cached decisions to the
   exact ordered roles, so role removal and grants cannot reuse stale decisions.
   Preserve public cache APIs, TTL and capacity; isolate manually seeded entries
   from internal authorizer entries. Identity-provider freshness remains required.
+- Repair four rustls advisories published 2026-10-14 by upgrading only rustls
+  0.23.45 → 0.23.46 and recording a reviewed cargo-vet delta. Preserve the rest of
+  the locked graph and existing exact, expiring exception boundaries.
+- Require checksum-pinned OSV scans of resolved direct/transitive dependencies
+  before CI builds and in the daily SCA workflow. Reject partial/empty scans,
+  scanner/network failures and malicious-package waivers. Preserve JSON evidence
+  without executing dependency install/build scripts; document Codex/Claude rules.
+- Scan and freeze Cargo audit-tool/Kani graphs before source builds. Keep cargo-vet
+  evaluation code unchanged while replacing its obsolete transport/progress
+  dependency requirements with a documented manifest-only overlay. Park the
+  optional cargo-geiger inventory because the latest tool still has unpatched
+  dependencies; retain required source/native/SAST/formal checks.
 
 ## [0.2.0] — 2026-10-14
 

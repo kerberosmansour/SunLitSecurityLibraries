@@ -1,6 +1,13 @@
 # Unsafe Code Budget
 
-> Status: M1 (regression-tested forbid posture) and M2 (`cargo-geiger` advisory CI lane + workspace number) are complete. Promotion of the threshold to a blocking gate is a separate, future runbook.
+> Current status (2026-10-14): the optional cargo-geiger inventory is parked.
+> OSV reports unpatched dependencies in cargo-geiger 0.14.0 even after compatible
+> resolution; do not install it or waive these findings. Historical counts below
+> are dated evidence, not current release gates. Source unsafe attestation,
+> native guards, SAST and bounded Kani remain enabled. Re-enable the inventory
+> only with a reviewed, admitted tool graph.
+
+> Historical status: M1 (regression-tested forbid posture) and M2 (`cargo-geiger` advisory CI lane + workspace number) are complete. Promotion of the threshold to a blocking gate is a separate, future runbook.
 
 ## Posture
 

@@ -17,6 +17,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  dependency-admission:
+    name: Dependency admission
+    uses: ./.github/workflows/osv-dependency-gate.yml
+    permissions:
+      contents: read
+
   dependency-review:
     name: Dependency Review
     if: github.event_name == 'pull_request' && github.event.repository.private == false
@@ -58,6 +64,8 @@ jobs:
           fi
 
   test:
+    if: always() && !cancelled()
+    needs: dependency-admission
     name: Test (${{ matrix.os }})
     strategy:
       matrix:
@@ -65,6 +73,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     steps:
+      - name: Fail the existing required check when dependency admission fails
+        if: needs.dependency-admission.result != 'success'
+        run: exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -87,7 +98,9 @@ jobs:
 
       - name: Workflow authority regressions
         if: runner.os == 'Linux'
-        run: python3 scripts/check-maintenance-workflows.py
+        run: |
+          python3 scripts/check-maintenance-workflows.py
+          python3 -m unittest discover -s scripts -p "test_*.py"
 
       - name: Release artifact integrity regressions
         if: runner.os == 'Linux'
@@ -109,14 +122,14 @@ jobs:
         run: cargo test --workspace --all-features --locked
 
       - name: Projected workload JWT contract
-        run: cargo test -p secure_identity --no-default-features --features "jwks" --test workload_jwt
+        run: cargo test -p secure_identity --no-default-features --features "jwks" --test workload_jwt --locked
 
       - name: Projected workload JWKS fetch/cache controls
-        run: cargo test -p secure_identity --no-default-features --features "jwks" --lib workload::tests
+        run: cargo test -p secure_identity --no-default-features --features "jwks" --lib workload::tests --locked
 
       - name: Doc
         if: runner.os == 'Linux'
-        run: cargo doc --workspace --no-deps
+        run: cargo doc --workspace --no-deps --locked
 
   # sg-gate-a M4: presubmit gate enforcing Google's "preventing backsliding"
   # pattern. Every crate that gained a framework-feature matrix in M1/M2
@@ -124,6 +137,8 @@ jobs:
   # PR, so a future edit that silently breaks one axis fails CI rather
   # than shipping.
   feature-matrix:
+    if: always() && !cancelled()
+    needs: dependency-admission
     name: Feature matrix (${{ matrix.crate }} features=${{ matrix.features }})
     timeout-minutes: 20
     runs-on: ubuntu-latest
@@ -137,6 +152,9 @@ jobs:
           - "actix-web"
           - "axum actix-web"
     steps:
+      - name: Fail the existing required check when dependency admission fails
+        if: needs.dependency-admission.result != 'success'
+        run: exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -145,7 +163,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@258712b0b7b1ddf8bddc9fc3b0faca682b2736c3 # v2
 
-      - name: cargo test
+      - name: cargo test --locked
         run: |
           if [ -z "${{ matrix.features }}" ]; then
             cargo test --locked -p ${{ matrix.crate }} --no-default-features
@@ -154,23 +172,33 @@ jobs:
           fi
 
   rustdoc-warnings:
+    if: always() && !cancelled()
+    needs: dependency-admission
     name: Rustdoc (zero warnings)
     runs-on: ubuntu-latest
     steps:
+      - name: Fail the existing required check when dependency admission fails
+        if: needs.dependency-admission.result != 'success'
+        run: exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
       - uses: Swatinem/rust-cache@258712b0b7b1ddf8bddc9fc3b0faca682b2736c3 # v2
-      - name: cargo doc (deny warnings)
+      - name: cargo doc (deny warnings) --locked
         env:
           RUSTDOCFLAGS: "-D warnings"
-        run: cargo doc --workspace --no-deps --all-features
+        run: cargo doc --workspace --no-deps --all-features --locked
 
   crate-package:
+    if: always() && !cancelled()
+    needs: dependency-admission
     name: Crate Packaging Preflight
     runs-on: ubuntu-latest
     steps:
+      - name: Fail the existing required check when dependency admission fails
+        if: needs.dependency-admission.result != 'success'
+        run: exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -183,19 +211,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cargo package -p security_core
+          cargo package -p security_core --locked
           for crate in \
             security_events secure_output secure_device_trust secure_network \
             secure_errors secure_boundary secure_data secure_resilience \
             secure_privacy secure_identity secure_authz
           do
-            cargo package -p "$crate" --list > "/tmp/$crate.package-list"
+            cargo package -p "$crate" --list > "/tmp/$crate.package-list" --locked
           done
 
   supply-chain:
+    if: always() && !cancelled()
+    needs: dependency-admission
     name: Supply-Chain Security
     runs-on: ubuntu-latest
     steps:
+      - name: Fail the existing required check when dependency admission fails
+        if: needs.dependency-admission.result != 'success'
+        run: exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -204,39 +237,31 @@ jobs:
 
       - uses: Swatinem/rust-cache@258712b0b7b1ddf8bddc9fc3b0faca682b2736c3 # v2
 
-      - name: Install audit tools
+      - name: Download security-tool admission evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: osv-dependencies-${{ github.workflow }}
+          path: .osv-admission
+
+      - name: Install source-verified tools with scanned frozen locks
         shell: bash
-        env:
-          OSV_SCANNER_VERSION: v2.3.6
-          OSV_SCANNER_SHA256: f689e183ef0d573d2459738aae457d411a26241ae58b5088de1af288b3355604
         run: |
           set -euo pipefail
-          cargo install --locked cargo-audit --version 0.22.1
-          cargo install --locked cargo-deny --version 0.19.0
-          cargo install --locked cargo-vet --version 0.10.2
-          if [ "$GITHUB_EVENT_NAME" = "schedule" ] || [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            cargo install --locked cargo-geiger --version 0.13.0
-          fi
-          install_dir="$RUNNER_TEMP/osv-scanner-bin"
-          mkdir -p "$install_dir"
-          curl -fsSL \
-            -o "$install_dir/osv-scanner" \
-            "https://github.com/google/osv-scanner/releases/download/${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
-          printf '%s  %s\n' "$OSV_SCANNER_SHA256" "$install_dir/osv-scanner" | sha256sum -c -
-          chmod 0755 "$install_dir/osv-scanner"
-          echo "$install_dir" >> "$GITHUB_PATH"
+          for tool in cargo-audit cargo-deny cargo-vet; do
+            python3 scripts/install-security-tool.py "$tool" --report .osv-admission/osv-dependencies.json --receipt .osv-admission/osv-dependencies.receipt.json
+          done
 
       - name: Cargo audit
-        run: cargo audit
+        run: python3 scripts/run-security-tool.py --report .osv-admission/osv-dependencies.json --receipt .osv-admission/osv-dependencies.receipt.json cargo-audit --
 
       - name: Cargo deny
-        run: cargo deny --locked check
+        run: python3 scripts/run-security-tool.py --report .osv-admission/osv-dependencies.json --receipt .osv-admission/osv-dependencies.receipt.json cargo-deny -- --locked check
 
       - name: Cargo vet
-        run: cargo vet --locked
+        run: python3 scripts/run-security-tool.py --report .osv-admission/osv-dependencies.json --receipt .osv-admission/osv-dependencies.receipt.json cargo-vet -- --locked
 
-      - name: OSV Scanner
-        run: osv-scanner scan source -r .
+      # The shared dependency-admission job scans every real lockfile with OSV
+      # before any matrix build. No duplicate scanner install or recursive scan.
 
       - name: ANSSI mapping lint
         # Gates the ANSSI Rust compliance mapping at docs/compliance/anssi-rust.md:
@@ -257,26 +282,6 @@ jobs:
         # docs/slo/design/pq-migration-plan.md §5.
         run: bash scripts/lint-fips-pq-claims.sh
 
-      - name: Cargo geiger (all libraries and features — advisory)
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        continue-on-error: true
-        timeout-minutes: 15
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p output
-          for manifest in crates/*/Cargo.toml; do
-            crate="$(basename "$(dirname "$manifest")")"
-            # Each crate is the feature root: a service-only report omits
-            # optional library features and library members it does not use.
-            cargo geiger --manifest-path "$PWD/$manifest" --all-features --all-dependencies --locked --output-format Json > "output/geiger-${crate}.json"
-          done
-
-      - name: Upload cargo-geiger artifact
-        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: cargo-geiger
-          path: output/geiger-*.json
-          if-no-files-found: warn
-          retention-days: 30
+      # cargo-geiger's latest graph still includes unpatched advisories. Do not
+      # build it or waive them for an advisory-only inventory. First-party
+      # unsafe attestation, native guards, SAST and bounded Kani remain enabled.

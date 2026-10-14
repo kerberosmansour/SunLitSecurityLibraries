@@ -36,7 +36,7 @@ Write-Host ""
 Write-Host "--- cargo audit ---"
 $cargoAudit = Get-Command cargo-audit -ErrorAction SilentlyContinue
 if (-not $cargoAudit) {
-    Write-Warn "cargo-audit not installed. Run: cargo install cargo-audit"
+    Write-Warn "cargo-audit not installed. Use tools/security-toolchains/README.md for admitted tools"
     $Errors++
 } else {
     cargo audit
@@ -53,7 +53,7 @@ Write-Host ""
 Write-Host "--- cargo deny check ---"
 $cargoDeny = Get-Command cargo-deny -ErrorAction SilentlyContinue
 if (-not $cargoDeny) {
-    Write-Warn "cargo-deny not installed. Run: cargo install cargo-deny"
+    Write-Warn "cargo-deny not installed. Use tools/security-toolchains/README.md for admitted tools"
     $Errors++
 } else {
     cargo deny check
@@ -70,7 +70,7 @@ Write-Host ""
 Write-Host "--- cargo vet ---"
 $cargoVet = Get-Command cargo-vet -ErrorAction SilentlyContinue
 if (-not $cargoVet) {
-    Write-Warn "cargo-vet not installed. Run: cargo install cargo-vet"
+    Write-Warn "cargo-vet not installed. Use tools/security-toolchains/README.md for admitted tools"
     $Errors++
 } else {
     cargo vet
@@ -83,56 +83,17 @@ if (-not $cargoVet) {
 }
 Write-Host ""
 
-# ── Step 4: OSV Scanner ─────────────────────────────────────────────────────
-Write-Host "--- OSV Scanner ---"
-$osvScanner = Get-Command osv-scanner -ErrorAction SilentlyContinue
-if (-not $osvScanner) {
-    Write-Warn "osv-scanner not installed. Install OSV Scanner v2.3.6 from https://github.com/google/osv-scanner/releases/tag/v2.3.6"
+# ── OSV admission (mandatory, pinned bootstrap) ───────────────────────────────
+Write-Host "--- OSV dependency admission ---"
+python scripts/osv-dependency-gate.py
+if ($LASTEXITCODE -eq 0) {
+    Write-Pass "OSV — complete resolved graph admitted"
+} else {
+    Write-Fail "OSV — dependency admission failed"
     $Errors++
-} else {
-    osv-scanner scan source -r .
-    if ($LASTEXITCODE -eq 0) {
-        Write-Pass "OSV Scanner — no unaccepted dependency vulnerabilities"
-    } else {
-        Write-Fail "OSV Scanner — unaccepted dependency vulnerabilities found"
-        $Errors++
-    }
 }
-Write-Host ""
 
-# ── Step 5: cargo geiger (advisory) ──────────────────────────────────────────
-# Surfaces transitive `unsafe` usage in the dependency tree. SunLit source is
-# forbid(unsafe_code), so this measures what deps bring in. Advisory: failure
-# does not count toward $Errors. JSON artifact is the audit evidence.
-#
-# cargo-geiger requires a root package (it cannot consume a virtual manifest).
-# We use secure_reference_service because it depends on every library crate
-# and is the closest analogue to a downstream consumer's BOM.
-#
-# See docs/dev-guide/unsafe-budget.md.
-Write-Host "--- cargo geiger (advisory) ---"
-$cargoGeiger = Get-Command cargo-geiger -ErrorAction SilentlyContinue
-if (-not $cargoGeiger) {
-    Write-Warn "cargo-geiger not installed. Run: cargo install --locked cargo-geiger --version 0.13.0"
-} else {
-    New-Item -ItemType Directory -Force -Path output | Out-Null
-    Push-Location crates/secure_reference_service
-    try {
-        cargo geiger `
-            --all-features `
-            --output-format Json `
-            --update-readme=false `
-            | Out-File -FilePath ../../output/cargo-geiger.json -Encoding utf8
-        if ($LASTEXITCODE -eq 0) {
-            Write-Pass "cargo geiger — JSON artifact written to output/cargo-geiger.json"
-        } else {
-            Write-Warn "cargo geiger — non-zero exit (advisory); see output/cargo-geiger.json for details"
-        }
-    } finally {
-        Pop-Location
-    }
-}
-Write-Host ""
+# cargo-geiger is parked while its latest graph has unpatched advisories.
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 Write-Host "=== Audit Summary ===" -ForegroundColor Cyan
