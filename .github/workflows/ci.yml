@@ -89,6 +89,10 @@ jobs:
         if: runner.os == 'Linux'
         run: python3 scripts/check-maintenance-workflows.py
 
+      - name: Release artifact integrity regressions
+        if: runner.os == 'Linux'
+        run: python3 -m unittest discover -s scripts -p test_prepare_release_artifacts.py
+
       - name: Check formatting
         if: runner.os == 'Linux'
         run: cargo fmt --all -- --check

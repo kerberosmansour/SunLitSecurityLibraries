@@ -14,10 +14,13 @@ Publishing a version is permanent. A multi-crate release is sequential and can b
 
 ## Signed release artifacts
 
-After registry publication, tag the tested main commit v0.2.0. release-sign.yml packages libraries without OIDC authority, then signs the resulting files in an isolated job and uploads signed-release-artifacts. It does not publish to crates.io. A manual run is allowed on main for a selected crate or all after dependencies exist in the registry. The workflow verifies the tag version and that its commit belongs to main.
+After registry publication, commit declarations/release-<version>-packages.json with the independently verified registry checksums and clean source commit. For future releases, tag the verified release commit containing the approval record and current workflow. The record identifies the immutable package source commit, which can precede that metadata commit. Library source/manifests/lock must remain unchanged between them. The existing 0.2.0 tag predates this recovery workflow and is intentionally left unchanged; dispatch the main recovery run instead. release-sign.yml downloads committed-checksum-approved registry archives without OIDC authority, verifies identity/source and generates CycloneDX 1.6 dependency SBOMs, then signs those exact files in an isolated job and uploads signed-release-artifacts. It does not publish to crates.io. A manual run is allowed on main for a selected crate or all after dependencies exist in the registry. The workflow verifies the tag version and that its commit belongs to main.
 
 Verify downloaded files and their Sigstore bundles using cosign verify-blob, the exact workflow identity (https://github.com/kerberosmansour/SunLitSecurityLibraries/.github/workflows/release-sign.yml@refs/tags/v0.2.0) and issuer https://token.actions.githubusercontent.com. Confirm SHA256SUMS. Attach the artifacts to the GitHub release.
 
 ## Repository controls
 
 Keep workflow tokens read-only by default, checks and dependency changes reviewed, Actions SHA-pinned, checkout credentials disabled, and build code separated from publishing/signing tokens. Inspect live branch protection, secret scanning and push-protection availability; do not assume account features are enabled from documentation alone. Daily scans and offline drills report evidence without creating or merging PRs.
+
+
+The 0.2.0 signing recovery uses a manual main run after archive repacking on CI changed file-mode metadata for two packages despite identical contents. The v0.2.0 source tag remains bf52c98180ca4794cc01ca06b3ca71d2981737ef. Verify the recovered bundles against the exact release-sign.yml identity at refs/heads/main and the documented signing run; checksums must match the committed release record and crates.io. Fresh repackaging is not a substitute for the immutable registry bytes. The producer downloads/reads archives but never builds or executes crate code; OIDC remains confined to the signing job.
