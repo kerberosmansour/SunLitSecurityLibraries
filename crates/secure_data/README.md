@@ -53,13 +53,13 @@ use secure_data::envelope::{encrypt_for_storage, decrypt_for_use};
 use secure_data::kms::StaticDevKeyProvider;
 use std::sync::Arc;
 
-let kms = Arc::new(StaticDevKeyProvider::with_dev_key());
+let kms = Arc::new(StaticDevKeyProvider::new());
 let plaintext = b"private medical record";
 
-let envelope = encrypt_for_storage(&*kms, "phi:patient:42", plaintext)?;
-// envelope.ciphertext is AES-256-GCM, envelope.wrapped_dek is the KMS-wrapped DEK.
+let envelope = encrypt_for_storage(plaintext, "phi:patient:42", &*kms).await?;
+// envelope.ciphertext is AES-256-GCM, envelope.wrapped_data_key is the KMS-wrapped DEK.
 
-let recovered = decrypt_for_use(&*kms, &envelope)?;
+let recovered = decrypt_for_use(&envelope, &*kms).await?;
 assert_eq!(recovered.as_slice(), plaintext);
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
@@ -138,3 +138,33 @@ Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibra
 
 
 AWS KMS dependency maintenance: the JSON parser advisory is repaired at aws-smithy-json 0.62.7 with the minimum compatible runtime/type/schema batch. The retained generated AWS SDK versions are pinned to avoid adopting new schema/codec paths during this review. Those new APIs have independently identified defects and are outside this provider's call path; two exact temporary cargo-vet exceptions expire 2026-11-14. They are not a general approval of those crates. The repository lock/audits describe its tested graph; downstream consumers must audit their final resolved graph and any custom SDK/runtime use.
+
+## Mobile native wrapping adapter (`mobile-storage`)
+
+`providers::mobile::MobileKeyProvider<B>` implements the sealed `KeyProvider`
+using a reviewed `NativeKeyBridge`. It reuses the same envelope AEAD and generates
+fresh zeroizing 32-byte DEKs. KEKs remain in native code. `new(bridge, platform,
+storage_policy)` combines an explicit `MobilePlatformPolicy` with the existing
+`MobileStoragePolicy`: iOS must be device-only, nonsynchronized and backup-excluded;
+Android software, TEE and StrongBox are distinct choices. Requiring hardware via
+storage policy always rejects software and unqualified iOS hardware claims.
+
+The native operation returns its exact alias/version and actual key custody with
+the wrapped frame or zeroizing DEK. A preflight device check is insufficient.
+Aliases/versions are nonempty printable ASCII <=128/64 bytes; frames are nonempty
+and <=8192 bytes. Malformed responses fail before AEAD. `MobileKeyError` carries
+fixed values without secret aliases, keys or native diagnostics. Decrypt never
+recreates a missing/invalidated key and no automatic retry occurs.
+
+Provider clones share serialized native operations. Independent providers sharing
+a native store need native coordination. The bridge must enforce timeouts, stop
+native work on cancellation, clear native transient copies, authenticate frames
+against alias/version, and enforce allocation limits before returning vectors.
+Rust can validate returned metadata but cannot prove native custody claims.
+
+This release's M1 is the adapter contract and executable real-envelope tests;
+it does not ship a native iOS/Android implementation or physical device
+qualification. The synthetic bridge is compiled only in tests. Guardian's bridge
+shape is reused; its attestation signing is not a wrapping implementation, and
+Broker's private desktop custody root is never exposed. See the mobile provider
+runbook/design/threat model. Native integration and device evidence are M2.

@@ -8,3 +8,6 @@ pub mod vault;
 
 #[cfg(feature = "aws-kms")]
 pub mod aws_kms;
+
+#[cfg(feature = "mobile-storage")]
+pub mod mobile;
