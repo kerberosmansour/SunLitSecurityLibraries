@@ -1,0 +1,67 @@
+{
+  "formatVersion": 1,
+  "version": "0.2.1",
+  "sourceCommit": "d5142b70275f45f2ee2ffa0ed24aad9976583547",
+  "packages": [
+    {
+      "name": "security_core",
+      "version": "0.2.1",
+      "checksum": "d4e14287753126ee280510f48ccf58e2d4426e2e99f6f7680a1075d4b9829b19"
+    },
+    {
+      "name": "security_events",
+      "version": "0.2.1",
+      "checksum": "8de5728a0feaf76be41660fcf01deb2679cafc17d6e09054b571e3ef7d8bc9c5"
+    },
+    {
+      "name": "secure_errors",
+      "version": "0.2.1",
+      "checksum": "996eed53b1b4568362c7b8fec46a80b3d20b75d1fc23c1b18b644fdf2b5f058b"
+    },
+    {
+      "name": "secure_output",
+      "version": "0.2.1",
+      "checksum": "1c3ca3d309fc496a5faf57ebf641dd5b09fa49442cc975279ced1dd621b8c357"
+    },
+    {
+      "name": "secure_network",
+      "version": "0.2.1",
+      "checksum": "99dab0bb38a86b5171f6237fe1996a70f8291b1d53405faf084c177d143ef3f6"
+    },
+    {
+      "name": "secure_device_trust",
+      "version": "0.2.1",
+      "checksum": "2933aa0307c13f3d9d1a8516645b13850ba2e5f2ff6b3a305e75724a0e0911b9"
+    },
+    {
+      "name": "secure_boundary",
+      "version": "0.2.1",
+      "checksum": "4cfbe0ecdf7967cdbac22db82fae708fc46b96899347c67e8904e5ca496740ba"
+    },
+    {
+      "name": "secure_data",
+      "version": "0.2.1",
+      "checksum": "4d32e9201ed9a479f2bfd0e9b958454cb3c4158e296f42c0ac2650ff5245cab2"
+    },
+    {
+      "name": "secure_resilience",
+      "version": "0.2.1",
+      "checksum": "e8f0782498c37b86a873dae95a6e52d5d5cfdd69240403bc56da33a1edaf8968"
+    },
+    {
+      "name": "secure_privacy",
+      "version": "0.2.1",
+      "checksum": "157ad8b28ca63d5c35d03c73bbd0620fd1c6b6d6b294208f164998dc81513299"
+    },
+    {
+      "name": "secure_identity",
+      "version": "0.2.1",
+      "checksum": "0cfa0ec47f9c6ce675bd4147fdde657ed83ffca4dbbe4933f85772ec43dc9efc"
+    },
+    {
+      "name": "secure_authz",
+      "version": "0.2.1",
+      "checksum": "f21b23b84e1d5eb1e439e570d642a31a187728cec4b863aea3195f1da4df2eef"
+    }
+  ]
+}
