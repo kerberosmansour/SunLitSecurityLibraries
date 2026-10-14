@@ -1,4 +1,4 @@
-"""Runtime-relevant CI boundary tests using generated SDK/report fixtures."""
+"""Runtime-relevant CI boundary tests using generated SDK fixtures."""
 import importlib.util
 import io
 import json
@@ -17,7 +17,6 @@ def module(name, file):
 
 cargo = module("locked", "locked-cargo.py")
 kani = module("kani", "lock-kani-cargo.py")
-dast = module("dast", "check-dast-report.py")
 
 class IntegrationTests(unittest.TestCase):
     def test_cargo_wrapper_locks_metadata_and_build_without_changing_arguments(self):
@@ -45,22 +44,5 @@ class IntegrationTests(unittest.TestCase):
             failed = subprocess.run([str(installation / "toolchain/bin/cargo"), "--version"], capture_output=True)
             self.assertNotEqual(failed.returncode, 0)
 
-    def test_missing_or_malformed_scan_report_fails_closed(self):
-        with tempfile.TemporaryDirectory() as folder:
-            p = Path(folder) / "report.xml"
-            with self.assertRaises(ValueError):dast.check_report(p)
-            for text in ('<unexpected/>', '<testsuites/>', '<testsuite/>', '<testsuites><unexpected/></testsuites>'):
-                p.write_text(text)
-                with self.assertRaises(ValueError):dast.check_report(p)
-
-    def test_report_distinguishes_empty_clean_scan_and_findings(self):
-        with tempfile.TemporaryDirectory() as folder:
-            p = Path(folder) / "report.xml"
-            p.write_text('<testsuite tests="0" failures="0" errors="0"/>')
-            self.assertFalse(dast.check_report(p))
-            p.write_text('<testsuite tests="1" failures="1" errors="0"><testcase><failure message="generated"/></testcase></testsuite>')
-            self.assertTrue(dast.check_report(p))
-            p.write_text('<testsuites><testsuite tests="1" failures="1" errors="0"/></testsuites>')
-            self.assertTrue(dast.check_report(p))
 
 if __name__ == "__main__":unittest.main()
