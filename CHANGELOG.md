@@ -11,6 +11,10 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ### Security and dependency admission
 
+- Fix issue #55: `secure_authz::DefaultAuthorizer` binds cached decisions to the
+  exact ordered roles, so role removal and grants cannot reuse stale decisions.
+  Preserve public cache APIs, TTL and capacity; isolate manually seeded entries
+  from internal authorizer entries. Identity-provider freshness remains required.
 - Repair four rustls advisories published 2026-10-14 by upgrading only rustls
   0.23.45 → 0.23.46 and recording a reviewed cargo-vet delta. Preserve the rest of
   the locked graph and existing exact, expiring exception boundaries.
