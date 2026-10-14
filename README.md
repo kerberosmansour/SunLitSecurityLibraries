@@ -254,9 +254,24 @@ cargo +nightly miri test --workspace
 
 ## Supply-Chain Security
 
+Dependency admission starts with a checksum-pinned OSV scan of every resolved
+production/toolchain lockfile before candidate dependencies execute:
+
+```sh
+python3 scripts/osv-dependency-gate.py
+```
+
+CI matrices, releases that build dependencies, and the daily scan use the same
+read-only gate. Reports include direct and transitive dependencies. Network,
+scanner and incomplete-inventory failures fail closed. Known malicious packages
+cannot be waived. OSV detects known advisories and malicious-package reports; it
+cannot prove absence of unknown malware, so provenance, integrity and build-script
+review remain mandatory. Codex and Claude follow [AGENTS.md](./AGENTS.md).
+
+
 [![CI](https://github.com/kerberosmansour/SunLitSecurityLibraries/actions/workflows/ci.yml/badge.svg)](https://github.com/kerberosmansour/SunLitSecurityLibraries/actions/workflows/ci.yml)
 
-Every dependency in this workspace is audited, license-checked, and source-verified on every pull request.
+Every pull request runs vulnerability, license/source and cargo-vet checks. The vet graph includes reviewed dependencies and explicit exemptions; a passing gate does not mean every dependency has been fully audited.
 
 ### Tools
 
@@ -270,7 +285,8 @@ Every dependency in this workspace is audited, license-checked, and source-verif
 
 ```bash
 # Install tools (one-time)
-cargo install cargo-audit cargo-deny cargo-vet
+python3 scripts/osv-dependency-gate.py
+# Build pinned tools from the admitted graph: tools/security-toolchains/README.md
 
 # Run all checks (Linux/macOS)
 bash scripts/audit.sh
@@ -292,7 +308,7 @@ cargo vet                    # audit trail
 - **Unknown git sources denied**: no git dependencies allowed
 - **Advisory ignore list**: every entry requires a written justification (see `deny.toml`)
 - **Memory-safety attestation**: every workspace crate declares `#![forbid(unsafe_code)]` at lib-root. The posture is regression-tested by [`crates/security_core/tests/no_unsafe_code.rs`](./crates/security_core/tests/no_unsafe_code.rs) — removal fails the build with a named-crate error. The accompanying scan also asserts no `unsafe` keyword appears anywhere in `crates/*/src/`.
-- **Transitive `unsafe` visibility**: every PR runs `cargo geiger --workspace --all-features` (advisory, 10-min cap) and uploads the JSON artifact. The number is the upper bound across all features; deltas are visible to reviewers via the artifact diff. See [`docs/dev-guide/unsafe-budget.md`](./docs/dev-guide/unsafe-budget.md) for the posture and threshold-promotion plan.
+- **Transitive unsafe inventory:** the optional cargo-geiger lane is parked because its latest graph retains unpatched advisories. Source unsafe attestation, native guards, SAST and bounded Kani remain enabled. See [unsafe-budget.md](./docs/dev-guide/unsafe-budget.md) for the historical inventory and limits.
 - **Formal verification** (advisory): every PR runs `cargo kani` (15-min cap) against the workspace's proof harnesses for `secure_data`, `secure_authz`, `secure_boundary`, and `secure_errors`. The TLA+ lane (10-min cap) checks the verified circuit-breaker and session step-up state machines, including their Naive counterexample specs. See [`docs/dev-guide/formal-verification.md`](./docs/dev-guide/formal-verification.md).
 
 ---
@@ -762,8 +778,9 @@ OpenAPI 3.1 spec for OWASP ZAP: `crates/secure_smoke_service/openapi.yaml`.
 The workspace keeps local DAST (Dynamic Application Security Testing) tooling
 for [OWASP ZAP](https://www.zaproxy.org/) (Checkmarx ZAP). ZAP scans the smoke
 service's OpenAPI spec and can gate on high/critical findings when run locally.
-CI uses Dastardly as the single PR DAST lane to avoid duplicate long-running
-GitHub Actions scans.
+The example-service DAST job was removed from CI by maintainer decision: it
+scanned a generated fixture and depended on an anonymously rate-limited registry.
+Library tests, OSV, SAST, CodeQL, native guards and Kani remain the automated gates.
 
 ### Prerequisites
 
@@ -794,8 +811,8 @@ bash scripts/zap_scan.sh --keep-service
 ### CI Integration
 
 ZAP does not run automatically in GitHub Actions. Use the local script when a
-change needs OpenAPI-driven ZAP coverage. Pull requests use the Dastardly
-workflow below as the CI DAST gate.
+change needs OpenAPI-driven ZAP coverage. There is no automatic example-service
+DAST job; qualify the scanner dependency graph before executing local tooling.
 
 ### Customisation
 
@@ -808,8 +825,8 @@ workflow below as the CI DAST gate.
 ## Dastardly (Burp Suite) DAST Scanning
 
 [Dastardly](https://portswigger.net/burp/dastardly) is a free, lightweight DAST
-scanner from PortSwigger, powered by the same engine as Burp Suite. It is the
-CI DAST gate for pull requests and checks for XSS (reflected & stored), SQL
+scanner from PortSwigger, powered by the same engine as Burp Suite. The retained
+local example-service helper can check XSS (reflected & stored), SQL
 injection, OS command injection, path traversal, SSRF, XXE, and improper input
 handling.
 
@@ -834,12 +851,10 @@ bash scripts/dastardly_scan.sh --keep-service
 
 ### CI Integration
 
-The Dastardly scan runs automatically in CI via `.github/workflows/dastardly.yml` on every push and PR to `main`. The workflow:
-
-1. Builds and starts `secure_smoke_service`
-2. Runs Dastardly via the official `PortSwigger/dastardly-github-action`
-3. Publishes results as a JUnit test report
-4. Uploads the XML report as a build artifact
+The automatic example-service Dastardly workflow has been removed. It did not
+represent a deployed product boundary and failed on ECR Public anonymous quotas.
+No failed/missing scan is recorded as a clean result. Local helpers remain
+optional research tools and do not constitute a qualified production DAST gate.
 
 ---
 

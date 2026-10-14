@@ -45,7 +45,7 @@ Before making the repository public:
    - `Supply-Chain Security`
    - `Semgrep Rust`
    - `CodeQL Rust` once the repository is public
-   - `Dastardly (Burp Suite) Scan`
+   - `Dependency admission / OSV resolved dependencies`
    - `Library device-trust contract`
    - `ZeroTrustAuth external conformance`
 5. Require the feature-matrix checks for crates that have framework adapters:

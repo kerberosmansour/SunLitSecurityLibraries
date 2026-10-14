@@ -26,7 +26,16 @@ def check_boundary(metadata, environment, cargo_config):
     setting = cargo_config.get("env", {}).get("AWS_LC_SYS_USE_SYSTEM", {})
     if setting != {"value": "0", "force": True}:
         errors.append("Cargo must force AWS_LC_SYS_USE_SYSTEM=0 to build bundled AWS-LC")
-    for key, value in environment.items():
+    configured_environment = {}
+    for key, configured in cargo_config.get("env", {}).items():
+        value = configured.get("value") if isinstance(configured, dict) else configured
+        if not isinstance(value, str):
+            errors.append(f"Cargo environment override has an invalid value: {key}")
+            continue
+        # Cargo injects these values into native build children even though they
+        # are not visible in this guard's own process environment.
+        configured_environment[key] = value
+    for key, value in [*environment.items(), *configured_environment.items()]:
         upper = key.upper()
         if upper.startswith("AWS_LC_SYS_SYSTEM_"):
             errors.append(f"External native implementation override is forbidden: {key}")
@@ -122,6 +131,17 @@ class NativeBoundaryTests(unittest.TestCase):
         metadata = {"packages": [{"id": "crypto", "name": "aws-lc-rs"}], "resolve": {"nodes": [{"id": "crypto", "features": ["legacy-des"]}]}}
         config = {"env": {"AWS_LC_SYS_USE_SYSTEM": {"value": "0", "force": True}}}
         self.assertTrue(any("legacy-des" in error for error in check_boundary(metadata, {}, config)))
+
+    def test_nonforced_config_cannot_hide_process_override(self):
+        config = {"env": {"AWS_LC_SYS_USE_SYSTEM": {"value": "0", "force": True}, "AWS_LC_SYS_USE_SYSTEM_aarch64_apple_darwin": "0"}}
+        self.assertTrue(check_boundary({}, {"AWS_LC_SYS_USE_SYSTEM_aarch64_apple_darwin": "1"}, config))
+
+    def test_cargo_config_target_override_cannot_bypass_native_guard(self):
+        config = {"env": {"AWS_LC_SYS_USE_SYSTEM": {"value": "0", "force": True}, "AWS_LC_SYS_USE_SYSTEM_aarch64_apple_darwin": {"value": "1", "force": True}}}
+        self.assertTrue(check_boundary({}, {}, config))
+        config["env"].pop("AWS_LC_SYS_USE_SYSTEM_aarch64_apple_darwin")
+        config["env"]["AWS_LC_SYS_SYSTEM_DIR"] = "/unreviewed"
+        self.assertTrue(check_boundary({}, {}, config))
 
     def test_target_override_cannot_reenable_discovery(self):
         config = {"env": {"AWS_LC_SYS_USE_SYSTEM": {"value": "0", "force": True}}}

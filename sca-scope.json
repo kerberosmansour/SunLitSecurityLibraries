@@ -1,7 +1,14 @@
 {
   "version": 1,
   "conventions": {
-    "actingPaths": ["apps/**", "services/**", "packages/**", "cmd/**", "crates/**"],
+    "actingPaths": [
+      "apps/**",
+      "services/**",
+      "packages/**",
+      "cmd/**",
+      "crates/**",
+      "tools/security-toolchains/**"
+    ],
     "excludePaths": [
       "**/examples/**",
       "**/example/**",
@@ -27,6 +34,41 @@
       "ecosystem": "crates.io",
       "parser": "Cargo.lock",
       "track": "cadence"
+    },
+    {
+      "path": "tools/security-toolchains/cargo-audit/Cargo.lock",
+      "ecosystem": "crates.io",
+      "parser": "Cargo.lock",
+      "track": "cadence",
+      "note": "Source-verified frozen security-tool graph; scanned before build, no automatic remediation authority."
+    },
+    {
+      "path": "tools/security-toolchains/cargo-deny/Cargo.lock",
+      "ecosystem": "crates.io",
+      "parser": "Cargo.lock",
+      "track": "cadence",
+      "note": "Source-verified frozen security-tool graph; scanned before build, no automatic remediation authority."
+    },
+    {
+      "path": "tools/security-toolchains/cargo-vet/Cargo.lock",
+      "ecosystem": "crates.io",
+      "parser": "Cargo.lock",
+      "track": "cadence",
+      "note": "Source-verified frozen security-tool graph; scanned before build, no automatic remediation authority."
+    },
+    {
+      "path": "tools/security-toolchains/kani-verifier/Cargo.lock",
+      "ecosystem": "crates.io",
+      "parser": "Cargo.lock",
+      "track": "cadence",
+      "note": "Source-verified frozen security-tool graph; scanned before build, no automatic remediation authority."
+    },
+    {
+      "path": "tools/security-toolchains/semgrep/requirements.txt",
+      "ecosystem": "PyPI",
+      "parser": "requirements.txt",
+      "track": "cadence",
+      "note": "Hash-pinned Linux x86_64/Python3.11 wheel-only graph, admitted before Semgrep installation."
     }
   ]
 }
