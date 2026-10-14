@@ -34,6 +34,9 @@ def verified_bom(data, record, source_commit):
     if (package['name'], package['version']) != (record['name'], record['version']):
         raise ValueError('Package identity differs from the approved record')
     packages = lock['package']
+    roots = [item for item in packages if (item['name'], item['version']) == (record['name'], record['version'])]
+    if len(roots) != 1:
+        raise ValueError('Packaged lock must contain exactly one released library entry')
     by_name = {}
     for item in packages:
         by_name.setdefault(item['name'], []).append(item)
@@ -49,15 +52,17 @@ def verified_bom(data, record, source_commit):
             components.append(component)
         refs = []
         for dependency in item.get('dependencies', []):
-            tokens = dependency.split(' ')
+            tokens = dependency.split(' ', 2)
             matches = by_name.get(tokens[0], [])
             if len(tokens) > 1:
                 matches = [candidate for candidate in matches if candidate['version'] == tokens[1]]
+            if len(tokens) > 2:
+                matches = [candidate for candidate in matches if tokens[2] == '(' + candidate.get('source', '') + ')']
             if len(matches) != 1:
                 raise ValueError('Packaged lock dependency cannot be resolved exactly')
             refs.append(ref(matches[0]))
         dependencies.append({'ref': identity, 'dependsOn': sorted(set(refs))})
-    component_refs = [component['bom-ref'] for component in components]
+    component_refs = [ref(item) for item in packages]
     if len(component_refs) != len(set(component_refs)):
         raise ValueError('Duplicate dependency identities require source-aware review')
     if root_ref not in {entry['ref'] for entry in dependencies}:
@@ -97,6 +102,7 @@ def main():
     # approved source against the checkout without running package code.
     import subprocess
     subprocess.run(['git', 'merge-base', '--is-ancestor', source_commit, 'origin/main'], cwd=ROOT, check=True)
+    subprocess.run(['git', 'diff', '--exit-code', source_commit, 'HEAD', '--', 'Cargo.toml', 'Cargo.lock', 'crates/'], cwd=ROOT, check=True)
     selected = sorted(records) if args.crate == 'all' else [args.crate]
     if any(name not in records for name in selected):
         raise ValueError('Unknown release crate')
