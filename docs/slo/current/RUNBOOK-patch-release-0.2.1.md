@@ -59,3 +59,10 @@ Actual security_core 0.2.1 archive: clean source and 100 packaged dependency
 identities admitted with official OSV; no compilation/upload preceded the scan.
 Cargo publish dry-run uses a temporary archive directory, so the documented
 candidate command is cargo package --no-verify --locked.
+
+Follow-up review's two remaining cases were reproduced with committed failing
+regressions before fixes: unexpected normalized top-level tables are rejected,
+and scanner exit 1 without represented advisories fails closed. 39 Python tests
+now pass. Actual core package verification compiled only after admission and
+preserved its exact admitted archive bytes. The inherited secure_data README's
+obsolete constructor/argument order was corrected without adding mobile APIs.
