@@ -180,6 +180,8 @@ def inventory_self_test():
 
 def inspect_graph():
     consumer_lock()
+    for path in ordinary_locks_for_proof():
+        owned_path(path)
     metadata = json.loads(subprocess.check_output([
         "cargo", "metadata", "--manifest-path", str(FIXTURE / "Cargo.toml"),
         "--format-version", "1", "--locked",
@@ -222,7 +224,7 @@ def admit_all_locks(output):
     spec = importlib.util.spec_from_file_location("hmac_osv_gate", ROOT / "scripts/osv-dependency-gate.py")
     gate = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gate)
-    ordinary_locks = gate.lockfiles()
+    ordinary_locks = [owned_path(item) for item in gate.lockfiles()]
     gate.lockfiles = lambda: sorted({*ordinary_locks, path})
     validator = gate.validate_inventory
     gate.validate_inventory = lambda report, paths: scanner_inventory(validator, report, paths, os.name == "nt")
