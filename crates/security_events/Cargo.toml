@@ -1,6 +1,6 @@
 [package]
 name = "security_events"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Security telemetry, redaction, HMAC-sealed events, and audit-friendly event sinks."

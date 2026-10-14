@@ -1,6 +1,6 @@
 # SunLit Security Libraries
 
-Current coordinated library release: **0.2.1**. Includes role-sensitive authorization cache invalidation and the targeted rustls 0.23.46 advisory repairs. Review [migration and residual dependency limits](./CHANGELOG.md) and the [release process](./docs/dev-guide/release-process.md).
+Current coordinated library release: **0.3.0**. Adds the sealed mobile native wrapping adapter and SDK reference sources. Retains role-sensitive authorization cache invalidation and rustls 0.23.46 advisory repairs. Review [migration and residual dependency limits](./CHANGELOG.md) and the [release process](./docs/dev-guide/release-process.md).
 
 A production-grade Cargo workspace of Rust security crates and reference
 services implementing [OWASP Proactive Controls](https://owasp.org/www-project-proactive-controls/)
@@ -941,3 +941,5 @@ Engineer-facing documentation for consuming these libraries lives in [`docs/dev-
 ## Supply-chain policy
 
 The canonical supply-chain policy lives at [`deny.toml`](./deny.toml) at the repo root. Downstream consumers may copy or `curl` it directly to adopt the same policy (licenses allowed, banned crates, source verification). The policy is enforced on every PR via the `supply-chain` job in `.github/workflows/ci.yml` (`cargo audit` + `cargo deny check` + `cargo vet`).
+
+Mobile consumers: see [native bridge migration](docs/dev-guide/mobile-bridge-migration.md) for integration, passcode recovery and qualification limits. Native references have simulator/emulator software evidence; physical devices and application bindings require separate qualification.

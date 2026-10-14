@@ -143,3 +143,7 @@ native calls/attributes and process recovery; physical backup exclusion, passcod
 removal/reset, lock state, reinstall, Secure Enclave, TEE/StrongBox and timing
 remain unqualified. The generated simulator/emulator should be shut down and
 removed by its owning operator after the test session; never erase a user device.
+
+## Published integration
+
+These reference sources are included in the `secure_data` 0.3.0 registry archive. Use [the migration guide](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/v0.3.0/docs/dev-guide/mobile-bridge-migration.md) from the source repository when implementing an application binding. The fixture manifests/runners are qualification assets and must not become a production app configuration. Physical devices, backup/passcode transitions and consumer reconciliation remain separate qualification gates.

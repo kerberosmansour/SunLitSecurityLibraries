@@ -30,18 +30,18 @@ members = [
 #     declared at the crate that uses it.
 [workspace.dependencies]
 # Internal crates (single source of truth for published versions).
-security_core = { path = "crates/security_core", version = "0.2.1" }
-secure_errors = { path = "crates/secure_errors", version = "0.2.1" }
-security_events = { path = "crates/security_events", version = "0.2.1" }
-secure_boundary = { path = "crates/secure_boundary", version = "0.2.1" }
-secure_authz = { path = "crates/secure_authz", version = "0.2.1" }
-secure_data = { path = "crates/secure_data", version = "0.2.1" }
-secure_output = { path = "crates/secure_output", version = "0.2.1" }
-secure_identity = { path = "crates/secure_identity", version = "0.2.1" }
-secure_device_trust = { path = "crates/secure_device_trust", version = "0.2.1" }
-secure_network = { path = "crates/secure_network", version = "0.2.1" }
-secure_resilience = { path = "crates/secure_resilience", version = "0.2.1" }
-secure_privacy = { path = "crates/secure_privacy", version = "0.2.1" }
+security_core = { path = "crates/security_core", version = "0.3.0" }
+secure_errors = { path = "crates/secure_errors", version = "0.3.0" }
+security_events = { path = "crates/security_events", version = "0.3.0" }
+secure_boundary = { path = "crates/secure_boundary", version = "0.3.0" }
+secure_authz = { path = "crates/secure_authz", version = "0.3.0" }
+secure_data = { path = "crates/secure_data", version = "0.3.0" }
+secure_output = { path = "crates/secure_output", version = "0.3.0" }
+secure_identity = { path = "crates/secure_identity", version = "0.3.0" }
+secure_device_trust = { path = "crates/secure_device_trust", version = "0.3.0" }
+secure_network = { path = "crates/secure_network", version = "0.3.0" }
+secure_resilience = { path = "crates/secure_resilience", version = "0.3.0" }
+secure_privacy = { path = "crates/secure_privacy", version = "0.3.0" }
 
 # Third-party crates shared with a uniform spec across 3+ members.
 serde = { version = "1", features = ["derive"] }

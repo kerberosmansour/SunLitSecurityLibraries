@@ -8,7 +8,7 @@
     "component": {
       "type": "application",
       "name": "SunLitSecurityLibraries",
-      "version": "0.2.1"
+      "version": "0.3.0"
     }
   },
   "declarations": {
@@ -40,7 +40,7 @@
               "value": "variant-analysis-result-schema"
             }
           ],
-          "version": "0.2.1"
+          "version": "0.3.0"
         },
         {
           "bom-ref": "component:secure_errors",
@@ -64,7 +64,7 @@
               "value": "panic-boundary"
             }
           ],
-          "version": "0.2.1"
+          "version": "0.3.0"
         },
         {
           "bom-ref": "component:security_events",
@@ -96,7 +96,7 @@
               "value": "Hard-deny matching covers only consumer-configured exact target roots and their :: descendants. Near-prefix and unlisted targets remain enabled, so consumers must inventory dependency targets and maintain runtime canaries."
             }
           ],
-          "version": "0.2.1"
+          "version": "0.3.0"
         },
         {
           "bom-ref": "component:secure_boundary",
@@ -124,7 +124,7 @@
               "value": "agent-prompt-injection-boundary"
             }
           ],
-          "version": "0.2.1"
+          "version": "0.3.0"
         },
         {
           "bom-ref": "component:secure_output",
@@ -144,7 +144,7 @@
               "value": "uri-scheme-sanitization"
             }
           ],
-          "version": "0.2.1"
+          "version": "0.3.0"
         },
         {
           "bom-ref": "component:secure_identity",
@@ -200,7 +200,7 @@
               "value": "OpenSSH public-key validation accepts only an algorithm and Base64 blob, not an authorized_keys options field or comment. The compatibility entry point permits 1024..16384-bit RSA; validate_openssh_public_key_with_rsa_minimum_bits enforces a caller-selected minimum in that range during validation."
             }
           ],
-          "version": "0.2.1"
+          "version": "0.3.0"
         },
         {
           "bom-ref": "component:secure_authz",
@@ -224,7 +224,7 @@
               "value": "tenant-isolation"
             }
           ],
-          "version": "0.2.1"
+          "version": "0.3.0"
         },
         {
           "bom-ref": "component:secure_data",
@@ -254,9 +254,33 @@
             {
               "name": "cdx:sunlit:crypto:password:feature",
               "value": "password"
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "sealed-mobile-native-key-provider"
+            },
+            {
+              "name": "cdx:sunlit:mobile:feature",
+              "value": "mobile-storage"
+            },
+            {
+              "name": "cdx:sunlit:mobile:native-reference",
+              "value": "SDK-only iOS Keychain and AndroidKeyStore DEK wrapping; application NativeKeyBridge binding required"
+            },
+            {
+              "name": "cdx:sunlit:mobile:qualification",
+              "value": "real simulator/emulator restart, tamper and deletion tests; no physical-device, hardware, hard-preemption or Guardian reconciliation qualification"
+            },
+            {
+              "name": "cdx:sunlit:mobile:ios-policy",
+              "value": "WhenPasscodeSetThisDeviceOnly; nonsynchronized; no fallback; trusted re-enrolment after passcode removal/reset"
+            },
+            {
+              "name": "cdx:sunlit:mobile:hardware-policy",
+              "value": "hardware-required rejects supplied software references; custom operation-bound hardware metadata requires independent qualification"
             }
           ],
-          "version": "0.2.1"
+          "version": "0.3.0"
         },
         {
           "bom-ref": "component:secure_network",
@@ -280,7 +304,7 @@
               "value": "cleartext-traffic-detection"
             }
           ],
-          "version": "0.2.1"
+          "version": "0.3.0"
         },
         {
           "bom-ref": "component:secure_resilience",
@@ -300,7 +324,7 @@
               "value": "timeout-budgeting"
             }
           ],
-          "version": "0.2.1"
+          "version": "0.3.0"
         },
         {
           "bom-ref": "component:secure_privacy",
@@ -320,7 +344,7 @@
               "value": "data-classification-handling"
             }
           ],
-          "version": "0.2.1"
+          "version": "0.3.0"
         }
       ]
     },

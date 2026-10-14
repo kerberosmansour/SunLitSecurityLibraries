@@ -37,3 +37,5 @@ Guardian's exactly-once reconciliation. Keychain passcode removal/reset cannot
 be hidden behind a fallback: consumers must re-enrol explicitly. iOS cleanup
 failure retains the application/namespace rather than losing a Keychain recovery
 record. OS calls are synchronous; a result deadline does not hard-preempt them.
+
+M3 publication: the coordinated 0.3.0 adapter/native SDK reference capability is described in `docs/dev-guide/mobile-bridge-migration.md`. Physical-device proof, consumer binding/cancellation and Guardian application reconciliation remain downstream gates. No external graph or native implementation changes are admitted by the publication milestone.
