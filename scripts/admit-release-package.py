@@ -58,11 +58,20 @@ def source_targets(root, name):
     metadata = json.loads(subprocess.check_output(["cargo", "metadata", "--no-deps", "--locked", "--offline", "--format-version", "1"], cwd=root))
     package = next(p for p in metadata["packages"] if p["name"] == name and Path(p["manifest_path"]) == root / "crates" / name / "Cargo.toml")
     result = {section: [] for section in ("lib", "bin", "test", "example", "bench")}
+    source_manifest = tomllib.loads((root / "crates" / name / "Cargo.toml").read_text())
     for target in package["targets"]:
         if len(target["kind"]) != 1 or target["kind"][0] not in result:
             raise ValueError("Source target kind requires explicit release review")
         section = target["kind"][0]
-        result[section].append({"name": target["name"], "path": Path(target["src_path"]).relative_to(root / "crates" / name).as_posix()})
+        resolved = {"name": target["name"], "path": Path(target["src_path"]).relative_to(root / "crates" / name).as_posix()}
+        declared = source_manifest.get(section, [])
+        declared = [declared] if isinstance(declared, dict) else declared
+        matches = [entry for entry in declared if section == "lib" or entry.get("name") == resolved["name"] or ("name" not in entry and entry.get("path") == resolved["path"])]
+        if len(matches) > 1:
+            raise ValueError("Ambiguous source target authority")
+        if matches:
+            resolved.update({key: value for key, value in matches[0].items() if key not in {"name", "path"}})
+        result[section].append(resolved)
     return {k: sorted(v, key=lambda t: (t["name"], t["path"])) for k, v in result.items()}
 
 
@@ -160,12 +169,12 @@ def candidate(archive, root, commit, published):
             targets = [targets] if isinstance(targets, dict) else targets
             actual_targets[section] = []
             for target in targets:
-                if set(target) - {"name", "path"}:
-                    raise ValueError("Target settings require explicit normalization review")
                 path = target.get("path")
                 if not path or path.startswith("/") or ".." in path.split("/") or prefix + path not in names:
                     raise ValueError("Normalized target points outside verified package sources")
-                actual_targets[section].append({"name": target.get("name", name.replace("-", "_") if section == "lib" else None), "path": path})
+                actual = dict(target)
+                actual.setdefault("name", name.replace("-", "_") if section == "lib" else None)
+                actual_targets[section].append(actual)
         if {k: sorted(v, key=lambda t: (t["name"], t["path"])) for k, v in actual_targets.items()} != targets_from_source:
             raise ValueError("Normalized targets differ from clean source authority")
         lock_bytes = read("Cargo.lock")
