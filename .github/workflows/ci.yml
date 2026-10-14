@@ -96,6 +96,9 @@ jobs:
           python3 scripts/check-native-dependencies.py --self-test
           python3 scripts/check-native-dependencies.py
 
+      - name: Admit isolated HMAC consumer and all root/tool locks
+        run: python3 scripts/check-jwt-hmac-profile.py --admit --output .cache/jwt-hmac-osv.json
+
       - name: Workflow authority regressions
         if: runner.os == 'Linux'
         run: |
@@ -120,6 +123,27 @@ jobs:
       - name: Optional library features (Linux)
         if: runner.os == 'Linux'
         run: cargo test --workspace --all-features --locked
+
+      - name: Reduced HMAC profile and isolated startup cases
+        run: |
+          cargo test -p secure_identity --no-default-features --features jwt-hmac --test jwt_hmac_profile --locked
+          cargo test -p secure_identity --no-default-features --features jwt-hmac --lib jwt_hmac::tests --locked
+          cargo run --manifest-path fixtures/jwt-hmac-consumer/Cargo.toml --locked -- all
+
+      - name: Reduced HMAC Kani bounds using the existing approved toolchain
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          KANI_HOME: ${{ github.workspace }}/.cache/kani
+        run: |
+          set -euo pipefail
+          python3 scripts/install-security-tool.py kani-verifier --report .cache/jwt-hmac-osv.json --receipt .cache/jwt-hmac-osv.receipt.json
+          bundle="$RUNNER_TEMP/kani-0.68.0-x86_64-unknown-linux-gnu.tar.gz"
+          curl --proto '=https' --tlsv1.2 -fsSL --retry 3 --retry-delay 2 -o "$bundle" https://github.com/model-checking/kani/releases/download/kani-0.68.0/kani-0.68.0-x86_64-unknown-linux-gnu.tar.gz
+          printf '%s  %s\n' 32e2b484d73ede0bbf64a2cf0879c4259422497d8aec4ee67d448de9ae7843d3 "$bundle" | sha256sum -c -
+          python3 scripts/run-security-tool.py --report .cache/jwt-hmac-osv.json --receipt .cache/jwt-hmac-osv.receipt.json kani-verifier -- setup --use-local-bundle "$bundle"
+          python3 scripts/lock-kani-cargo.py
+          python3 scripts/check-jwt-hmac-profile.py --prove-kani --output .cache/jwt-hmac-kani.json --report .cache/jwt-hmac-osv.json --receipt .cache/jwt-hmac-osv.receipt.json
 
       - name: Projected workload JWT contract
         run: cargo test -p secure_identity --no-default-features --features "jwks" --test workload_jwt --locked

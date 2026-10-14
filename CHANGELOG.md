@@ -9,7 +9,18 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ## Unreleased
 
-_No changes yet._
+### Identity (source milestone; not yet published)
+
+- Add an explicit reduced HMAC-only profile with an isolated normal/build consumer
+  graph that excludes the rsa Rust package; preserve legacy default/asymmetric/SSH
+  APIs through named feature groups. Cargo feature unification can restore RSA.
+- Reuse admitted ring HMAC and vendor JWT validation, checked process-provider
+  initialization and fixed conflict errors. Bound new-profile tokens/keys and
+  preserve signature, issuer/audience and expiry checks; add real consumer/startup
+  scenarios and Kani acceptance-kernel obligations. No external identity/version/
+  checksum change. This capability is not available in the immutable 0.3.0 release;
+  publication and registry migration remain a separate milestone.
+
 
 ## [0.3.0] — 2026-10-14
 

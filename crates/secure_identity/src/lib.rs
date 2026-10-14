@@ -10,15 +10,20 @@ pub mod authenticator;
 #[cfg(feature = "biometric")]
 pub mod biometric;
 pub mod boot;
+#[cfg(feature = "asymmetric-jwt")]
 pub mod capability;
 pub mod dev;
 #[cfg(feature = "biometric")]
 pub mod device_binding;
 pub mod error;
+#[cfg(feature = "asymmetric-jwt")]
 pub mod jwks;
+#[cfg(not(feature = "asymmetric-jwt"))]
+pub mod jwt_hmac;
 pub mod mfa;
 #[cfg(feature = "oidc")]
 pub mod oidc;
+#[cfg(feature = "ssh-public-keys")]
 pub mod openssh;
 pub mod passwordless;
 pub mod session;
@@ -33,12 +38,14 @@ pub mod workload;
 
 pub use authenticator::{AuthenticationRequest, Authenticator, TokenKind};
 pub use boot::{assert_no_dev_identity_in_production, ProductionModeViolation};
+#[cfg(feature = "asymmetric-jwt")]
 pub use capability::{
     CapabilityError, CapabilityIssuer, CapabilityRequest, CapabilitySigner, CapabilityVerifier,
     Expected, InMemoryReplayStore, Operation, ReplayStore, RsaCapabilitySigner, VerifiedCapability,
     MAX_TTL_SECONDS,
 };
 pub use error::IdentityError;
+#[cfg(feature = "ssh-public-keys")]
 pub use openssh::{
     validate_openssh_public_key, validate_openssh_public_key_with_rsa_minimum_bits,
     OpenSshPublicKeyError, MAX_OPENSSH_PUBLIC_KEY_BASE64_BYTES,
@@ -51,10 +58,9 @@ pub use passwordless::{
     PasswordlessMethod, PasswordlessProof, PasswordlessProofVerifier,
 };
 pub use session::{InMemorySessionManager, Session, SessionManager};
-pub use token::{
-    AlgorithmConfig, AsymmetricTokenValidator, AsymmetricTokenValidatorConfig, TokenValidator,
-    TokenValidatorConfig,
-};
+#[cfg(feature = "asymmetric-jwt")]
+pub use token::{AlgorithmConfig, AsymmetricTokenValidator, AsymmetricTokenValidatorConfig};
+pub use token::{TokenValidator, TokenValidatorConfig};
 #[cfg(feature = "jwks")]
 pub use workload::{
     KubernetesServiceAccountSubject, WorkloadIdentityError, WorkloadJwtValidator,
