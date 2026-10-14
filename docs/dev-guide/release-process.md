@@ -14,7 +14,7 @@ secure_resilience, secure_privacy, secure_identity, secure_authz.
 
 1. On the clean reviewed release commit, run `python3 scripts/osv-dependency-gate.py
    --output .cache/release-root-osv.json`. Review the complete graph/provenance.
-2. Resolve each candidate without compilation: `cargo publish --dry-run --no-verify
+2. Resolve each candidate without compilation: `cargo package --no-verify
    --locked -p <crate>`. Inspect the generated archive's file list and metadata.
 3. Run `python3 scripts/admit-release-package.py target/package/<name>-<version>.crate
    --root-report .cache/release-root-osv.json --root-receipt

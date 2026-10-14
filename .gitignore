@@ -73,3 +73,6 @@ states/
 
 # Repository-owned verified Kani SDK and Cargo wrapper
 /.cache/kani/
+
+# Exact release candidate lock/report evidence (never credentials).
+.cache/release-admission/

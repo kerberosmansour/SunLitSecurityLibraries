@@ -4,7 +4,7 @@ User authorized versioning/publication and verified merges. This urgent release
 ships the merged role-cache fix and four Rustls repairs before longer native
 qualification. It does not include mobile M1/M2. No new external product package.
 
-Allow-list: root Cargo.toml/Cargo.lock/CHANGELOG/README; all twelve publishable crate
+Allow-list: root Cargo.toml/Cargo.lock/CHANGELOG/README/.gitignore; all twelve publishable crate
 Cargo.toml/README files; declarations/cyclonedx-1.6-capabilities.json;
 docs/dev-guide/release-process.md; scripts/admit-release-package.py;
 scripts/test_release_admission.py; scripts/osv-dependency-gate.py;
@@ -16,7 +16,7 @@ identity/checksum and existing audit/expiry. No audit or exception fabrication.
 Outcome: users can install fixed 0.2.1 libraries, exact registry bytes match a
 clean main commit and are signed; issue #55 closes only after fixed publication.
 Package graph must be admitted before Cargo verification executes any build
-script/procedural macro. Script-disabled dry-run creates the archive; admission
+script/procedural macro. Script-disabled packaging creates the archive; admission
 checks source bytes, normalized manifest/dependency authority and complete exact
 lock inventory. Verified sibling records bind registry path dependencies.
 Known MAL advisories cannot be excepted. Fail on partial/network/parse errors.
@@ -54,3 +54,8 @@ match each lock format; exceptions require crates.io identity. Regressions for
 path-only normalization and injected target/path authority failed before repairs;
 seven package fixture tests now pass. All 37 Python tests and 1,387 all-feature Rust
 tests pass; workspace Clippy passes. Actual package admission remains required.
+
+Actual security_core 0.2.1 archive: clean source and 100 packaged dependency
+identities admitted with official OSV; no compilation/upload preceded the scan.
+Cargo publish dry-run uses a temporary archive directory, so the documented
+candidate command is cargo package --no-verify --locked.
