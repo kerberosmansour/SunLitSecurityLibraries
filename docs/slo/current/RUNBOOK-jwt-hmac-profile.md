@@ -147,14 +147,14 @@ The resource-bound policy is local to the new reduced profile. If a fix needs an
 existing asymmetric test/source outside this list, pause and present the concrete
 conflict rather than broadening this scope. Publication is a later contract.
 
-Status: user confirmed 2026-10-14; in_progress.
+Status: user confirmed 2026-10-14; M1 done, 2026-10-14.
 
 
 ## Milestone tracker
 
 | Milestone | Status | Started | Finished |
 |---|---|---|---|
-| M1 reduced profile / actual consumer proof | in_progress | 2026-10-14 | — |
+| M1 reduced profile / actual consumer proof | done | 2026-10-14 | 2026-10-14 |
 | M2 coordinated publication / consumer migration | proposed; contract not yet authored | — | — |
 
 ## Sequential critique
@@ -173,8 +173,8 @@ Design: hold scope. Unreleased guide must distinguish legacy/default and minimal
 | Baseline runtime | Focused all-feature secure_identity baseline passed; current 1395-test workspace 0.3.0 evidence retained for identical source. |
 | Candidate admission | Official OSV v2.7.0 all seven locks/1643 package occurrences passed after explicit positive consumer admission. No fixture exception inheritance; root external dictionaries identical and consumer 195-package lock has no rsa. |
 | Real JWT/startup/race/bounds | Two selected real JWT/bounds tests, one private key utility test and six actual isolated consumer/startup scenarios pass. Cold-cache graph resolution failed before fix and passes with locked build-free fetching. |
-| Kani/workspace/static | Legacy all-feature workspace 1395 tests and workspace/selected-profile/consumer Clippy pass; formatter/workflow regressions pass. Actual CI38643646234 Linux 0.68 red/green kernels verified: both mutant assertions fail, both original kernels pass, all thirteen covers SATISFIED, automatic assertion reachability enabled and no stubs. Final hardened-classifier/platform revalidation pending. |
-| Scope/docs/verify/retro | Pending. |
+| Kani/workspace/static | Legacy all-feature workspace 1395 tests and workspace/selected-profile/consumer Clippy pass; formatter/workflow regressions pass. Actual CI38643646234 Linux 0.68 red/green kernels verified: both mutant assertions fail, both original kernels pass, all thirteen covers SATISFIED, automatic assertion reachability enabled and no stubs. Final hardened-classifier/platform revalidation passed on implementation78b3bc7 (CI38645105658). |
+| Scope/docs/verify/retro | 17 changed paths within the confirmed 18; root lock unchanged. All required CI/security/package/doc gates pass on78b3bc7. Cold-cache, parser and ownership review findings reproduced/fixed; actual raw proofs pass the strict classifier. Guide, threat model, lessons and completion filled; no additional issue filing. |
 
 User AGENTS dependency admission takes precedence over a fixture-runtime red run: unrepaired standalone fixture cannot inherit root RSA exceptions. The real outcome graph assertion is red first; behavioral scenarios are authored before implementation and execute only after the reduced graph is admitted. No compile/setup error or unadmitted vulnerable fixture is presented as passing evidence.
 
@@ -200,7 +200,7 @@ complete token <=65536 bytes. Kernels compare independent expectations, not thei
 own byte helpers. Red test weakens key minimum and ignores separator/tag budget;
 require exactly two positively classified failures with expected harness names,
 restore source even on failure, then require exactly two SUCCESSFUL green results.
-Actual kernel verdict verified in CI38643646234; final hardened-classifier CI pending. No assertion/property, counterexample or solver
+Actual kernel verdict verified in CI38643646234; final hardened-classifier CI passed in CI38645105658. No assertion/property, counterexample or solver
 failure is hidden. Crypto, entropy, process interleavings, I/O and memory erasure
 remain unproved; real runtime/subprocess evidence covers selected behaviors.
 
@@ -208,7 +208,7 @@ CI regression follow-up: Windows OSV source serialization is accepted only when
 it exactly equals a requested lock path with forward slashes; the saved raw JSON
 is unchanged and the original inventory validator still rejects missing, duplicate,
 relative and unrequested sources. Five explicit path/inventory cases pass locally;
-actual Windows revalidation remains required. Semgrep's argv/current_exe findings
+actual Windows seven-lock admission and complete platform validation passed. Semgrep's argv/current_exe findings
 are confined to the unpublished, unprivileged six-process regression harness:
 fixed scenario names, no credentials or authority decisions. Two exact rule
 annotations document that boundary. All platform lanes now finish independently
@@ -225,7 +225,7 @@ assertion reachability, requires actual policy assertion FAILURE in each mutant
 and SUCCESS in each restored harness, and requires all thirteen named covers
 SATISFIED. Covers include all three algorithm boundaries, empty/oversize and
 usize::MAX domains. No assertion, memory/overflow check or source/tool graph is
-disabled; final actual regular-mode verdict remains pending CI. The hidden-file
+disabled; actual regular-mode verdict passed, including the final hardened classifier. The hidden-file
 artifact correction now retains raw reports/logs on every completed platform.
 
 Actual proof evidence: https://github.com/kerberosmansour/SunLitSecurityLibraries/actions/runs/38643646234
@@ -241,4 +241,25 @@ contradictory-result acceptance before correction. Ten mixed/malformed/duplicate
 post-summary/unsupported/unreachable-policy cases now reject; both real logs
 accept. Two same-byte POSIX file/parent symlink regressions reject, and all
 consumer/ordinary locks are ownership-checked before metadata and again at proof.
-Final exact-source CI, independent handoff and merged closeout remain pending.
+Final implementation78b3bc7 exact-source CI and strict proof classification passed. The following closeout is docs-only; source remains unpublished until M2.
+
+## Final self-review and regression matrix
+
+All self-review answers yes: exact allow-list, graph/admission before builds,
+real outcome/BDD rejection cases, compatibility, mandatory static/platform
+checks, positive red/green Kani with independent expectations/non-vacuity, docs,
+complete evidence and clean ignored artifacts. oc-jwt-hmac-1 / cuj-jwt-hmac-1=pass.
+Core identity/profile/default/workload/package/security outcomes=pass; cloud/UI/AI/
+hardware consumer integration=not_applicable (this local Rust source milestone
+introduces none). No required scenario is pending or waived.
+
+Detected work ledger: cold metadata, omitted positive fixture inventory, exact
+Windows source aliases, unpublished-harness Semgrep review, hidden artifact upload,
+legacy verifier output classification, mixed/post-summary records and ownership
+aliases are all fix_now/resolved with the recorded evidence. Publication is
+operator_action for separately proposed M2, already tracked by issue54; no new
+upstream defect/accepted-risk waiver or duplicate issue is filed.
+
+Completed2026-10-14. Lessons: docs/slo/lessons/jwt-hmac-profile-m1.md.
+Completion: docs/slo/completion/jwt-hmac-profile-m1.md.
+Final code verification: https://github.com/kerberosmansour/SunLitSecurityLibraries/actions/runs/38645105658

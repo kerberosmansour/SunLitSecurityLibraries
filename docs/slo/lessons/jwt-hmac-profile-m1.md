@@ -1,66 +1,83 @@
-# JWT HMAC profile M1 lessons — verification in progress
+# Lessons Learned — JWT HMAC Profile Milestone 1
 
-A no-default-feature manifest does not remove an unconditional crypto backend or
-SSH dependency. Prove the separate consumer normal/build graph, including dev
-feature edges and additive feature unification, rather than assuming a flag.
+## What changed
+Added the explicit reduced jwt-hmac profile while preserving default asymmetric/
+SSH APIs through named default groups. Reused ring and vendor JWT11 interfaces,
+checked provider initialization and bounded keys/tokens. The standalone real
+consumer resolves 195 normal/build packages with zero rsa.
 
-Vendor JWT11 freezes a process-global provider. Cache a checked own install result
-and initialize before upstream encoding; a foreign/frozen provider cannot be
-guessed compatible. Real subprocess ordering/race cases verify fixed failure
-behavior without giving a fake foreign provider authentication authority.
+## Results vs thesis
+Leading metric: the isolated consumer graph now excludes rsa; the pre-change
+graph assertion failed because rsa was present. Outcome: real HS256 authentication
+and rejection/startup cases pass on Linux, macOS and Windows. Legacy 1395 all-feature
+workspace tests, Clippy and required security/package/documentation gates pass.
+No production deployment/adoption metric is invented; ship the separately
+confirmed publication milestone after its readiness gates.
 
-Generic admission deliberately excludes vulnerable fixture directories. An
-executable positive consumer needs explicit admission: reuse the same pinned
-scanner/inventory/source-scoped exceptions over all seven locks. Fixture advisories
-must never inherit root exceptions. Locked metadata can fetch verified bytes
-without build scripts; forcing offline metadata made cold admission fail. The
-empty-cache regression reproduced this and passed after correction.
+## Outcome vs promise
+oc-jwt-hmac-1 and cuj-jwt-hmac-1 pass across manifest/lock, production provider,
+real vendor signing/verification and authenticated role/error boundaries.
+Existing identity/public-key behavior is preserved by default feature groups;
+workspace/platform/feature-matrix gates cover adjacent library outcomes.
 
-Check complete-token size including separator/base64 tag, and bounds before
-temporary token/key copies. Key length is not entropy. Kani expectations use
-independent JWA minimum/tag-length constants, not implementation helpers; deliberate
-weakened policies must fail before restored original proofs can count as verified.
+## Design decisions and why
+Use ring HMAC and vendor parsing rather than custom crypto/parsers. Use std
+OnceLock to cache a checked own install result; foreign/frozen provider conflicts
+fail closed. Gate SSH/RustCrypto feature edges explicitly, including the prior dev
+edge. Advertise only the actual isolated graph; additive Cargo features can restore rsa.
 
-Existing approved 0.68.0 Linux CI provisioning is reused. The installed generic
-skill's 0.67 default is superseded by this repo's already admitted tool recipe;
-no older local SDK is selected or new tool identity/version/graph introduced.
-Proof report stays inline in the user-confirmed runbook instead of an unapproved
-nineteenth file. Kani proof verdict remains pending actual CI, never inferred
-from runtime success or a compile/setup failure. Concurrency/crypto are not proved.
+## Mistakes made
+The generic scanner deliberately excludes fixtures; a positive executable consumer
+needed explicit seven-lock admission. Offline all-platform metadata failed in a
+cold cache. Initial artifact upload omitted hidden-cache reports. Legacy Kani old
+output classified raw reachability exits incorrectly. An existential proof parser
+accepted contradictory records, and proof-time ownership checks were incomplete.
 
-CI regression follow-up: Windows OSV source serialization is accepted only when
-it exactly equals a requested lock path with forward slashes; the saved raw JSON
-is unchanged and the original inventory validator still rejects missing, duplicate,
-relative and unrequested sources. Five explicit path/inventory cases pass locally;
-actual Windows revalidation remains required. Semgrep's argv/current_exe findings
-are confined to the unpublished, unprivileged six-process regression harness:
-fixed scenario names, no credentials or authority decisions. Two exact rule
-annotations document that boundary. All platform lanes now finish independently
-and retain admission/proof artifacts even when a gate fails. No production
-scanner/core file, advisory exception, dependency identity or allow-list changed.
+## Root causes
+Fixture policy, host-only cache assumptions, artifact action defaults, and treating
+legacy CBMC output as Kani-classified results. Fixes preserve the unchanged pinned
+scanner core and existing source/SDK verifier graph. No advisory waiver was added.
 
-Kani diagnosis from retained actual 0.68 logs: both original policy assertions
-were SUCCESS, but legacy old output used raw CBMC exits and counted successful
-reachability probes as failures. Upstream 0.68 call_cbmc.rs confirms Old bypasses
-Kani property post-processing. The gate now uses regular output, retains automatic
-assertion reachability, requires actual policy assertion FAILURE in each mutant
-and SUCCESS in each restored harness, and requires all thirteen named covers
-SATISFIED. Covers include all three algorithm boundaries, empty/oversize and
-usize::MAX domains. No assertion, memory/overflow check or source/tool graph is
-disabled; final actual regular-mode verdict remains pending CI. The hidden-file
-artifact correction now retains raw reports/logs on every completed platform.
+## What was harder than expected
+Vendor process-global registration requires actual isolated processes; key utilities
+and non-exhaustive hashes need fixed unsupported errors. Regular-mode Kani results
+must be parsed per harness with unique checks, exact policy descriptions/status,
+complete records and no trailing results.
 
-Actual proof evidence: https://github.com/kerberosmansour/SunLitSecurityLibraries/actions/runs/38643646234
-Verified Linux 0.68 result: two actual mutant policy failures; both restored
-kernels verified, thirteen explicit covers SATISFIED, automatic assertion
-reachability enabled, no stubs and source restored. Exact raw red/green logs
-also pass the subsequently hardened production classifier. No concurrency,
-cryptographic strength, entropy or key-copy-erasure proof is claimed.
+## Naming conventions established
+asymmetric-jwt / ssh-public-keys preserve defaults; jwt-hmac names the reduced
+consumer. JHK_KEY_* and JHK_MESSAGE_* identify thirteen explicit coverage cases.
 
-Independent review's concrete classifier and ownership findings are fixed.
-A synthetic fixture exercised the actual old nested classifier and reproduced
-contradictory-result acceptance before correction. Ten mixed/malformed/duplicate/
-post-summary/unsupported/unreachable-policy cases now reject; both real logs
-accept. Two same-byte POSIX file/parent symlink regressions reject, and all
-consumer/ordinary locks are ownership-checked before metadata and again at proof.
-Final exact-source CI, independent handoff and merged closeout remain pending.
+## Test patterns that worked well
+Graph red first without compiling unadmitted fixtures; real vendor round trips;
+six separate process order/race cases; cold-cache metadata regression; exact Windows
+slash-path aliases; strict parser red/green fixtures and same-byte alias rejection.
+Both real deliberately weakened assertions fail; restored kernels pass.
+
+## Kani scope and evidence
+Actual CI38645105658 on implementation 78b3bc7: admitted source-verified 0.68.0,
+SDK SHA32e2b484d73ede0bbf64a2cf0879c4259422497d8aec4ee67d448de9ae7843d3.
+Three HMAC kinds and all usize values on Linux x86_64, independent key/tag/token
+constants, no heap/loop/unwind bound or stub. Both original policy assertions pass;
+all thirteen covers SATISFIED with automatic assertion reachability enabled.
+Crypto/entropy/process scheduling/I/O/internal key-copy erasure remain unproved.
+
+## Missing tests that should exist now
+None within confirmed M1. New parser findings have ten negative cases, and POSIX
+same-byte file/parent symlink cases reject. Windows guard remains enabled without
+claiming the POSIX symlink fixture ran there. Published-consumer proof belongs to M2.
+
+## Rules for the next milestone
+Confirm M2's 37 files before execution. Preserve external package identities,
+audits and exact expiring dispositions. Admit all seven locks and exact package
+archives before compilation/upload; validate registry source/checksums and signing.
+Never fabricate a vet audit, inherit root exceptions into fixtures, or waive MAL.
+
+## Template improvements suggested
+No new filing. Existing issue54 tracks publication/migration. The upstream
+repo-of-origin convention is already tracked by Hulumi31; no duplicate issue.
+
+## Filing/disposition record
+All concrete implementation/verification findings are fix_now and resolved in M1.
+Publication confirmation is operator_action for M2, already tracked by issue54.
+No new upstream defect or accepted-risk waiver is claimed; no additional issue filed.

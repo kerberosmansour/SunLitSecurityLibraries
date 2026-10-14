@@ -1,66 +1,59 @@
-# JWT HMAC profile M1 — source verification in progress
+# Completion Summary — JWT HMAC Profile Milestone 1
 
-Status: in_progress. User confirmed eighteen files. Source preserves legacy default
-asymmetric/SSH APIs through named feature groups and adds the explicit reduced
-profile. Normal/build consumer graph and its 195-package lock exclude rsa; all
-external identities/sources/checksums are a root subset and root package dictionaries
-are unchanged. No publication/version/capability declaration update in this phase.
+## Goal completed
+Source milestone done. The explicit reduced profile uses bounded ring-backed
+HMAC/JWT handling and a checked startup provider, with no rsa package in its
+195-package isolated normal/build graph. Legacy defaults retain public-key/SSH
+behavior. This feature is not in published 0.3.0; issue54 remains open for M2.
 
-Before implementation, offline metadata showed the old reduced graph still included
-rsa and the assertion failed without compiling an unpatched fixture. Focused legacy
-identity baseline 203 tests passed. Official checksum-pinned OSV 2.7.0 admitted seven
-root/tool/consumer locks and 1643 package occurrences before new-profile compilation;
-fixture exceptions do not inherit root dispositions.
+## Files changed
+17 of the 18 confirmed paths changed. Root Cargo.lock remains unchanged. The
+changes are manifest gates, lib/token/provider source, selected JWT tests,
+standalone consumer manifest/lock/source, admission/proof helper, existing CI,
+README/changelog/guide/threat-model and these three SLO artifacts. No other
+source/tool recipe, external dependency identity, audit or advisory disposition changed.
 
-Selected real JWT tests 2, private key utility test 1 and six separate consumer
-process scenarios passed. They cover HMAC algorithms/key bounds, signature/claims
-rejection, own concurrent init, foreign-first, own-first, competing registration
-and early upstream misuse. Existing 1395 all-feature workspace tests and workspace/
-selected-profile/consumer Clippy with warnings denied passed. Formatter and four
-workflow-boundary regressions pass. Empty-cache metadata regression was red before
-fix, green with locked build-free fetching. Independent review found no concrete
-authentication bypass/key exposure/unsupported startup race.
+## Tests added
+Two real JWT/algorithm/key/claims tests and one private unsupported-key-utility test;
+empty-cache graph, Windows exact-path inventory, ten malformed/mixed/duplicate/
+post-summary proof parser cases, and two POSIX same-byte alias regressions.
 
-Still required: final source/security checks, fail-closed Kani red/green two-kernel
-CI verdict, remaining platform gates and closeout. The kernels cover three HMAC
-kinds and all usize values on Linux x86_64 without heaps/loops/stubs; they do not prove
-vendor crypto, entropy, scheduling or key-copy erasure. Publication/issue 54 closure
-requires its separately confirmed next milestone. No pending proof is claimed
-SUCCESSFUL or waived as a local-tool skip.
+## Runtime validations added
+Six real separate consumer/startup processes: real JWT, own race, foreign first,
+own first, competing registration and early upstream misuse. Actual mutation tests
+fail both weakened policy assertions; both restored Kani kernels pass and all thirteen
+covers are SATISFIED with automatic assertion reachability enabled and no stubs.
 
-CI regression follow-up: Windows OSV source serialization is accepted only when
-it exactly equals a requested lock path with forward slashes; the saved raw JSON
-is unchanged and the original inventory validator still rejects missing, duplicate,
-relative and unrequested sources. Five explicit path/inventory cases pass locally;
-actual Windows revalidation remains required. Semgrep's argv/current_exe findings
-are confined to the unpublished, unprivileged six-process regression harness:
-fixed scenario names, no credentials or authority decisions. Two exact rule
-annotations document that boundary. All platform lanes now finish independently
-and retain admission/proof artifacts even when a gate fails. No production
-scanner/core file, advisory exception, dependency identity or allow-list changed.
+## Compatibility checks performed
+Implementation78b3bc7: all required PR gates pass. CI38645105658 passed Linux,
+macOS and Windows; default/optional/feature matrix, selected profile, workload,
+package/docs/admission gates passed. Legacy all-feature workspace1395 tests,
+workspace/selected/consumer Clippy and format passed. CodeQL and Semgrep are green.
+OSV2.7.0 scanned all seven locks/1643 package occurrences before new builds.
+External graph/source/checksum dictionaries unchanged; fixture exceptions never
+inherit root dispositions. Independent review findings were reproduced/fixed;
+the strict final parser accepts the actual retained red/green logs.
 
-Kani diagnosis from retained actual 0.68 logs: both original policy assertions
-were SUCCESS, but legacy old output used raw CBMC exits and counted successful
-reachability probes as failures. Upstream 0.68 call_cbmc.rs confirms Old bypasses
-Kani property post-processing. The gate now uses regular output, retains automatic
-assertion reachability, requires actual policy assertion FAILURE in each mutant
-and SUCCESS in each restored harness, and requires all thirteen named covers
-SATISFIED. Covers include all three algorithm boundaries, empty/oversize and
-usize::MAX domains. No assertion, memory/overflow check or source/tool graph is
-disabled; final actual regular-mode verdict remains pending CI. The hidden-file
-artifact correction now retains raw reports/logs on every completed platform.
+## Documentation updated
+Unreleased README/changelog and migration/startup/bounds guide; abuse model,
+inline proof scope, complete runbook evidence/self-review and lessons. Distinguish
+legacy defaults, prior no-default asymmetric callers and additive feature limits.
 
-Actual proof evidence: https://github.com/kerberosmansour/SunLitSecurityLibraries/actions/runs/38643646234
-Verified Linux 0.68 result: two actual mutant policy failures; both restored
-kernels verified, thirteen explicit covers SATISFIED, automatic assertion
-reachability enabled, no stubs and source restored. Exact raw red/green logs
-also pass the subsequently hardened production classifier. No concurrency,
-cryptographic strength, entropy or key-copy-erasure proof is claimed.
+## .gitignore changes
+None. Generated reports/caches remain ignored; user-facing evidence is outside repo.
 
-Independent review's concrete classifier and ownership findings are fixed.
-A synthetic fixture exercised the actual old nested classifier and reproduced
-contradictory-result acceptance before correction. Ten mixed/malformed/duplicate/
-post-summary/unsupported/unreachable-policy cases now reject; both real logs
-accept. Two same-byte POSIX file/parent symlink regressions reject, and all
-consumer/ordinary locks are ownership-checked before metadata and again at proof.
-Final exact-source CI, independent handoff and merged closeout remain pending.
+## Test artifact cleanup verified
+No untracked test artifacts. Source mutations are restored; tracked diff stays
+within the exact contract. Docs-only closeout follows verified implementation78b3bc7.
+
+## Deferred follow-ups
+User confirmation and M2 readiness, coordinated0.4.0 publication, packaged-consumer
+and immutable registry/signature/SBOM verification. Issue54 is not closed early.
+
+## Known non-blocking limitations
+Bounds do not prove key entropy or erase vendor copies. Direct vendor parsing needs
+caller bounds. Cargo feature unification can restore rsa; default full graphs retain
+existing exact expiring public-key exceptions. Kani proves neither crypto nor
+scheduling/foreign code; runtime scenarios cover selected interleavings only.
+
+Evidence: https://github.com/kerberosmansour/SunLitSecurityLibraries/actions/runs/38645105658
