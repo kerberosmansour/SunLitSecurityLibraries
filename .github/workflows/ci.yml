@@ -68,6 +68,7 @@ jobs:
     needs: dependency-admission
     name: Test (${{ matrix.os }})
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
@@ -97,7 +98,9 @@ jobs:
           python3 scripts/check-native-dependencies.py
 
       - name: Admit isolated HMAC consumer and all root/tool locks
-        run: python3 scripts/check-jwt-hmac-profile.py --admit --output .cache/jwt-hmac-osv.json
+        run: |
+          python3 scripts/check-jwt-hmac-profile.py --self-test --output .cache/jwt-hmac-inventory-tests.json
+          python3 scripts/check-jwt-hmac-profile.py --admit --output .cache/jwt-hmac-osv.json
 
       - name: Workflow authority regressions
         if: runner.os == 'Linux'
@@ -154,6 +157,14 @@ jobs:
       - name: Doc
         if: runner.os == 'Linux'
         run: cargo doc --workspace --no-deps --locked
+
+      - name: Preserve HMAC admission and proof evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: jwt-hmac-evidence-${{ matrix.os }}
+          path: .cache/jwt-hmac-*
+          if-no-files-found: error
 
   # sg-gate-a M4: presubmit gate enforcing Google's "preventing backsliding"
   # pattern. Every crate that gained a framework-feature matrix in M1/M2

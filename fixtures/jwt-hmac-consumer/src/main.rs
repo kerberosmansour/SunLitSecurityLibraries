@@ -67,9 +67,16 @@ fn own_workers(barrier: Arc<Barrier>) -> Vec<std::thread::JoinHandle<bool>> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Unpublished, unprivileged regression harness: argv selects a fixed test
+    // scenario, never executable identity, authentication or access authority.
+    // nosemgrep: rust.lang.security.args.args
     let mode = std::env::args().nth(1).unwrap_or_else(|| "all".into());
     match mode.as_str() {
         "all" => {
+            // Only spawn this test binary with fixed scenario names. There are
+            // no credentials or privilege transitions; replacement can only
+            // invalidate the local test run, not grant production authority.
+            // nosemgrep: rust.lang.security.current-exe.current-exe
             let executable = std::env::current_exe()?;
             for mode in [
                 "real-jwt",

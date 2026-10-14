@@ -27,3 +27,14 @@ kinds and all usize values on Linux x86_64 without heaps/loops/stubs; they do no
 vendor crypto, entropy, scheduling or key-copy erasure. Publication/issue 54 closure
 requires its separately confirmed next milestone. No pending proof is claimed
 SUCCESSFUL or waived as a local-tool skip.
+
+CI regression follow-up: Windows OSV source serialization is accepted only when
+it exactly equals a requested lock path with forward slashes; the saved raw JSON
+is unchanged and the original inventory validator still rejects missing, duplicate,
+relative and unrequested sources. Five explicit path/inventory cases pass locally;
+actual Windows revalidation remains required. Semgrep's argv/current_exe findings
+are confined to the unpublished, unprivileged six-process regression harness:
+fixed scenario names, no credentials or authority decisions. Two exact rule
+annotations document that boundary. All platform lanes now finish independently
+and retain admission/proof artifacts even when a gate fails. No production
+scanner/core file, advisory exception, dependency identity or allow-list changed.

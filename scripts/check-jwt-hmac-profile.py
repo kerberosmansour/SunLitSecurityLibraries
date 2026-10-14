@@ -1,17 +1,59 @@
 #!/usr/bin/env python3
 """Inspect an isolated normal/build graph without executing dependency code."""
 import argparse
+import copy
 import importlib.util
 import hashlib
 import re
 import json
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
+import os
 import subprocess
 import sys
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "fixtures/jwt-hmac-consumer"
+
+
+def scanner_inventory(validator, report, paths, windows):
+    # OSV's Go path serialization uses forward slashes on Windows. Only accept
+    # the exact requested path's slash spelling; never resolve arbitrary paths,
+    # fold case, accept relative paths or modify the saved raw scanner report.
+    checked = copy.deepcopy(report)
+    if windows and isinstance(checked, dict) and isinstance(checked.get("results"), list):
+        aliases = {path.as_posix(): str(path) for path in paths}
+        for entry in checked["results"]:
+            if isinstance(entry, dict) and isinstance(entry.get("source"), dict):
+                reported = entry["source"].get("path")
+                if isinstance(reported, str) and reported in aliases:
+                    entry["source"]["path"] = aliases[reported]
+    return validator(checked, paths)
+
+
+def inventory_self_test():
+    spec = importlib.util.spec_from_file_location("inventory_osv_gate", ROOT / "scripts/osv-dependency-gate.py")
+    gate = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gate)
+    path = PureWindowsPath("D:/a/repo/fixtures/jwt-hmac-consumer/Cargo.lock")
+    entry = {"source": {"path": path.as_posix()}, "packages": [
+        {"package": {"name": "ring", "version": "0.17.14", "ecosystem": "crates.io"}}]}
+    report = {"results": [entry]}
+    packages = scanner_inventory(gate.validate_inventory, report, [path], True)
+    assert packages[0]["_admission_source"] == str(path)
+    assert report["results"][0]["source"]["path"] == path.as_posix()
+    for rejected in (
+        {"results": []},
+        {"results": [entry, entry]},
+        {"results": [{**entry, "source": {"path": "D:/a/repo/other/Cargo.lock"}}]},
+        {"results": [{**entry, "source": {"path": "fixtures/jwt-hmac-consumer/Cargo.lock"}}]},
+    ):
+        try:
+            scanner_inventory(gate.validate_inventory, rejected, [path], True)
+        except ValueError:
+            continue
+        raise ValueError("Inventory regression accepted missing/duplicate/unrequested source")
+    return {"windowsSlashAlias": True, "rawReportUnchanged": True, "negativeCases": 4}
 
 
 def inspect_graph():
@@ -63,6 +105,8 @@ def admit_all_locks(output):
     spec.loader.exec_module(gate)
     ordinary_locks = gate.lockfiles()
     gate.lockfiles = lambda: sorted({*ordinary_locks, path})
+    validator = gate.validate_inventory
+    gate.validate_inventory = lambda report, paths: scanner_inventory(validator, report, paths, os.name == "nt")
     # Reuse all checksum, inventory, native guard, exception and snapshot checks.
     # Root exceptions stay source-scoped and cannot admit consumer advisories.
     output.with_suffix(".receipt.json").unlink(missing_ok=True)
@@ -133,12 +177,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--admit", action="store_true", help="Run unchanged pinned OSV core over root/tool/consumer locks before builds")
+    parser.add_argument("--self-test", action="store_true", help="Exercise scanner path identity and fail-closed inventory checks without builds")
     parser.add_argument("--prove-kani", action="store_true", help="Run exact red/green bounded kernels using the approved installed CI tool")
     parser.add_argument("--report", type=Path)
     parser.add_argument("--receipt", type=Path)
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps({"status": "failed"}, indent=2) + "\n")
+    if args.self_test:
+        if args.admit or args.prove_kani:
+            raise ValueError("Inventory regressions are separate from admission/proof")
+        args.output.write_text(json.dumps({"status": "pass", **inventory_self_test()}, indent=2) + "\n")
+        return 0
     result = inspect_graph()
     if args.prove_kani:
         if args.admit or args.report is None or args.receipt is None:
