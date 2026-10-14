@@ -6,12 +6,13 @@
 //! short-circuit with [`CircuitBreakerError::ProbeInFlight`] until the
 //! probe completes.
 //!
-//! The design was TLA+-verified before implementation (see
+//! The abstract single-probe protocol was TLA+-model-checked (see
 //! [`docs/slo/design/circuit-breaker-verified.md`](../../../docs/slo/design/circuit-breaker-verified.md)
 //! and [`specs/CircuitBreaker.tla`](../../../specs/CircuitBreaker.tla)).
 //! The Naive variant of the spec deliberately omits the
 //! `probe_inflight` check; TLC must find the double-probe
-//! counterexample before this implementation is considered sound.
+//! counterexample. That model result does not prove the Rust implementation;
+//! generation and unwind behavior have separate runtime regressions.
 //!
 //! # Threading model
 //!
@@ -46,7 +47,7 @@ use crate::error::ResilienceError;
 
 /// Lifecycle state of the circuit breaker.
 ///
-/// State transitions are TLA+-verified in
+/// Abstract state transitions are model-checked in
 /// [`specs/CircuitBreaker.tla`](../../../specs/CircuitBreaker.tla).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CircuitBreakerState {
@@ -142,6 +143,7 @@ struct Internal {
     state: CircuitBreakerState,
     failure_count: u32,
     opened_at: Option<Instant>,
+    generation: u64,
 }
 
 /// Single-process circuit breaker.
@@ -160,6 +162,25 @@ pub struct CircuitBreaker {
     probe_inflight: AtomicBool,
 }
 
+struct ProbeReservation<'a> {
+    breaker: &'a CircuitBreaker,
+    generation: u64,
+    active: bool,
+}
+
+impl Drop for ProbeReservation<'_> {
+    fn drop(&mut self) {
+        if !self.active {
+            return;
+        }
+        if let Ok(guard) = self.breaker.inner.lock() {
+            if guard.generation == self.generation && guard.state == CircuitBreakerState::HalfOpen {
+                self.breaker.probe_inflight.store(false, Ordering::SeqCst);
+            }
+        }
+    }
+}
+
 impl CircuitBreaker {
     /// Create a new breaker with the given policy.
     #[must_use]
@@ -170,6 +191,7 @@ impl CircuitBreaker {
                 state: CircuitBreakerState::Closed,
                 failure_count: 0,
                 opened_at: None,
+                generation: 0,
             }),
             probe_inflight: AtomicBool::new(false),
         }
@@ -209,7 +231,7 @@ impl CircuitBreaker {
         F: FnOnce() -> Result<T, E>,
     {
         // Phase 1: pre-call state check + probe reservation.
-        let allow_probe = {
+        let (allow_probe, generation) = {
             let mut guard = self.inner.lock().map_err(|_| {
                 CircuitBreakerError::Internal(ResilienceError::Internal(
                     "circuit-breaker mutex poisoned".into(),
@@ -225,50 +247,59 @@ impl CircuitBreaker {
                 }
             }
 
-            match guard.state {
+            let probe = match guard.state {
                 CircuitBreakerState::Closed => false,
                 CircuitBreakerState::Open => return Err(CircuitBreakerError::CircuitOpen),
-                CircuitBreakerState::HalfOpen => true,
-            }
+                CircuitBreakerState::HalfOpen => {
+                    if self.probe_inflight.swap(true, Ordering::SeqCst) {
+                        return Err(CircuitBreakerError::ProbeInFlight);
+                    }
+                    true
+                }
+            };
+            (probe, guard.generation)
         };
 
-        // Phase 2: single-probe reservation (only relevant in HalfOpen).
-        if allow_probe {
-            // Reserve the probe slot atomically. If another caller has
-            // already reserved it, return ProbeInFlight without
-            // touching the closure.
-            if self
-                .probe_inflight
-                .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-                .is_err()
-            {
-                return Err(CircuitBreakerError::ProbeInFlight);
-            }
-        }
-
-        // Phase 3: invoke the closure.
+        // The reservation also releases on downstream unwind. Its generation
+        // check prevents an old call from releasing another cycle's probe.
+        let _reservation = ProbeReservation {
+            breaker: self,
+            generation,
+            active: allow_probe,
+        };
+        // Phase 3: invoke the closure outside the state lock.
         let outcome = f();
 
         // Phase 4: post-call state transition.
         let mut guard = self.inner.lock().map_err(|_| {
             // Release the probe reservation even on poison so a future
             // breaker (after recovery) is in a known state.
-            self.probe_inflight.store(false, Ordering::SeqCst);
+            if allow_probe {
+                self.probe_inflight.store(false, Ordering::SeqCst);
+            }
             CircuitBreakerError::Internal(ResilienceError::Internal(
                 "circuit-breaker mutex poisoned".into(),
             ))
         })?;
 
+        // A call admitted before an open/recovery cycle owns no authority over
+        // the current generation, including its half-open probe reservation.
+        if generation != guard.generation {
+            return outcome.map_err(CircuitBreakerError::DownstreamFailed);
+        }
+
         match (&outcome, guard.state) {
             // Probe success in HalfOpen → transition to Closed.
-            (Ok(_), CircuitBreakerState::HalfOpen) => {
+            (Ok(_), CircuitBreakerState::HalfOpen) if allow_probe => {
+                guard.generation = guard.generation.wrapping_add(1);
                 guard.state = CircuitBreakerState::Closed;
                 guard.failure_count = 0;
                 guard.opened_at = None;
                 self.probe_inflight.store(false, Ordering::SeqCst);
             }
             // Probe failure in HalfOpen → re-open.
-            (Err(_), CircuitBreakerState::HalfOpen) => {
+            (Err(_), CircuitBreakerState::HalfOpen) if allow_probe => {
+                guard.generation = guard.generation.wrapping_add(1);
                 guard.state = CircuitBreakerState::Open;
                 guard.opened_at = Some(Instant::now());
                 self.probe_inflight.store(false, Ordering::SeqCst);
@@ -281,12 +312,13 @@ impl CircuitBreaker {
             (Err(_), CircuitBreakerState::Closed) => {
                 guard.failure_count += 1;
                 if guard.failure_count >= self.policy.failure_threshold {
+                    guard.generation = guard.generation.wrapping_add(1);
                     guard.state = CircuitBreakerState::Open;
                     guard.opened_at = Some(Instant::now());
                 }
             }
             // Should not happen — Phase 1 short-circuits on Open.
-            (_, CircuitBreakerState::Open) => {}
+            (_, CircuitBreakerState::Open | CircuitBreakerState::HalfOpen) => {}
         }
         // Drop guard before potentially returning the error variant.
         drop(guard);

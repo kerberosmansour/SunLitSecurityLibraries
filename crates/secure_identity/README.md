@@ -22,19 +22,19 @@ Output is a `security_core::identity::AuthenticatedIdentity`, which `secure_auth
 
 ```toml
 [dependencies]
-secure_identity = "0.1.10"
+secure_identity = "0.2.0"
 
 # OIDC (PKCE) flows:
-# secure_identity = { version = "0.1.10", features = ["oidc"] }
+# secure_identity = { version = "0.2.0", features = ["oidc"] }
 
 # Projected Kubernetes workload JWTs over HTTPS or bounded inline public JWKS:
-# secure_identity = { version = "0.1.10", features = ["jwks"] }
+# secure_identity = { version = "0.2.0", features = ["jwks"] }
 
 # Redis-backed sessions:
-# secure_identity = { version = "0.1.10", features = ["session-redis"] }
+# secure_identity = { version = "0.2.0", features = ["session-redis"] }
 
 # Biometric / device-binding / step-up:
-# secure_identity = { version = "0.1.10", features = ["biometric"] }
+# secure_identity = { version = "0.2.0", features = ["biometric"] }
 ```
 
 ## Quick example — production boot check
@@ -207,3 +207,7 @@ Contributions are welcome. Please read [CONTRIBUTING.md](https://github.com/kerb
 ## License
 
 Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-MIT) or [Apache-2.0](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-APACHE) at your option.
+
+### JWKS transport maintenance
+
+`JwksKeyStore::new` requires HTTPS for fetching keys. User information and fragments are rejected; redirects are disabled. Fetches have a ten-second timeout and a one-MiB response limit. Production HTTP now fails closed. With the `dev` feature, tests may explicitly call `new_insecure_loopback_for_testing` with a numeric loopback HTTP URL; this does not allow non-loopback HTTP endpoints. The HTTPS transport requires the `jwks` feature.

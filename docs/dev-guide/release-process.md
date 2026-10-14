@@ -1,138 +1,23 @@
-# Release Process
+# Release process
 
-This repository is prepared for separate crates.io packages. Do not make the
-repository public until the secret scan, OSV dependency scan, Semgrep Rust scan,
-package dry run, and release signing checks have passed on the exact commit
-that will be exposed. CodeQL is configured ahead of time, but the workflow is
-gated until the repository is public so findings publish to GitHub code
-scanning.
+The repository is public. Twelve independently installable libraries share version 0.2.0; secure_reference_service and secure_smoke_service have publish=false and are integration fixtures.
 
-## Publishable crates
+## Verification
 
-The service crates are internal integration fixtures and are marked
-`publish = false`:
+Use a clean release commit on main. Run workspace tests, feature tests, Clippy, rustdoc, formatting, secret/static scans, cargo audit, cargo deny --locked check, cargo vet --locked and scripts/check-native-dependencies.py. Review exact source, audit exceptions and packaged file lists; credentials must never enter source or packages. The guard enforces the 2026-11-14 native/maintenance/RSA verification exception deadline. Do not refresh the whole dependency graph to satisfy packaging.
 
-- `secure_reference_service`
-- `secure_smoke_service`
+## Publishing
 
-Publish the library crates individually so downstream users can depend only on
-the control they need. The current crates.io package names match the Rust
-library target names exactly, for example `secure_data` is installed with
-`cargo add secure_data` and imported with `use secure_data::...`.
+Publish in dependency order: security_core, security_events, secure_errors, secure_output, secure_network, secure_device_trust, secure_boundary, secure_data, secure_resilience, secure_privacy, secure_identity, secure_authz. Use cargo package --list for each crate to inspect contents. Before each upload run cargo publish --dry-run --locked -p <crate>, then cargo publish --locked -p <crate>. Cargo resolves versioned sibling path dependencies from crates.io for verification, so each prerequisite must reach the registry index first. Cargo waits for availability after an upload; use bounded registry checks or honor Retry-After if throttled rather than a fixed ten-minute delay for every crate.
 
-Recommended publish order for the `0.1.2` release:
+Publishing a version is permanent. A multi-crate release is sequential and can be partial; confirm the registry version/checksum before retrying an interrupted run. Never overwrite or blindly republish an existing version. If a secret enters a published crate, revoke it: yanking cannot erase its contents.
 
-1. `security_core`
-2. `security_events`
-3. `secure_errors`
-4. `secure_output`
-5. `secure_network`
-6. `secure_device_trust`
-7. `secure_boundary`
-8. `secure_data`
-9. `secure_resilience`
-10. `secure_privacy`
-11. `secure_identity`
-12. `secure_authz`
+## Signed release artifacts
 
-Before publishing, package every crate from a clean branch that points at the
-release commit:
+After registry publication, tag the tested main commit v0.2.0. release-sign.yml packages libraries without OIDC authority, then signs the resulting files in an isolated job and uploads signed-release-artifacts. It does not publish to crates.io. A manual run is allowed on main for a selected crate or all after dependencies exist in the registry. The workflow verifies the tag version and that its commit belongs to main.
 
-```bash
-cargo package -p security_core
-for crate in \
-  security_events secure_output secure_device_trust secure_network \
-  secure_errors secure_boundary secure_data secure_resilience \
-  secure_privacy secure_identity secure_authz
-do
-  cargo package -p "$crate" --list > "/tmp/$crate.package-list"
-done
-```
+Verify downloaded files and their Sigstore bundles using cosign verify-blob, the exact workflow identity (https://github.com/kerberosmansour/SunLitSecurityLibraries/.github/workflows/release-sign.yml@refs/tags/v0.2.0) and issuer https://token.actions.githubusercontent.com. Confirm SHA256SUMS. Attach the artifacts to the GitHub release.
 
-For update releases, run `cargo publish --dry-run -p <crate>` immediately
-before publishing each crate in the order above. The manifests keep versioned
-local path dependencies; when Cargo prepares the package, the published
-manifest resolves those sibling dependencies from crates.io. That means a
-dependent crate's dry run only succeeds after its prerequisite `0.1.2` packages
-have reached the index.
+## Repository controls
 
-Before publishing or making the repository public, run the local supply-chain
-gate. It includes `cargo audit`, `cargo deny`, `cargo vet`, and OSV Scanner:
-
-```bash
-bash scripts/audit.sh
-```
-
-When ready, publish in the order above. crates.io publishes are permanent for
-the uploaded version. Space each upload by at least 10 minutes to avoid
-registry throttling and to give the index time to settle before dependents are
-published:
-
-```bash
-cargo login
-cargo publish -p security_core
-sleep 600
-cargo publish -p security_events
-sleep 600
-# continue through the ordered crate list
-```
-
-Publishing to crates.io is permanent for a given version. If a secret ever
-enters a published crate, yank is not enough; revoke the secret immediately and
-treat the crate contents as public forever.
-
-## Sigstore signing
-
-`.github/workflows/release-sign.yml` packages all publishable crates, copies the
-CycloneDX declaration, creates `SHA256SUMS`, and signs each artifact with
-Sigstore keyless signing through GitHub Actions OIDC.
-
-To produce signed artifacts without publishing:
-
-1. Run the `Release Artifact Signing` workflow manually with
-   `workflow_dispatch` for the crate you are about to publish. Use `all` only
-   after internal dependency versions already exist on crates.io. A `v*` tag
-   also signs `all`.
-2. Download the `signed-release-artifacts` workflow artifact.
-3. Verify any artifact locally:
-
-```bash
-cosign verify-blob \
-  --bundle secure_data-0.1.2.crate.sigstore.json \
-  --certificate-identity-regexp 'https://github.com/kerberosmansour/SunLitSecurityLibraries/.github/workflows/release-sign.yml@refs/(heads|tags)/.*' \
-  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
-  secure_data-0.1.2.crate
-```
-
-## GitHub hardening checklist
-
-Current checked state before public release:
-
-- Repository visibility is still private.
-- `main` is the default branch and points at the sanitized one-commit release
-  candidate.
-- `main` has baseline branch protection: stale-review dismissal, conversation
-  resolution, and force-push/deletion blocks.
-- Default workflow token permission is `contents: read`.
-- GitHub Actions cannot approve pull request reviews.
-- Workflows use explicit `permissions:` blocks and checkout does not persist
-  credentials.
-- Mutable high-risk workflow references have been replaced with commit SHAs.
-- Semgrep Rust static analysis is configured for private prep branches.
-- CodeQL Rust static analysis is configured and will run once the repository is
-  public.
-
-Before switching visibility to public, finish these repository settings in
-GitHub:
-
-- Delete or replace old private-history remote branches before changing
-  repository visibility.
-- Upgrade `main` branch protection using
-  [`branch-protection.md`](./branch-protection.md).
-- Require status checks for CI, supply-chain, secret-pattern, packaging,
-  Semgrep Rust, CodeQL Rust, and DAST gates.
-- Disable force pushes and branch deletion on protected branches.
-- Require signed commits or vigilant mode if that matches maintainer workflow.
-- Enable secret scanning and push protection.
-- Keep SHA-pinned Actions enforcement enabled; every workflow and reusable
-  workflow reference must stay pinned to a commit SHA.
+Keep workflow tokens read-only by default, checks and dependency changes reviewed, Actions SHA-pinned, checkout credentials disabled, and build code separated from publishing/signing tokens. Inspect live branch protection, secret scanning and push-protection availability; do not assume account features are enabled from documentation alone. Daily scans and offline drills report evidence without creating or merging PRs.

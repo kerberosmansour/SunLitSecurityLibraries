@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: "41 5 * * 1"
 
 permissions:
   contents: read
@@ -57,6 +59,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -66,21 +69,36 @@ jobs:
         with:
           components: clippy, rustfmt
 
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - uses: Swatinem/rust-cache@258712b0b7b1ddf8bddc9fc3b0faca682b2736c3 # v2
         with:
           # Windows cache saves have repeatedly failed after format, clippy,
           # tests, and docs all passed. Restore remains useful, but saving is
           # not allowed to turn a green test lane red.
           save-if: ${{ runner.os != 'Windows' }}
 
+      - name: Native dependency trust boundaries
+        run: |
+          python3 scripts/check-native-dependencies.py --self-test
+          python3 scripts/check-native-dependencies.py
+
+      - name: Workflow authority regressions
+        if: runner.os == 'Linux'
+        run: python3 scripts/check-maintenance-workflows.py
+
       - name: Check formatting
+        if: runner.os == 'Linux'
         run: cargo fmt --all -- --check
 
       - name: Clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        if: runner.os == 'Linux'
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       - name: Test
-        run: cargo test --workspace
+        run: cargo test --workspace --locked
+
+      - name: Optional library features (Linux)
+        if: runner.os == 'Linux'
+        run: cargo test --workspace --all-features --locked
 
       - name: Projected workload JWT contract
         run: cargo test -p secure_identity --no-default-features --features "jwks" --test workload_jwt
@@ -89,6 +107,7 @@ jobs:
         run: cargo test -p secure_identity --no-default-features --features "jwks" --lib workload::tests
 
       - name: Doc
+        if: runner.os == 'Linux'
         run: cargo doc --workspace --no-deps
 
   # sg-gate-a M4: presubmit gate enforcing Google's "preventing backsliding"
@@ -98,6 +117,7 @@ jobs:
   # than shipping.
   feature-matrix:
     name: Feature matrix (${{ matrix.crate }} features=${{ matrix.features }})
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -115,22 +135,14 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
-
-      - name: cargo check
-        run: |
-          if [ -z "${{ matrix.features }}" ]; then
-            cargo check -p ${{ matrix.crate }} --no-default-features
-          else
-            cargo check -p ${{ matrix.crate }} --no-default-features --features "${{ matrix.features }}"
-          fi
+      - uses: Swatinem/rust-cache@258712b0b7b1ddf8bddc9fc3b0faca682b2736c3 # v2
 
       - name: cargo test
         run: |
           if [ -z "${{ matrix.features }}" ]; then
-            cargo test -p ${{ matrix.crate }} --no-default-features
+            cargo test --locked -p ${{ matrix.crate }} --no-default-features
           else
-            cargo test -p ${{ matrix.crate }} --no-default-features --features "${{ matrix.features }}"
+            cargo test --locked -p ${{ matrix.crate }} --no-default-features --features "${{ matrix.features }}"
           fi
 
   rustdoc-warnings:
@@ -141,7 +153,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - uses: Swatinem/rust-cache@258712b0b7b1ddf8bddc9fc3b0faca682b2736c3 # v2
       - name: cargo doc (deny warnings)
         env:
           RUSTDOCFLAGS: "-D warnings"
@@ -157,7 +169,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - uses: Swatinem/rust-cache@258712b0b7b1ddf8bddc9fc3b0faca682b2736c3 # v2
 
       - name: Package publishable crates
         shell: bash
@@ -182,7 +194,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - uses: Swatinem/rust-cache@258712b0b7b1ddf8bddc9fc3b0faca682b2736c3 # v2
 
       - name: Install audit tools
         shell: bash
@@ -194,7 +206,9 @@ jobs:
           cargo install --locked cargo-audit --version 0.22.1
           cargo install --locked cargo-deny --version 0.19.0
           cargo install --locked cargo-vet --version 0.10.2
-          cargo install --locked cargo-geiger --version 0.13.0
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ] || [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            cargo install --locked cargo-geiger --version 0.13.0
+          fi
           install_dir="$RUNNER_TEMP/osv-scanner-bin"
           mkdir -p "$install_dir"
           curl -fsSL \
@@ -235,39 +249,26 @@ jobs:
         # docs/slo/design/pq-migration-plan.md §5.
         run: bash scripts/lint-fips-pq-claims.sh
 
-      - name: Cargo geiger (transitive unsafe — advisory)
-        # Advisory-only: cargo-geiger surfaces transitive `unsafe` usage in the
-        # dependency tree. SunLit source is forbid(unsafe_code), so this measures
-        # what the deps bring in. Failure here does NOT block the build; the
-        # JSON artifact is the audit evidence. Promotion to blocking is a
-        # separate runbook after >=1 release cycle of stable signal.
-        #
-        # cargo-geiger requires a root package (it cannot consume a virtual
-        # manifest directly). We pick `secure_reference_service` because it
-        # depends on every library crate and is the closest analogue to what
-        # a downstream consumer's BOM looks like.
-        #
-        # See docs/dev-guide/unsafe-budget.md for the threshold posture.
+      - name: Cargo geiger (all libraries and features — advisory)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         continue-on-error: true
-        timeout-minutes: 10
+        timeout-minutes: 15
         shell: bash
-        working-directory: crates/secure_reference_service
         run: |
           set -euo pipefail
-          mkdir -p ../../output
-          cargo geiger \
-            --all-features \
-            --output-format Json \
-            --update-readme=false \
-            > ../../output/cargo-geiger.json || true
-          echo "--- geiger summary ---"
-          cargo geiger --all-features --update-readme=false || true
+          mkdir -p output
+          for manifest in crates/*/Cargo.toml; do
+            crate="$(basename "$(dirname "$manifest")")"
+            # Each crate is the feature root: a service-only report omits
+            # optional library features and library members it does not use.
+            cargo geiger --manifest-path "$PWD/$manifest" --all-features --all-dependencies --locked --output-format Json > "output/geiger-${crate}.json"
+          done
 
       - name: Upload cargo-geiger artifact
-        if: always()
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: cargo-geiger
-          path: output/cargo-geiger.json
+          path: output/geiger-*.json
           if-no-files-found: warn
           retention-days: 30

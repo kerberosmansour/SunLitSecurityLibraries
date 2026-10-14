@@ -2,12 +2,13 @@
   "$schema": "https://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "version": 5,
+  "version": 6,
   "metadata": {
-    "timestamp": "2026-08-04T00:00:00Z",
+    "timestamp": "2026-10-14T00:00:00Z",
     "component": {
       "type": "application",
-      "name": "SunLitSecurityLibraries"
+      "name": "SunLitSecurityLibraries",
+      "version": "0.2.0"
     }
   },
   "declarations": {
@@ -38,7 +39,8 @@
               "name": "cdx:sunlit:capability",
               "value": "variant-analysis-result-schema"
             }
-          ]
+          ],
+          "version": "0.2.0"
         },
         {
           "bom-ref": "component:secure_errors",
@@ -61,7 +63,8 @@
               "name": "cdx:sunlit:capability",
               "value": "panic-boundary"
             }
-          ]
+          ],
+          "version": "0.2.0"
         },
         {
           "bom-ref": "component:security_events",
@@ -92,7 +95,8 @@
               "name": "cdx:sunlit:limit",
               "value": "Hard-deny matching covers only consumer-configured exact target roots and their :: descendants. Near-prefix and unlisted targets remain enabled, so consumers must inventory dependency targets and maintain runtime canaries."
             }
-          ]
+          ],
+          "version": "0.2.0"
         },
         {
           "bom-ref": "component:secure_boundary",
@@ -119,7 +123,8 @@
               "name": "cdx:sunlit:capability",
               "value": "agent-prompt-injection-boundary"
             }
-          ]
+          ],
+          "version": "0.2.0"
         },
         {
           "bom-ref": "component:secure_output",
@@ -138,7 +143,8 @@
               "name": "cdx:sunlit:capability",
               "value": "uri-scheme-sanitization"
             }
-          ]
+          ],
+          "version": "0.2.0"
         },
         {
           "bom-ref": "component:secure_identity",
@@ -185,15 +191,16 @@
               "name": "cdx:sunlit:limit",
               "value": "Projected Kubernetes workload JWT validation is authentication-only: it returns one bounded system:serviceaccount:<namespace>:<serviceaccount> subject and conveys no tenant, role, or operation authority; consumers must resolve authority in a deny-by-default registry."
             },
-        {
-          "name": "cdx:sunlit:limit",
-          "value": "Projected workload validation requires the jwks feature and either one exact HTTPS JWKS URL or one bounded inline public JWKS document. The remote path refuses redirects and stale-key fallback after refresh failure and rate-limits unknown-kid refreshes to at most one per five-second window; the inline path performs no network refresh and requires an operator rollout to rotate keys. Both paths accept only RS256 with a required bounded protected kid and require exact issuer, exact single audience, exp, and nbf."
-        },
-        {
-          "name": "cdx:sunlit:limit",
-          "value": "OpenSSH public-key validation accepts only an algorithm and Base64 blob, not an authorized_keys options field or comment. The compatibility entry point permits 1024..16384-bit RSA; validate_openssh_public_key_with_rsa_minimum_bits enforces a caller-selected minimum in that range during validation."
-        }
-          ]
+            {
+              "name": "cdx:sunlit:limit",
+              "value": "Projected workload validation requires the jwks feature and either one exact HTTPS JWKS URL or one bounded inline public JWKS document. The remote path refuses redirects and stale-key fallback after refresh failure and rate-limits unknown-kid refreshes to at most one per five-second window; the inline path performs no network refresh and requires an operator rollout to rotate keys. Both paths accept only RS256 with a required bounded protected kid and require exact issuer, exact single audience, exp, and nbf."
+            },
+            {
+              "name": "cdx:sunlit:limit",
+              "value": "OpenSSH public-key validation accepts only an algorithm and Base64 blob, not an authorized_keys options field or comment. The compatibility entry point permits 1024..16384-bit RSA; validate_openssh_public_key_with_rsa_minimum_bits enforces a caller-selected minimum in that range during validation."
+            }
+          ],
+          "version": "0.2.0"
         },
         {
           "bom-ref": "component:secure_authz",
@@ -216,7 +223,8 @@
               "name": "cdx:sunlit:capability",
               "value": "tenant-isolation"
             }
-          ]
+          ],
+          "version": "0.2.0"
         },
         {
           "bom-ref": "component:secure_data",
@@ -240,10 +248,6 @@
               "value": "kms-key-provider"
             },
             {
-              "name": "cdx:sunlit:capability",
-              "value": "fips-aead-backend"
-            },
-            {
               "name": "cdx:sunlit:crypto:password:kdf",
               "value": "argon2id"
             },
@@ -251,7 +255,8 @@
               "name": "cdx:sunlit:crypto:password:feature",
               "value": "password"
             }
-          ]
+          ],
+          "version": "0.2.0"
         },
         {
           "bom-ref": "component:secure_network",
@@ -274,7 +279,8 @@
               "name": "cdx:sunlit:capability",
               "value": "cleartext-traffic-detection"
             }
-          ]
+          ],
+          "version": "0.2.0"
         },
         {
           "bom-ref": "component:secure_resilience",
@@ -293,7 +299,8 @@
               "name": "cdx:sunlit:capability",
               "value": "timeout-budgeting"
             }
-          ]
+          ],
+          "version": "0.2.0"
         },
         {
           "bom-ref": "component:secure_privacy",
@@ -312,7 +319,8 @@
               "name": "cdx:sunlit:capability",
               "value": "data-classification-handling"
             }
-          ]
+          ],
+          "version": "0.2.0"
         }
       ]
     },
@@ -362,8 +370,8 @@
       {
         "bom-ref": "claim:secure_data:capabilities",
         "target": "component:secure_data",
-        "predicate": "Advertises envelope-encryption, argon2id-password-hashing, kms-key-provider, fips-aead-backend for control coverage C2,C7,C8.",
-        "reasoning": "Repository README crate table maps each crate to OWASP or MASVS controls and its purpose."
+        "predicate": "Advertises envelope-encryption, argon2id-password-hashing, and kms-key-provider for control coverage C2,C7,C8. The fips feature does not select a validated envelope backend.",
+        "reasoning": "Checked against secure_data envelope implementation and corrected feature documentation during the 2026-10-14 maintenance review."
       },
       {
         "bom-ref": "claim:secure_network:capabilities",

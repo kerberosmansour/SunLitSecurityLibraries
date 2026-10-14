@@ -1,0 +1,4 @@
+# Keep the reviewed native implementation bundled in repository builds.
+# Target-specific AWS_LC_SYS_* overrides are rejected by CI's native boundary check.
+[env]
+AWS_LC_SYS_USE_SYSTEM = { value = "0", force = true }

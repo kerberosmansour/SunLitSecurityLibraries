@@ -659,7 +659,7 @@ Invalid scheme strings are rejected with `DataError::InvalidSecretReference`.
 
 ### FIPS Readiness
 
-The `fips` Cargo feature gates `aws-lc-rs` as an alternative AEAD backend. When enabled, FIPS 140-2/3 validated cryptographic primitives replace the default `aes-gcm` (RustCrypto) backend. Application code is unchanged — the backend swap is transparent.
+The `fips` Cargo feature currently enables an optional `aws-lc-rs` dependency. Envelope encryption continues to call the RustCrypto `aes-gcm` and `chacha20poly1305` implementations; the feature does not route AEAD operations through AWS-LC or enable its FIPS module. This compatibility placeholder confers no FIPS validation. A future backend implementation requires a separately reviewed interface, module certificate, approved platform and operating configuration, and cryptographic conformance evidence.
 
 ### Mobile Storage Extensions (MASVS-STORAGE — M2)
 

@@ -10,13 +10,13 @@
 
 ```toml
 [dependencies]
-secure_identity = "0.1.10"
+secure_identity = "0.2.0"
 
 # For development/testing only:
-secure_identity = { version = "0.1.10", features = ["dev"] }
+secure_identity = { version = "0.2.0", features = ["dev"] }
 
 # Projected Kubernetes workload JWTs:
-secure_identity = { version = "0.1.10", features = ["jwks"] }
+secure_identity = { version = "0.2.0", features = ["jwks"] }
 ```
 
 ---
@@ -441,7 +441,7 @@ impl SessionManager for RedisSessionManager {
 
 ```toml
 [dependencies]
-secure_identity = { version = "0.1.10", features = ["session-redis"] }
+secure_identity = { version = "0.2.0", features = ["session-redis"] }
 ```
 
 ```rust
@@ -460,7 +460,7 @@ OIDC integration is intentionally a thin wrapper over the `openidconnect` crate 
 
 ```toml
 [dependencies]
-secure_identity = { version = "0.1.10", features = ["oidc"] }
+secure_identity = { version = "0.2.0", features = ["oidc"] }
 ```
 
 ```rust
@@ -661,3 +661,7 @@ impl IdentitySource for KeycloakAdapter {
 | `MfaChallenge` | `mfa` | MFA challenge struct |
 | `MfaResponse` | `mfa` | MFA response struct |
 | `DevAuthenticator` | `dev` | Dev-only authenticator (feature `dev`) |
+
+### JWKS transport maintenance
+
+`JwksKeyStore::new` requires HTTPS for fetching keys. User information and fragments are rejected; redirects are disabled. Fetches have a ten-second timeout and a one-MiB response limit. Production HTTP now fails closed. With the `dev` feature, tests may explicitly call `new_insecure_loopback_for_testing` with a numeric loopback HTTP URL; this does not allow non-loopback HTTP endpoints. The HTTPS transport requires the `jwks` feature.

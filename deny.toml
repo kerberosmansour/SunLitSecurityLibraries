@@ -13,10 +13,11 @@
 [advisories]
 # Ignore list — each entry must have a justification reason.
 ignore = [
-    # RUSTSEC-2026-0002: lru v0.12.5 IterMut violates Stacked Borrows.
-    # lru is used by secure_authz for LRU decision cache; we do not call IterMut.
-    # Refactor to a different cache crate is deferred (no refactor budget in M10).
-    { id = "RUSTSEC-2026-0002", reason = "lru IterMut is not exercised by secure_authz; IterMut is not part of our public API surface." },
+    # Unchanged transitive policy-engine dependency; no patched version exists.
+    # Exact version/owner/2026-11-14 expiry are enforced by CI from
+    # supply-chain/maintenance-exceptions.json. This accepts an informational
+    # maintenance warning, not a new vulnerability waiver.
+    { id = "RUSTSEC-2026-0249", reason = "smartstring 1.0.1 via casbin/rhai; no patched version. Temporary unmaintained exception owned by repository maintainer, expires 2026-11-14; CI enforces exact scope and expiry." },
 
     # RUSTSEC-2023-0071: rsa v0.9.10 Marvin timing side-channel attack.
     # Pulled transitively through openidconnect -> rsa for OIDC signature
@@ -27,19 +28,9 @@ ignore = [
     # channel. No fixed upgrade is available in rsa as of this writing.
     # Revisit when rsa publishes a constant-time release or when
     # openidconnect moves to an alternative.
-    { id = "RUSTSEC-2023-0071", reason = "rsa used only for JWT signature VERIFICATION (public-key op); Marvin attack is a private-key-decryption timing channel. No exploitable path in this crate's usage." },
+    { id = "RUSTSEC-2023-0071", reason = "rsa used only for JWT signature VERIFICATION (public-key op); Marvin attack is a private-key-decryption timing channel. Exact rsa 0.9.10 public verification usage, owner repository maintainer, expires 2026-11-14 and enforced by native dependency CI guard." },
 
-    # RUSTSEC-2026-0098, 0099, 0104: rustls-webpki v0.101.7 — CRL/URI/
-    # wildcard name-constraint issues. Pulled transitively only through
-    # aws-smithy-http-client -> hyper-rustls 0.24 -> rustls 0.21 for AWS
-    # KMS API calls. The TLS chain validates against AWS-issued
-    # certificates over AWS endpoints; no customer-controlled CRLs or
-    # URI-constrained CAs flow through this path. AWS SDK has not yet
-    # released a build against rustls 0.23 + rustls-webpki 0.103.
-    # Revisit when aws-smithy-http-client drops the 0.101 dep.
-    { id = "RUSTSEC-2026-0098", reason = "rustls-webpki 0.101 pulled only by aws-smithy-http-client -> hyper-rustls 0.24; AWS endpoints use AWS-issued certs, no customer-controlled URI-constrained CAs in this path." },
-    { id = "RUSTSEC-2026-0099", reason = "rustls-webpki 0.101 pulled only by aws-smithy-http-client -> hyper-rustls 0.24; AWS endpoints use AWS-issued certs, no customer-controlled wildcard-constrained CAs in this path." },
-    { id = "RUSTSEC-2026-0104", reason = "rustls-webpki 0.101 pulled only by aws-smithy-http-client -> hyper-rustls 0.24; AWS endpoints do not accept customer-supplied CRLs, so the CRL parsing panic is not reachable in this usage." },
+
 ]
 
 [licenses]

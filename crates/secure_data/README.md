@@ -4,21 +4,21 @@
 [![docs.rs](https://docs.rs/secure_data/badge.svg)](https://docs.rs/secure_data)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-Secrets management, envelope encryption, password hashing, and FIPS-ready cryptography (OWASP C8). Part of the [SunLit Security Libraries](https://github.com/kerberosmansour/SunLitSecurityLibraries) workspace.
+Secrets management, envelope encryption, and password hashing (OWASP C8). Part of the [SunLit Security Libraries](https://github.com/kerberosmansour/SunLitSecurityLibraries) workspace.
 
 ## When to reach for this crate
 
 - You handle **secrets in-memory** (API tokens, DB passwords, signing keys) and want types that suppress `Debug`, `Display`, and default `Serialize` and that zero on drop.
 - You need **envelope encryption** with a pluggable KMS (Vault, AWS KMS, Azure Key Vault, or a static dev key).
 - You need **Argon2id password hashing** (OWASP C2/C7) without re-deriving parameters every release.
-- You want **FIPS 140-2/3 readiness** by toggling a feature flag (`aws-lc-rs` backend).
+- You need explicit crypto policy and an accurate implementation inventory. The `fips` feature is a compatibility placeholder; this crate does not supply a validated FIPS envelope backend.
 - You want **mobile secure storage** primitives (`SensitiveBuffer`, `BackupExclusion`, MASVS-STORAGE-1).
 
 ## Install
 
 ```toml
 [dependencies]
-secure_data = { version = "0.1.2", features = ["password"] }
+secure_data = { version = "0.2.0", features = ["password"] }
 ```
 
 ## Quick examples
@@ -88,7 +88,7 @@ assert_eq!(recovered.as_slice(), plaintext);
 | `vault` | `reqwest` | HashiCorp Vault Transit key provider + KV secret resolution. |
 | `aws-kms` | `aws-sdk-kms`, `aws-config` | AWS KMS `GenerateDataKey` / `Decrypt` provider. |
 | `azure-kv` | — | Azure Key Vault key provider (wrap/unwrap only). |
-| `fips` | `aws-lc-rs` | FIPS 140-2/3 validated AEAD backend. |
+| `fips` | `aws-lc-rs` | Compatibility placeholder; adds a dependency without changing envelope encryption or conferring FIPS validation. |
 | `password` | `argon2` | Argon2id password hashing. |
 | `mobile-storage` | — | Mobile secure-storage primitives (MASVS-STORAGE). |
 
@@ -135,3 +135,6 @@ Contributions are welcome. Please read [CONTRIBUTING.md](https://github.com/kerb
 ## License
 
 Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-MIT) or [Apache-2.0](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-APACHE) at your option.
+
+
+AWS KMS dependency maintenance: the JSON parser advisory is repaired at aws-smithy-json 0.62.7 with the minimum compatible runtime/type/schema batch. The retained generated AWS SDK versions are pinned to avoid adopting new schema/codec paths during this review. Those new APIs have independently identified defects and are outside this provider's call path; two exact temporary cargo-vet exceptions expire 2026-11-14. They are not a general approval of those crates. The repository lock/audits describe its tested graph; downstream consumers must audit their final resolved graph and any custom SDK/runtime use.

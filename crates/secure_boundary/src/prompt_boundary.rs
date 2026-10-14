@@ -157,7 +157,7 @@ fn is_allowed_control(character: char) -> bool {
 fn is_bidi_or_zero_width_control(character: char) -> bool {
     matches!(
         character,
-        '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}' | '\u{FEFF}'
+        '\u{061C}' | '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{206F}' | '\u{FEFF}'
     )
 }
 

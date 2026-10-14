@@ -2,7 +2,7 @@
 
 > **Status:** M1-M5 of the [`formal-verification-kani-tla` runbook](../slo/future/RUNBOOK-formal-verification-kani-tla.md) are complete. The advisory Kani lane covers `secure_data`, `secure_authz`, `secure_boundary`, and `secure_errors`; the advisory TLA+ lane covers the circuit-breaker and session step-up state machines.
 
-SunLit ships proof-grade evidence for safety-critical invariants alongside its property-based and fuzz tests. Two tools, two layers:
+SunLit ships bounded model-checking evidence for selected invariants alongside its property-based and fuzz tests. Two tools, two layers:
 
 | Layer | Tool | Lives in | What it proves | CI lane |
 |---|---|---|---|---|
@@ -13,7 +13,7 @@ SunLit ships proof-grade evidence for safety-critical invariants alongside its p
 
 Kani and TLA+ are **complementary, not redundant**:
 
-- **Kani proves the implementation respects an invariant for all inputs within bound.** It speaks Rust and runs on the production source. Examples (M1–M3): `secure_authz` deny-by-default, `secure_boundary` depth/size/field limits, `secure_data` nonce non-zero, `secure_errors` no internal-detail leak.
+- **Kani proves the implementation respects an invariant for all inputs within bound.** It speaks Rust and runs on the production source. Examples (M1–M3): `secure_authz` deny-by-default, `secure_boundary` depth/size/field limits, `secure_data` nonce-length dispatch, `secure_errors` finite status/code mapping.
 - **TLA+ proves the design of a state machine is sound.** It speaks abstract state and runs on a model, not on Rust. Examples (M4–M5): the `secure_resilience::circuit_breaker` half-open-double-probe race; the `secure_identity` session+step-up "no privileged action without step-up" property.
 
 The value of *both* is that Kani catches "the implementation diverges from the design" while TLA+ catches "the design itself has a race." A bug in either layer would slip past the other.
@@ -22,7 +22,7 @@ The value of *both* is that Kani catches "the implementation diverges from the d
 
 | Proof | File | Property | Kani CI |
 |---|---|---|---|
-| `nonce_non_zero` | [`crates/secure_data/src/proofs.rs`](../../crates/secure_data/src/proofs.rs) | A 12-byte AES-256-GCM nonce, modelled with a CSPRNG axiom that excludes the all-zero output, remains non-zero after the structural copies the `EnvelopeEncrypted` builder performs. Bootstrap proof — validates the toolchain end-to-end. | ✓ advisory |
+| `nonce_non_zero` | [`crates/secure_data/src/proofs.rs`](../../crates/secure_data/src/proofs.rs) | A symbolic 12-byte array assumed non-zero is copied locally. Toolchain smoke check only: it does not call encryption, verify RNG output, or prove nonce uniqueness. | ✓ advisory |
 | `aes_256_gcm_nonce_len_is_12` | same | Build-time invariant guard against accidental change of the AES-256-GCM nonce length constant. | ✓ advisory |
 | `deny_by_default_decision_is_deny` | [`crates/secure_authz/src/proofs.rs`](../../crates/secure_authz/src/proofs.rs) | `Decision::Deny { reason }` always reports `is_deny() == true` and `is_allow() == false`. M2. | ✓ advisory |
 | `allow_and_deny_are_mutually_exclusive` | same | `Decision::Allow` and `Decision::Deny` are mutually exclusive on every constructed Decision (catches a refactor that returns the wrong discriminant). M2. | ✓ advisory |
@@ -31,10 +31,10 @@ The value of *both* is that Kani catches "the implementation diverges from the d
 | `body_size_above_limit_is_rejected` | same | Same shape, on `max_body_bytes` (within bounded ranges). M2. | ✓ advisory |
 | `default_limits_are_non_zero` | same | Catches a future copy-paste accident that initialises a default limit to zero (which would silently reject every request). M2. | ✓ advisory |
 | `nonce_len_per_algorithm_in_canonical_set` | [`crates/secure_data/src/proofs.rs`](../../crates/secure_data/src/proofs.rs) | For every `CryptoAlgorithm` variant, `nonce_len()` returns either 12 (AES-256-GCM family) or 24 (XChaCha20-Poly1305). M3. | ✓ advisory |
-| `nonce_length_preserved_per_algorithm` | same | Strengthens M1: per-algorithm nonce-length preservation through the structural pass-through. M3. | ✓ advisory |
+| `nonce_length_preserved_per_algorithm` | same | Local equality smoke check on the selected nonce length. Does not execute the encryption path. | ✓ advisory |
 | `public_status_code_is_in_4xx_5xx_range` | [`crates/secure_errors/src/proofs.rs`](../../crates/secure_errors/src/proofs.rs) | Every `AppError` variant maps to a 4xx/5xx status; never 1xx/2xx/3xx. M3. | ✓ advisory |
-| `public_error_code_is_non_empty_static_literal` | same | `PublicError.code` is a non-empty `&'static str` for every variant — by type, cannot be derived from `err.to_string()`. M3. | ✓ advisory |
-| `public_error_code_is_in_whitelist` | same | `code` for every variant is in the small known set; new variants force a deliberate whitelist update. M3. | ✓ advisory |
+| `public_error_code_is_non_empty_static_literal` | same | The actual mapped `PublicError.code` is non-empty for the finite variants constructed by the harness. This does not prove message redaction or arbitrary internal-input noninterference. | ✓ advisory |
+| `public_error_code_is_in_whitelist` | same | The actual `into_response_parts` output code is in the finite public string whitelist for the constructed variants. Messages, request IDs, arbitrary input strings and serialization require runtime tests. | ✓ advisory |
 
 Each harness lives in its crate's `src/proofs.rs` under `#![cfg(kani)]` so it compiles **only** under `cargo kani`. Regular `cargo build` and `cargo test` runs exclude these files entirely; adding harnesses has zero impact on the production build.
 
@@ -106,3 +106,9 @@ These are explicitly disallowed under the project's formal-verification posture:
 - Research dossier: [`docs/slo/research/formal-verification-kani-tla/`](../slo/research/formal-verification-kani-tla/) (40 sources)
 - Migration plan (PQ-related verification scope): [`docs/slo/design/pq-migration-plan.md`](../slo/design/pq-migration-plan.md)
 - `slo-tla` SKILL.md: bundled with [SunLitOrchestrate](https://github.com/kerberosmansour/SunLitOrchestrate); install with `sldo-install`.
+
+## Maintenance scope correction (2026-10-14)
+
+The nonce copy/equality harnesses are smoke checks, not evidence of encryption safety or nonce uniqueness. The error harnesses cover the finite status/code mapping; they do not establish a general noninterference proof. A green abstract circuit-breaker model does not cover stale Closed calls completing in a later generation; the channel-controlled runtime regression covers that interleaving. No whole-system correctness claim is made.
+
+Advisory Kani runs on Rust source/workflow changes, weekly and manually; TLC runs on model/workflow changes, weekly and manually. Missing model files and non-counterexample tool failures cannot count as successful negative model evidence. Runtime library tests and optional-feature tests remain presubmit gates.

@@ -7,11 +7,35 @@ criteria = "safe-to-deploy"
 delta = "4.1.2 -> 4.1.4"
 notes = "Delta reviewed via cargo vet diff and independently APPROVED by win-agent for GPIL M2. Sanitizer hardening for SVG animation/set attributeName targets, namespace/MathML mXSS, and tag-aware URL/attribute filtering, with regression tests. No unsafe, build script, network, or ambient-capability additions."
 
+[[audits.ammonia]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "4.1.4 -> 4.2.3"
+notes = "AI-assisted delta review of lib.rs, rcdom.rs, style.rs and manifests for the supported sanitizer security update. Extends SVG animation filtering, reparses/normalizes CSS URLs using allowed schemes and configured relative rewriting, and uses cssparser quoted-string serialization for escaping. Invalid stylesheet/style-attribute-filter combinations fail at trusted builder configuration rather than silently sanitizing only attributes. No unsafe or ambient authority added; configured callbacks remain caller-controlled code. Coordinated HTML/CSS/atom dependencies are reviewed separately. The project uses bounded HTML/default sanitizer configuration; sanitizer/all-features tests passed, without a claim of exhaustive XSS proof."
+
+[[audits.aws-smithy-runtime-api]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "1.12.0 -> 1.12.3"
+notes = "AI-assisted delta review of changed auth, ser_de, behavior_version, connection and HTTP headers/request/error source and manifests, independently checked against retained aws-config 1.8.16/KMS 1.106.0/STS 1.103.0 generated consumers. Adds typed auth representation while preserving Document paths, config-aware serializer methods, checked method conversion and sensitive header Debug redaction. New mutual-default deserializer recursion requires a caller implementing neither method; retained SDK implementations override the legacy method. No new build/network/process authority. Deployment scope is the retained SDK graph, not certification of arbitrary custom trait implementations."
+
+[[audits.aws-smithy-types]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "1.4.7 -> 1.4.9"
+notes = "AI-assisted delta review of endpoint typed auth, document module move/conversion feature boundary, retry-spec/config merge and manifests; independently traced retained SDK consumers. Existing Document auth paths remain and default retry configuration is preserved; added typed properties and retry settings use owned/borrowed Rust data. New serde-document conversion APIs are unstable-feature gated and not enabled in the resolved graph. No new build/network/process authority. Review covers the retained generated SDK deployment; new schema/JSON codecs are separate explicit exceptions, not implicitly approved by this record."
+
 [[audits.bs58]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 version = "0.5.1"
 notes = "Full source review for serde_with 3.21's optional Base58 adapter. Pure codec with no build script, filesystem, network, process, or environment authority. The sole unsafe block temporarily exposes a str as mutable bytes behind a Drop guard that replaces every invalid UTF-8 sequence before control returns; the encoder itself emits ASCII."
+
+[[audits.chacha20]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.10.0 -> 0.10.2"
+notes = "AI-assisted delta and independent provider source review of RNG offsets, dispatch and SSE2/NEON backends. Typed fixed-size state/block buffers bound SIMD loads/stores; SSE2 path no longer uses SSE4.1 extraction. NEON cipher batch advances exactly eight 64-byte blocks while RNG output remains four. Runtime x86 feature dispatch and compile-time NEON gating preserve CPU preconditions. No new ambient/native-library authority. Project all-features/PQ tests pass on aarch64; other architecture execution remains CI/upstream evidence, not a whole cryptographic or side-channel audit."
 
 [[audits.cmov]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
@@ -19,11 +43,29 @@ criteria = "safe-to-deploy"
 delta = "0.5.3 -> 0.5.4"
 notes = "Security-positive delta reviewed via cargo vet diff for GHSA-3rjw-m598-pq24. AArch64 inline assembly now masks the intended low 8/16 bits before conditional selection, preventing stale high register bits from changing results; regression tests cover the prior u8/u16/i16 failures. No new ambient capability or unsafe call site."
 
+[[audits.cssparser]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.37.0 -> 0.38.0"
+notes = "AI-assisted delta review of parser/tokenizer, CowRcStr, ASCII macros, color/nth/unicode parsing and manifests. CowRcStr cold-drop extraction retains the same Rc::from_raw ownership path; borrowed str length cannot reach usize::MAX. Parser callers check next_byte before internal next_unchecked; identifier fast scanning copies existing UTF-8 bytes and returns at codepoint boundaries before constructing unchecked UTF-8. MaybeUninit arrays use initialized-prefix conversion. No new ambient authority or build script. Application use remains Ammonia-controlled parsing with cursor/state values from the same input; arbitrary cross-input source-position/state manipulation is not part of this audit argument. Coordinated PHF generation/runtime was reviewed separately."
+
+[[audits.h2]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.4.13 -> 0.4.20"
+notes = "AI-assisted delta review of client/server builders, HPACK codec/table/header paths, framed read/write, stream counts/flow control, receive/send/prioritization and manifests. Adds bounded small-DATA/header/reset processing and checked malformed-frame/content-length handling; write-zero terminates instead of busy looping. Existing BytesStr unchecked UTF-8 conversion remains behind constructors that validate incoming bytes or take str/static str; the decoder continues using validated header/URI/status constructors. No new production unsafe/ambient authority; new env reads are benchmark-only. Project HTTP/JWKS/all-features suites passed. This is focused memory/authority/abuse-bound review, not exhaustive HTTP/2 protocol verification."
+
 [[audits.hkdf]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 version = "0.12.4"
 notes = "Direct pq feature dependency for HKDF-SHA-256 combiner reviewed for pqd M2. Pure Rust implementation; Apache-2.0 OR MIT license accepted by deny policy."
+
+[[audits.hkdf]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.12.4 -> 0.13.0"
+notes = "AI-assisted review of all production source (lib.rs, hmac_impl.rs, errors.rs) and manifests for the HMAC/digest API migration. No unsafe or ambient authority; Cargo forbids unsafe and has no build script. SHA-256 PRK length and output bound preserve RFC5869: <=255 digest blocks, checked block-counter conversion, output copied only within its digest-sized block. HmacImpl is now unsealed, so custom implementations remain caller-trusted code. The repository hybrid combiner passes an independently derived HMAC/SHA-256 vector and PQ tests before/after. This is safe-to-deploy review, not crypto-reviewed certification."
 
 [[audits.html5ever]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
@@ -31,11 +73,29 @@ criteria = "safe-to-deploy"
 delta = "0.35.0 -> 0.39.0"
 notes = "Delta reviewed via cargo vet diff and independently APPROVED by win-agent for GPIL M2. Parser/spec conformance changes add charset extraction, encoding indicators, duplicate-attribute tracking, and tokenizer/tree-builder updates. No new build script, network/runtime dependency, unsafe block, or changed safety precondition; existing SIMD fast paths remain runtime-guarded."
 
+[[audits.html5ever]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.39.0 -> 0.40.1"
+notes = "AI-assisted delta review of encoding.rs, tree_builder/mod.rs, tokenizer/mod.rs and serialize/mod.rs. Truncated charset extraction now uses checked get; tree construction moves validated attributes rather than cloning. Tokenizer refactoring retains runtime-gated SIMD and bounded tendril chunks; inspected existing SSE2/NEON byte scanning ends on ASCII delimiters or input end before UTF-8 subtendril creation. Serializer writes checked byte slices and escapes HTML specials/NBSP without creating partial UTF-8 strings. No new unsafe or ambient authority. Application sanitizer regression/all-features tests passed on aarch64; this is not exhaustive HTML conformance or architecture proof."
+
+[[audits.lru]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.18.0 -> 0.18.3"
+notes = "AI-assisted exact delta review of Cargo.toml and src/lib.rs from 0.18.0 to 0.18.3. pop removes the map entry and detaches the node before reconstructing/dropping its key, preserving linked-list ownership when key Drop panics. find_and_promote traverses live initialized entries under exclusive cache access and only relinks owned nodes; sparse construction reuses the same initialized sentinel construction. No ambient authority added. The later retain API is excluded by an exact 0.18.3 constraint; 0.18.4/0.18.5 were held after independent review found failed-removal ownership risk. Project decision-cache tests use immutable derived Eq/Hash keys; no general memory-safety proof is claimed."
+
 [[audits.markup5ever]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "0.35.0 -> 0.39.0"
 notes = "Delta reviewed via cargo vet diff for GPIL M2. Parser-model updates add encoding indicators, CSP duplicate-attribute state, selectedcontent support, and optional serde support; no unsafe, network, build-script, or ambient-capability additions."
+
+[[audits.markup5ever]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.39.0 -> 0.40.0"
+notes = "AI-assisted delta review of Cargo.toml: MSRV 1.85 and web_atoms 0.3 dependency update only; no source or authority change. Dependent crates are reviewed separately. Exact-source diff preserved in the maintenance evidence."
 
 [[audits.ml-kem]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
@@ -61,11 +121,35 @@ criteria = "safe-to-deploy"
 version = "0.13.3"
 notes = "Full source review of exact p521 0.13.3 for bounded untrusted P-521 public-point validation. The crate forbids unsafe code and has no build script or ambient authority. This workspace uses default-features=false with arithmetic only; the exercised 133-byte uncompressed SEC1 path canonically bounds coordinates, checks the curve equation, and rejects identity. Exact-feature, NIST group-vector, all-feature, FIPS, and Wycheproof tests passed; a fresh RustSec scan found no p521 advisory. This safe-to-deploy audit is not a crypto-reviewed certification: upstream's unaudited constant-time warning and unimplemented Scalar::sqrt do not affect this public-only path. Do not expand to secret/scalar/compressed use without a new review."
 
+[[audits.phf]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.13.1 -> 0.14.0"
+notes = "AI-assisted delta review of lib.rs, map.rs, ordered_map.rs, set.rs and ordered_set.rs. Borrowed-key comparison moves to PhfEq and matching hash generation/lookup; new ptrhash layouts use checked slices and maps guard empty tables before lookup. Macro cfg resolution emits Rust tokens only. No unsafe or ambient authority added. Application sanitizer and all-features compilation exercise the selected CHD graph; this is not a formal algorithm proof."
+
 [[audits.phf_codegen]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "0.11.3 -> 0.13.1"
 notes = "Delta reviewed via cargo vet diff for GPIL M2. Code-generation API and dependency updates, including Cow-based inputs; no runtime capability, build-script network access, unsafe code, or ambient authority added."
+
+[[audits.phf_codegen]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.13.1 -> 0.14.0"
+notes = "AI-assisted delta review of Cargo.toml and src/lib.rs. Coordinated CHD/ptrhash layout generation, optional quote token emission, and checked formatting/indexing over caller-provided compile-time keys. Generated data and runtime layouts must use the same feature; the repository selects CHD. No new unsafe, process, network, environment or file authority; formatting remains caller-directed."
+
+[[audits.phf_generator]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.13.1 -> 0.14.0"
+notes = "AI-assisted delta review of Cargo.toml, src/lib.rs and src/ptrhash.rs. CHD bucket density and sentinel representation change; placement verifies occupied slots before commit. Optional ptrhash uses deterministic seeded generation and checked vectors, with an explicit empty-input case. Build-time inputs are trusted static atom tables; malformed/extreme custom tables can fail generation. No unsafe or ambient capability added."
+
+[[audits.phf_shared]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.13.1 -> 0.14.0"
+notes = "AI-assisted delta review of Cargo.toml, lib.rs, hasher.rs and ptrhash.rs. PortableSipHasher normalizes integer endianness and width; slice lengths delimit variable-sized elements; PhfEq supports conservative borrowed forms. New slice byte-view unsafe cast is instantiated only for u8, i8 and bool, each one byte with no padding, and returns an immutable slice with the same lifetime and length. Optional ptrhash indexes checked slices from matching generated metadata. No new ambient authority; independent pointer review also checks the cast before shipping."
 
 [[audits.quick-xml]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
@@ -78,6 +162,42 @@ who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "0.11.14 -> 0.11.15"
 notes = "Delta reviewed via cargo vet diff for GPIL M2. QUIC transport hardening bounds missing-chunk buffering, drops saturated state, and corrects timing paths. No new unsafe or ambient capabilities; an optional qlog timestamp comparison concern is non-security telemetry accuracy and does not affect transport enforcement."
+
+[[audits.quinn-proto]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.11.15 -> 0.11.18"
+notes = "AI-assisted delta review of endpoint/config RNG use, connection assembler/datagrams/ACK/streams/retired CID/send buffers/spaces, congestion, MTU and packet crypto changes. Count/metadata budgets now constrain sparse receive chunks, queued datagrams and retired IDs; checked/saturating arithmetic prevents budget/cwnd wrap. Existing unsafe VarInt conversions remain on validated local offsets or already bounded VarInt values. Endpoint/connection and token-key randomness remain StdRng/SysRng or rand::rng, while new PCG is used in congestion/sampling paths, not token-key generation. No new runtime filesystem/process/network authority beyond caller-fed sans-IO protocol. QUIC is lockfile-only in the selected workspace graph; downstream HTTP3 requires separate runtime validation. Not a full cryptographic/protocol proof."
+
+[[audits.rand]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.10.1 -> 0.10.3"
+notes = "AI-assisted delta review of distributions, slice/index sampling, weighted-index updates, rng APIs and xoshiro seed handling. Removes unchecked slice/char conversions; validates deserialized UniformChar maximum; weighted sampler errors are returned before mutating weights. No new unsafe or ambient capability. Existing integer fill casts cover integer types with all bit patterns valid; ThreadRng ownership assumptions are unchanged. Dependent ChaCha backend is reviewed separately. The workspace all-features tests exercise the resolved graph; no claim of a full randomness/cryptographic audit."
+
+[[audits.rand_pcg]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+version = "0.10.2"
+notes = "AI-assisted source review of lib.rs, pcg64.rs, pcg128.rs, pcg128cm.rs and macros: deterministic integer-state PCG generators, explicitly non-cryptographic, forbid unsafe code, no build script or ambient authority. State advancement uses wrapping arithmetic; shifts/rotations operate on fixed integer widths and byte-filling uses rand_core helpers. This workspace receives it through Quinn random sampling; it must not replace OS/CSPRNG key generation. Reference vectors are present upstream; project transport/all-features tests passed. Not a crypto-reviewed certification."
+
+[[audits.rustls]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.23.40 -> 0.23.45"
+notes = "AI-assisted exact forward delta review of handshake client/server/encryption-level deframer, message parsing, certificate/compression/provider/suite selection, stream buffering and key-log paths. is_aligned now rejects any pending handshake span before key changes, fixing cross-encryption-level acceptance; ticket requests are optional and server-capped with default zero. Signature schemes and suites remain filtered for the selected protocol; buffers use checked bounds. Crate forbids unsafe. Existing caller-opted SSLKEYLOGFILE authority now creates Unix files mode 0600; no automatic key logging is introduced. Provider/WebPKI review is separate, with explicit native feature/build boundaries and temporary native audit exceptions. Project HTTPS/JWKS/all-features tests passed; not full TLS or cryptographic verification."
+
+[[audits.rustls-webpki]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.103.13 -> 0.103.14"
+notes = "AI-assisted exact delta review of manifests, aws_lc_rs_algs.rs, CRL types and lib exports. Promotes already supplied ML-DSA verification algorithms from unstable provider namespace to stable AWS-LC API; moves provider requirement to 1.18. CRL iteration propagates parse errors with ? rather than altering matching/validation. No new unsafe/ambient authority; native provider review is separately bounded and FIPS features are blocked in repository builds. Source certificate/signature parsing is otherwise unchanged; this is not a FIPS/certificate-module validation claim."
+
+[[audits.rustls-webpki]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.103.14 -> 0.103.15"
+notes = "AI-assisted exact delta review: Cargo docs feature metadata and src/aws_lc_rs_algs.rs only. Removes in_fips_submission filtering from algorithm FIPS metadata; signature verification implementations and certificate parsing are unchanged. No new unsafe or ambient capability. This repository blocks native AWS-LC FIPS features and makes no module/certificate validation claim; the metadata change is not evidence of FIPS compliance. AWS-LC provider code remains separately scoped in the native review/temporary exception."
 
 [[audits.serde_with]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
@@ -97,17 +217,35 @@ criteria = "safe-to-deploy"
 version = "0.10.9"
 notes = "Direct pq feature dependency for HKDF-SHA-256 reviewed for pqd M2. Pure Rust implementation; Apache-2.0 OR MIT license accepted by deny policy."
 
+[[audits.spin]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.9.8 -> 0.9.9"
+notes = "AI-assisted exact delta review of src/once.rs and manifests. Once::force_into_inner now wraps self in ManuallyDrop before assume_init_read, so moving out an initialized T cannot run the Once destructor and double-drop it. Existing COMPLETE-state/unchecked-caller preconditions and consuming ownership remain; no new ambient authority/build script. Removes a yanked version with a focused memory-safety fix; project tests are rerun on the resolved graph."
+
 [[audits.string_cache]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "0.8.9 -> 0.9.0"
 notes = "Delta reviewed via cargo vet diff for GPIL M2. Version and phf_shared dependency updates with documentation changes only; no new unsafe block, runtime authority, network access, or build capability."
 
+[[audits.string_cache]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.9.0 -> 0.11.0"
+notes = "AI-assisted delta review plus independent provider inspection of atom.rs, dynamic_set.rs, static_sets.rs, trivial_impls.rs and lib.rs. Mutex-held link traversal/removal uses UnsafeCell; immutable string/hash fields remain protected by live atomic references, with overflow abort rather than wraparound use. Initialized inline bytes and explicit exposed provenance preserve constructor bounds. The application uses regenerated web_atoms LocalName/Namespace tables, not DefaultAtom try_static empty identity; the independent review found that empty DefaultAtom identity can differ and an existing arbitrary pack_inline safe API has unchecked length/UTF-8 preconditions. Discretion is limited to normal constructors and generated constants with valid <=7-byte UTF-8 payloads; do not infer arbitrary pack_inline or allocator-measurement safety. No new network/file/process authority. No formal pointer proof claimed."
+
 [[audits.string_cache_codegen]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "0.5.4 -> 0.6.1"
 notes = "Delta reviewed via cargo vet diff for GPIL M2. Identifier-generation and code-emission updates remain build-time only; no network access, unsafe code, runtime authority, or ambient-capability additions."
+
+[[audits.string_cache_codegen]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.6.1 -> 0.11.2"
+notes = "AI-assisted delta and independent source review of lib.rs/manifests. Coordinated 64-bit hashes and inline short/empty atoms require regenerated tables with matching runtime; generated inline UTF-8 lengths are <=7 bytes and initialized. New rustfmt process consumes generated source on stdin and trusts successful stdout. Repository CI checks that PATH selects the rustup-managed formatter/proxy matching the selected toolchain before compilation. This is an explicit build-tool trust boundary; downstream builds must provide their own controlled toolchain/PATH. No concealed transfer/download or new unsafe block; caller-directed file emission is unchanged. Formatter subprocess is unbounded for arbitrary callers; repository inputs are finite static atom tables."
 
 [[audits.tendril]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
@@ -126,6 +264,12 @@ who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "0.1.3 -> 0.2.5"
 notes = "Delta reviewed via cargo vet diff for GPIL M2. Generated atom-set expansion plus dependency and build-format updates; no unsafe code, network access, runtime authority, or new ambient capability."
+
+[[audits.web_atoms]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "0.2.5 -> 0.3.0"
+notes = "AI-assisted delta review of Cargo.toml: MSRV and coordinated phf/string_cache dependency versions only. build.rs and generated table inputs are unchanged; dependency code-generator authority is reviewed separately. No new own unsafe block, process, filesystem, or network operation."
 
 [[audits.x25519-dalek]]
 who = "kerberosmansour <13433538+kerberosmansour@users.noreply.github.com>"

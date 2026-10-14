@@ -13,7 +13,7 @@ Add the dependency to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-security_core = "0.1.2"
+security_core = "0.2.0"
 ```
 
 ---

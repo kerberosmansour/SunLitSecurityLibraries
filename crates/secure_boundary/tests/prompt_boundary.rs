@@ -77,3 +77,19 @@ fn enforces_size_and_label_policy() {
     .expect_err("labels with whitespace are rejected");
     assert_eq!(bad_label, PromptBoundaryError::InvalidFenceLabel);
 }
+
+#[test]
+fn rejects_all_unicode_bidi_format_controls() {
+    for character in [
+        '\u{061C}', '\u{206A}', '\u{206B}', '\u{206C}', '\u{206D}', '\u{206E}', '\u{206F}',
+    ] {
+        let input = format!("safe{character}hidden");
+        assert!(
+            matches!(
+                render_untrusted_markdown_literal(&input),
+                Err(PromptBoundaryError::DirectionOverride { .. })
+            ),
+            "accepted {character:?}"
+        );
+    }
+}

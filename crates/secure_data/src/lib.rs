@@ -1,11 +1,11 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
-//! `secure_data` — Data protection, secrets management & FIPS readiness (OWASP C8).
+//! `secure_data` — Data protection and secrets management (OWASP C8).
 //!
 //! This crate provides:
 //! - Typed secret wrappers that suppress `Debug`, `Display`, and default `Serialize` output.
 //! - Pluggable key-provider abstraction with a `StaticDevKeyProvider` for tests.
-//! - Envelope encryption/decryption via AES-256-GCM (FIPS-ready `aws-lc-rs` behind `fips` feature).
+//! - Envelope encryption/decryption via RustCrypto AES-256-GCM. The `fips` feature does not select a validated backend.
 //! - Key ring lifecycle management with rotation and dual-read support.
 //! - Secret reference parsing (`vault://`, `kms://`, `env://`).
 //! - Zeroization and `ReadOnce` memory helpers.

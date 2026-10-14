@@ -44,7 +44,7 @@ const ML_KEM_768_EXPANDED_SECRET_KEY_LEN: usize = 2400;
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct HybridEncapsulation {
     /// ML-KEM-768 ciphertext, 1088 bytes.
     pub kem_ciphertext: Vec<u8>,
@@ -52,6 +52,16 @@ pub struct HybridEncapsulation {
     pub x25519_share: Vec<u8>,
     /// Combined HKDF-SHA-256 output, suitable as an AES-256-GCM key.
     pub derived_key: [u8; 32],
+}
+
+impl std::fmt::Debug for HybridEncapsulation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HybridEncapsulation")
+            .field("kem_ciphertext", &self.kem_ciphertext)
+            .field("x25519_share", &self.x25519_share)
+            .field("derived_key", &"[REDACTED]")
+            .finish()
+    }
 }
 
 /// Encapsulates to a recipient ML-KEM-768 public key and X25519 public key.

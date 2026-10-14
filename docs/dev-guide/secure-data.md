@@ -1,6 +1,6 @@
 # `secure_data` — Developer Guide
 
-> **OWASP C8**: Data protection — secrets management, envelope encryption, key rotation, and FIPS readiness.
+> **OWASP C8**: Data protection — secrets management, envelope encryption, key rotation, and explicit cryptographic policy.
 
 `secure_data` ensures that sensitive data is never stored in plaintext and that secrets are never accidentally logged or serialized. It provides typed secret wrappers, envelope encryption with pluggable KMS backends, and a key lifecycle management system.
 
@@ -10,14 +10,14 @@
 
 ```toml
 [dependencies]
-secure_data = "0.1.2"
+secure_data = "0.2.0"
 
 # With optional features:
-secure_data = { version = "0.1.2", features = ["vault"] }       # HashiCorp Vault
-secure_data = { version = "0.1.2", features = ["aws-kms"] }     # AWS KMS
-secure_data = { version = "0.1.2", features = ["fips"] }        # FIPS 140-2/3 backend
-secure_data = { version = "0.1.2", features = ["pq"] }          # Hybrid PQ envelope wrap
-secure_data = { version = "0.1.2", features = ["vault", "aws-kms"] } # Both
+secure_data = { version = "0.2.0", features = ["vault"] }       # HashiCorp Vault
+secure_data = { version = "0.2.0", features = ["aws-kms"] }     # AWS KMS
+secure_data = { version = "0.2.0", features = ["fips"] }        # compatibility placeholder; no validated backend
+secure_data = { version = "0.2.0", features = ["pq"] }          # Hybrid PQ envelope wrap
+secure_data = { version = "0.2.0", features = ["vault", "aws-kms"] } # Both
 ```
 
 ---
@@ -575,44 +575,25 @@ Three reasons (full discussion in the [migration plan](../slo/design/pq-migratio
 2. Hybrid is a strict superset: an attacker must break **both** X25519 and ML-KEM-768 to recover the wrap key.
 3. Production deployments at AWS, Cloudflare, and Google in 2024–2025 followed this pattern. Adopting it puts SunLit on the same migration trajectory as those ecosystems.
 
-### `fips` × `pq` interaction (M4)
+### `fips` and `pq` implementation status
 
-A build with **both** `--features fips` and `--features pq` enabled is **not** FIPS-validated for the post-quantum portion of the pipeline. The interaction has three honest properties consumers must know:
+The `fips` feature enables the optional `aws-lc-rs` dependency. `envelope.rs` still calls RustCrypto AEAD directly, so the feature does not select an AWS-LC FIPS module or make envelope encryption validated. The previous backend-swap claim was incorrect.
 
-| Combination | What's validated | What's not |
+| Features | Envelope implementation | Project validation claim |
 |---|---|---|
-| `fips` only (no `pq`) | AEAD via FIPS 140-2/3-track `aws-lc-rs` (when validated for the platform) | (PQ not requested; not relevant) |
-| `pq` only (no `fips`) | Nothing claims FIPS validation; pure-Rust `ml-kem` path | (FIPS not requested; not relevant) |
-| `fips` + `pq` | AEAD validated by the same FIPS module as `fips`-only | **The hybrid PQ KEM is validation-pending CMVP** |
+| `fips` | RustCrypto AES-GCM or XChaCha20-Poly1305 | No FIPS validation |
+| `pq` | X25519 + ML-KEM-768 + HKDF-SHA-256, with RustCrypto AES-GCM | No FIPS validation |
+| `fips,pq` | Same hybrid implementation as `pq` | No FIPS validation |
 
-**No CMVP cert covers ML-KEM-768 as of 2026-05** (verified 2026-05-05 in the research dossier; AWS-LC FIPS 3.0 has been on the CMVP "modules in process" list since 2024-12-10 with no public ETA). A `--features fips,pq` build therefore reports `pq_fips_status: "pending_cmvp"` in `Debug` output of any envelope it produces — the runtime metadata field exists so downstream auditors can scan production binaries for the honest label.
+`secure_data::pq::fips_status()` returns `Some("pending_cmvp")` when this project's PQ path is enabled, and `None` otherwise. The status is available through that function; `EnvelopeEncrypted` does not have a `pq_fips_status` field. Searching a binary for a status string cannot demonstrate compliance.
 
-**Hard rule**: SunLit documentation, README, CHANGELOG, rustdoc, and dev-guide content **never** make a validation claim about the PQ path. The CI pipeline includes a grep-based lint (`scripts/lint-fips-pq-claims.sh`) that fails the build if any forbidden phrasing slips in. See the script for the exact forbidden patterns.
+A validated backend requires an actual implementation selected by the encryption/decryption path, a reviewed certificate and supported operating environment, platform and configuration constraints, and conformance tests. That work is outside this maintenance release. Documentation lint helps prevent misleading claims; it is not a cryptographic verification tool.
 
-#### Promotion criteria — when does the validated path ship?
+### Reviewed native build boundary
 
-A future runbook adds a `pq-aws-lc` feature (or similar) that selects a CMVP-validated implementation. Promotion criteria:
+Repository builds force `AWS_LC_SYS_USE_SYSTEM=0` through `.cargo/config.toml`. CI rejects target-specific overrides that reenable system discovery or inject native libraries/bindings, and checks the resolved graph for AWS-LC `legacy-des`, native FIPS, and SSL features outside this review. This responds to the maintenance batch's independent dependency review; it does not establish complete C/assembly memory safety or cryptographic validation.
 
-1. A CMVP cert exists for ML-KEM-768 in a Rust-callable cryptographic module.
-2. The validated module's version, OS support, and platform constraints are documented.
-3. The migration plan is updated to reference the validated path explicitly.
-4. The `pq_fips_status` runtime metadata field reports `"validated"` for the validated combination.
-
-Until those four conditions are met, `--features fips,pq` honestly reports `"pending_cmvp"`. Honest > aspirational.
-
-#### What `pq_fips_status` looks like in `Debug` output
-
-```rust,ignore
-let envelope = encrypt_with_policy(&policy, ...).await?;
-println!("{:?}", envelope);
-// EnvelopeEncrypted { version: "1", algorithm: "AES-256-GCM", ..., pq_fips_status: None }
-//
-// On a `--features fips,pq` build:
-// EnvelopeEncrypted { version: "2", algorithm: "X25519+ML-KEM-768/HKDF-SHA-256", ...,
-//                     pq_fips_status: Some("pending_cmvp") }
-```
-
-Auditors / SBOM consumers can grep production binaries for the literal string `pending_cmvp` to verify the honest label is in place. The CI lint enforces it on the source side; the runtime field enforces it on the binary side.
+Downstream consumers do not inherit this workspace's Cargo configuration or lockfile. Set `AWS_LC_SYS_USE_SYSTEM=0` in controlled builds and remove conflicting `AWS_LC_SYS_SYSTEM_*` and target-specific discovery settings, or independently review the selected native installation, provenance, and ABI. Consumer feature unification must also be reviewed. The release evidence records exact reviewed versions and remaining audit limits.
 
 ---
 
@@ -673,7 +654,7 @@ fn load_config() -> Result<(), Box<dyn std::error::Error>> {
 |---|---|---|
 | `vault` | `VaultKeyProvider`, `reqwest` | Using HashiCorp Vault Transit |
 | `aws-kms` | `AwsKmsKeyProvider`, `aws-sdk-kms` | Using AWS KMS |
-| `fips` | `aws-lc-rs` AEAD backend | FIPS 140-2/3 compliance required |
+| `fips` | Optional dependency placeholder; envelope AEAD is unchanged | Does not confer FIPS validation |
 | `password` | `Argon2Hasher`, `argon2` | Password hashing with Argon2id |
 | `pq` | `ml-kem`, `x25519-dalek`, `hkdf`, `sha2` | Hybrid X25519 + ML-KEM-768 v2 envelope key wrap |
 
@@ -719,3 +700,6 @@ cargo build -p secure_data --features vault,aws-kms
 | `hash_password()` | `password` | Hash a password with Argon2id (feature `password`) |
 | `verify_password()` | `password` | Verify a password against a hash (feature `password`) |
 | `PasswordError` | `password` | Password hashing error enum (feature `password`) |
+
+
+AWS KMS dependency maintenance: the JSON parser advisory is repaired at aws-smithy-json 0.62.7 with the minimum compatible runtime/type/schema batch. The retained generated AWS SDK versions are pinned to avoid adopting new schema/codec paths during this review. Those new APIs have independently identified defects and are outside this provider's call path; two exact temporary cargo-vet exceptions expire 2026-11-14. They are not a general approval of those crates. The repository lock/audits describe its tested graph; downstream consumers must audit their final resolved graph and any custom SDK/runtime use.

@@ -142,12 +142,14 @@ version = "1.2.14"
 criteria = "safe-to-deploy"
 
 [[exemptions.aws-lc-rs]]
-version = "1.16.3"
+version = "1.18.2"
 criteria = "safe-to-deploy"
+notes = "Required by rustls 0.23.45 security repair. Focused independent FFI/source review completed; legacy DES/native FIPS/SSL features outside review are blocked and bundled native source is forced. Exact-version temporary exception preserves honest limits; not a complete cryptographic or C/assembly audit. Owner: repository maintainer. Expires: 2026-11-14. CI enforces expiry and reviewed feature/build boundaries."
 
 [[exemptions.aws-lc-sys]]
-version = "0.40.0"
+version = "0.46.0"
 criteria = "safe-to-deploy"
+notes = "Required bundled implementation for AWS-LC/rustls security repair. Native build authority and selected changed C boundaries were independently inspected. Opaque NASM objects, all C/assembly functions and ABI/architecture behavior were not fully reviewed. System-library substitution is blocked. Exact-version temporary exception, not a fabricated audit. Owner: repository maintainer. Expires: 2026-11-14. CI enforces expiry and reviewed feature/build boundaries."
 
 [[exemptions.aws-runtime]]
 version = "1.7.3"
@@ -178,8 +180,9 @@ version = "1.1.12"
 criteria = "safe-to-deploy"
 
 [[exemptions.aws-smithy-json]]
-version = "0.62.5"
+version = "0.62.7"
 criteria = "safe-to-deploy"
+notes = "Exact temporary acceptance for retained SDK legacy paths only; new schema/codec defects prevent general approval. Independent source review, owner and 2026-11-14 expiry recorded in maintenance-exceptions.json and enforced by CI."
 
 [[exemptions.aws-smithy-observability]]
 version = "0.2.6"
@@ -200,6 +203,11 @@ criteria = "safe-to-deploy"
 [[exemptions.aws-smithy-runtime-api-macros]]
 version = "1.0.0"
 criteria = "safe-to-deploy"
+
+[[exemptions.aws-smithy-schema]]
+version = "0.1.0"
+criteria = "safe-to-deploy"
+notes = "Required by JSON advisory repair, but new binding/codec APIs are not used or exposed by retained generated SDKs. Source review found public-API defects; not a broad audit. Exact bounded exception expires 2026-11-14 and requires review before adoption."
 
 [[exemptions.aws-smithy-types]]
 version = "1.4.7"

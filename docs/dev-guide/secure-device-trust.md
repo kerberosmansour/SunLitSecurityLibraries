@@ -8,7 +8,7 @@ conformance and other native-client access checks.
 
 ```toml
 [dependencies]
-secure_device_trust = "0.1.2"
+secure_device_trust = "0.2.0"
 ```
 
 ## What It Does

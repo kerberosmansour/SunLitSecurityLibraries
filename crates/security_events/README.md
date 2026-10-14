@@ -19,10 +19,10 @@ Security logging, monitoring, and tamper-evident audit trail (OWASP C9). Part of
 
 ```toml
 [dependencies]
-security_events = "0.1.3"
+security_events = "0.2.0"
 
 # OpenTelemetry integration:
-# security_events = { version = "0.1.3", features = ["otel"] }
+# security_events = { version = "0.2.0", features = ["otel"] }
 ```
 
 ## What's inside
@@ -32,7 +32,7 @@ security_events = "0.1.3"
 | `event::SecurityEvent` | The strongly-typed event record (kind, outcome, severity, classification). |
 | `kind::EventKind` | Standardized event categories (auth, authz, data access, network, etc.). |
 | `event::EventOutcome` | `Success`, `Failure`, `Blocked`, `Unknown`. |
-| `event::EventValue::Classified` | Field values carrying their `DataClassification` so sinks can redact. |
+| `event::EventValue::Classified` | Label values carrying their `DataClassification` for explicit RedactionEngine processing. |
 | `audit_chain::AuditChain` | Hash-chained, tamper-evident audit log. Each event commits to its predecessor. |
 | `hmac::HmacEventSigner` | HMAC-seal events for integrity-verified shipping to a remote collector. |
 | `correlation` | Parent/child correlation IDs (`with_parent`, `attach_parent`, `filter_by_parent`). |
@@ -142,3 +142,7 @@ Contributions are welcome. Please read [CONTRIBUTING.md](https://github.com/kerb
 ## License
 
 Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-MIT) or [Apache-2.0](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-APACHE) at your option.
+
+## Redaction boundary
+
+Run `RedactionEngine::process_event` before forwarding an event to a sink. Generic sinks do not automatically redact. The engine processes classified labels; ordinary fields such as actor, source_ip, session_id, resource and reason_code are outside that label policy. Sanitize or omit those fields at the producer. Never treat the resulting event as universally PII-free.

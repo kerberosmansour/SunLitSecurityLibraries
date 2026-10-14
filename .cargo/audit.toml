@@ -7,7 +7,7 @@
 
 [advisories]
 ignore = [
-    # See deny.toml for justifications.
-    "RUSTSEC-2026-0002",  # lru IterMut
+    # See deny.toml and supply-chain/maintenance-exceptions.json for scope/expiry.
+    "RUSTSEC-2026-0249",  # unchanged smartstring; informational unmaintained warning
     "RUSTSEC-2023-0071",  # rsa Marvin (signature-verification-only usage)
 ]
