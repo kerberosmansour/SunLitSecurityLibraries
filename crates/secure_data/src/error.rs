@@ -179,4 +179,11 @@ pub enum DataError {
         /// Human-readable reason — must not include the malformed bytes.
         reason: String,
     },
+    /// Fixed, value-free mobile bridge failure (behind mobile-storage).
+    #[cfg(feature = "mobile-storage")]
+    #[error("{kind}")]
+    MobileKeyProvider {
+        /// Typed failure; never contains native key bytes or caller metadata.
+        kind: crate::providers::mobile::MobileKeyError,
+    },
 }
