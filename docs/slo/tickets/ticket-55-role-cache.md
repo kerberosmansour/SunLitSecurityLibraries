@@ -84,5 +84,5 @@ Verified role downgrades/grants and adversarial manual seeding against the real 
 Validation: 107 tests (27 doctests), all-feature check and clippy, formatter, native dependency guard and cargo-vet passed. The third-party graph is unchanged. Four regressions failed before implementation as expected. New private key tests cover cache hits, role order, expiry and shared capacity.
 
 Issue: https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/55
-PR: created by ticket closeout; independent review pending before merge.
-Publication: next coordinated release after the newly authorized capability milestones; do not close issue before a fixed published version is available.
+PR:128; bounded independent review found no actionable finding. Main synchronized after the reviewed rustls/admission repair, preserving both changelog entries. Live OSV6locks/1448passes before revalidation.
+Publication: coordinated urgent patch0.2.1 includes this fix and the rustls repair; native capability qualification proceeds separately. Do not close issue55 before a fixed published version is available.
