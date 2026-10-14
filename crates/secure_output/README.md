@@ -19,7 +19,7 @@ All encoders implement an open `OutputEncoder` trait so callers pick by *context
 
 ```toml
 [dependencies]
-secure_output = "0.2.0"
+secure_output = "0.2.1"
 ```
 
 ## Quick example

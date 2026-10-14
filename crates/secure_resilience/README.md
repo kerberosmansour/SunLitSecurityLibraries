@@ -20,7 +20,7 @@ This crate is a **pure policy engine** — *you* write the platform-specific pro
 
 ```toml
 [dependencies]
-secure_resilience = "0.2.0"
+secure_resilience = "0.2.1"
 ```
 
 ## Quick example — RASP decision pipeline

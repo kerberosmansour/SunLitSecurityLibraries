@@ -51,7 +51,7 @@ async fn test_tenant_scoped_cache_prevents_cross_tenant_poisoning() {
         "Tenant-B editor should be allowed: {decision_b:?}"
     );
 
-    // Verify cache has two separate entries by checking with constructed keys
+    // Manual keys must not inspect role-bound authorizer entries
     // After add_policy, version is 2 (starts at 1 + 1 increment)
     let key_a = CacheKey {
         actor_id: "alice".into(),
@@ -70,13 +70,23 @@ async fn test_tenant_scoped_cache_prevents_cross_tenant_poisoning() {
         tenant_id: Some("tenant-B".into()),
     };
     assert!(
-        cache.get(&key_a).is_some(),
-        "Tenant-A cache entry should exist"
+        cache.get(&key_a).is_none(),
+        "Role-bound tenant-A entries must be isolated from manual keys"
     );
     assert!(
-        cache.get(&key_b).is_some(),
-        "Tenant-B cache entry should exist"
+        cache.get(&key_b).is_none(),
+        "Role-bound tenant-B entries must be isolated from manual keys"
     );
+    // A role removal in tenant B cannot reuse either tenant's cached allow.
+    let downgraded = test_subject_with_tenant("alice", "tenant-B", &["child"]);
+    assert!(authorizer
+        .authorize(&downgraded, &Action::Read, &resource_b)
+        .await
+        .is_deny());
+    assert!(authorizer
+        .authorize(&subject_a, &Action::Read, &resource_a)
+        .await
+        .is_allow());
 }
 
 /// E2E: Obligation enforcement blocks requests with unsatisfied obligations.
