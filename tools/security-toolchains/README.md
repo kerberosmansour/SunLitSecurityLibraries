@@ -22,6 +22,11 @@ advisory-only inventory is parked; no waiver is added to run it. Existing unsafe
 attestation, native feature/build guards, SAST and bounded Kani checks remain.
 Re-enable only with an admitted graph and a reviewed tool update.
 
+Semgrep 1.180.0 uses a fully resolved Python 3.11/Linux x86_64, hash-pinned,
+wheel-only requirements graph. Pip resolves/downloads metadata without package
+execution; installation uses --require-hashes --no-deps --only-binary. The
+requirements lock participates in admission before scanning source.
+
 Library advisory exceptions are scoped only to the root Cargo.lock. They cannot
 suppress a vulnerability in these toolchains. All graphs are part of the scan
 inventory and receipt. Do not edit recipes/locks to bypass a finding; resolve,

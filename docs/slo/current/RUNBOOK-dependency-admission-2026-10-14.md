@@ -7,7 +7,7 @@ M2: validate negative boundaries, live inventory, workflow permissions/order and
 
 | Contract | Constraint |
 |---|---|
-| Allow-list | scripts/osv-dependency-gate.py, scripts/test_osv_dependency_gate.py, scripts/check-maintenance-workflows.py; .github/workflows/osv-dependency-gate.yml; existing dependency-executing workflows; .gitignore; AGENTS.md; CLAUDE.md; README.md; this contract. Rust additionally scripts/install-security-tool.py, scripts/run-security-tool.py, scripts/check-native-dependencies.py, scripts/test_install_security_tool.py, scripts/audit.sh, scripts/audit.ps1, tools/security-toolchains/README.md, tools/security-toolchains/recipes.json, tools/security-toolchains/cargo-audit/Cargo.lock, tools/security-toolchains/cargo-deny/Cargo.lock, tools/security-toolchains/cargo-vet/Cargo.lock, tools/security-toolchains/kani-verifier/Cargo.lock, docs/dev-guide/unsafe-budget.md, docs/dev-guide/formal-verification.md, Cargo.lock, supply-chain/audits.toml, CHANGELOG.md for the exact rustls repair. |
+| Allow-list | scripts/osv-dependency-gate.py, scripts/test_osv_dependency_gate.py, scripts/check-maintenance-workflows.py; .github/workflows/osv-dependency-gate.yml; existing dependency-executing workflows; .gitignore; AGENTS.md; CLAUDE.md; README.md; this contract. Rust additionally scripts/install-security-tool.py, scripts/run-security-tool.py, scripts/check-native-dependencies.py, scripts/test_install_security_tool.py, scripts/audit.sh, scripts/audit.ps1, sca-scope.json, scripts/locked-cargo.py, scripts/lock-kani-cargo.py, scripts/check-dast-report.py, scripts/test_ci_integrations.py, tools/security-toolchains/semgrep/requirements.txt, tools/security-toolchains/README.md, tools/security-toolchains/recipes.json, tools/security-toolchains/cargo-audit/Cargo.lock, tools/security-toolchains/cargo-deny/Cargo.lock, tools/security-toolchains/cargo-vet/Cargo.lock, tools/security-toolchains/kani-verifier/Cargo.lock, docs/dev-guide/unsafe-budget.md, docs/dev-guide/formal-verification.md, Cargo.lock, supply-chain/audits.toml, CHANGELOG.md for the exact rustls repair. |
 | Read-list | All changed workflows and root manifests/locks, existing scope and exception files, official OSV release metadata/SHA256SUMS/source documentation, existing workflow regressions. |
 | Dependencies | No new project dependency; official scanner is a verified build tool. OSV version and six platform digests matched to official release metadata and published SHA256SUMS. |
 | Compatibility | Existing test/check names retained. Read-only scans do not remediate, merge, execute install scripts or perform call analysis. Deliberate vulnerable fixture locks stay excluded and uninstalled. |
@@ -40,3 +40,30 @@ verifies the installed digest against the admitted source/lock recipe and suppli
 Cargo's required subcommand environment. Kani's Linux compiler bundle has an
 independently verified official-release SHA256 before setup. No cargo-geiger
 waiver and no floating npm package install remain.
+
+CI repair evidence: the first real GitHub run passed all 21 protected CI checks,
+including Linux/macOS/Windows and the feature matrix. Additional lanes exposed
+unsupported Kani --locked arguments, unclassified nested locks, Semgrep's old
+vulnerable Python graph and a Dastardly registry/report-permission failure.
+Kani now wraps only its repository-owned verified SDK Cargo, adding --locked to
+actual compilation/metadata calls without editing the shared SDK. Dastardly uses
+an official digest-pinned image, bounded pull retries and a standard-library
+report verifier with read-only GitHub permissions. Scope classification includes
+all nested tool locks. Semgrep 1.180.0's 66 hash-pinned wheels were independently
+matched to official PyPI version metadata and inspected for install hooks/path
+traversal; none were found. Its complete graph scans clean, before installation.
+No MCP server or JWT authentication service is activated by source scanning.
+The final live Rust scan covers six locks / 1,448 resolved package occurrences.
+OSV detects known advisories, including malware reports; wheel integrity and
+provenance review do not establish absence of unknown malicious code.
+
+Independent review follow-up: Cargo global flags and arguments after `--` could
+bypass the initial wrapper; incomplete DAST XML could falsely pass. Both were
+reproduced by failing tests, then repaired. The wrapper parses global option
+values and checks locking flags only before the application argument separator.
+The report requires a completed suite with explicit nonnegative counts. Pinned
+Kani driver source confirms release setup/metadata/build selects
+`kani_dir/toolchain/bin/cargo`, not the runner CARGO environment variable.
+Real Kani/DAST GitHub execution remains required before merge. Host network
+access for loopback DAST and mutable upstream Semgrep rules are disclosed tool
+containment/reproducibility limits; no source or credentials are sent to a model.

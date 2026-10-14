@@ -70,3 +70,6 @@ states/
 
 # Source-verified security tool builds
 /.cache/security-tools/
+
+# Repository-owned verified Kani SDK and Cargo wrapper
+/.cache/kani/

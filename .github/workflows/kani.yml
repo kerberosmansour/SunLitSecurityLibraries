@@ -76,6 +76,8 @@ jobs:
 
       - name: Install Kani with admitted frozen dependency graph
         shell: bash
+        env:
+          KANI_HOME: ${{ github.workspace }}/.cache/kani
         run: |
           set -euo pipefail
           python3 scripts/install-security-tool.py kani-verifier --report .osv-admission/osv-dependencies.json --receipt .osv-admission/osv-dependencies.receipt.json
@@ -83,9 +85,12 @@ jobs:
           curl --proto '=https' --tlsv1.2 -fsSL --retry 3 --retry-delay 2 -o "$bundle" https://github.com/model-checking/kani/releases/download/kani-0.68.0/kani-0.68.0-x86_64-unknown-linux-gnu.tar.gz
           printf '%s  %s\n' 32e2b484d73ede0bbf64a2cf0879c4259422497d8aec4ee67d448de9ae7843d3 "$bundle" | sha256sum -c -
           python3 scripts/run-security-tool.py --report .osv-admission/osv-dependencies.json --receipt .osv-admission/osv-dependencies.receipt.json kani-verifier -- setup --use-local-bundle "$bundle"
+          python3 scripts/lock-kani-cargo.py
 
       - name: Run Kani proofs
         shell: bash
+        env:
+          KANI_HOME: ${{ github.workspace }}/.cache/kani
         run: |
           set -euo pipefail
           echo "--- Kani version ---"
@@ -93,7 +98,7 @@ jobs:
           echo "--- harnesses for ${{ matrix.crate }} ---"
           # Assertion reachability can report these small invariant harnesses
           # as unreachable on the pinned verifier/toolchain combination.
-          python3 scripts/run-security-tool.py --report .osv-admission/osv-dependencies.json --receipt .osv-admission/osv-dependencies.receipt.json kani-verifier -- -p "${{ matrix.crate }}" --output-format old --no-assertion-reach-checks --locked
+          python3 scripts/run-security-tool.py --report .osv-admission/osv-dependencies.json --receipt .osv-admission/osv-dependencies.receipt.json kani-verifier -- -p "${{ matrix.crate }}" --output-format old --no-assertion-reach-checks
 
       - name: Surface result regardless of pass/fail
         if: always()

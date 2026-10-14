@@ -36,7 +36,9 @@ def main():
     arguments = args.arguments[1:] if args.arguments[:1] == ["--"] else args.arguments
     # Cargo passes a subcommand prefix when invoking cargo-* executables.
     command = [str(binary), recipe["binary"].removeprefix("cargo-"), *arguments]
-    return subprocess.run(command, cwd=ROOT, env=environment, check=False).returncode
+    # This is a trusted operator CLI, not a network-input handler. Only the
+    # recipe-bound, digest-verified executable runs; arguments are never a shell.
+    return subprocess.run(command, cwd=ROOT, env=environment, check=False, shell=False).returncode  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
 
 
 if __name__ == "__main__":
