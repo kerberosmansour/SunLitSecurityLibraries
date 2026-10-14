@@ -8,7 +8,7 @@ baseline: cargo test -p secure_data --features mobile-storage --locked
 ---
 # Mobile key provider
 
-User confirmed M1, M2 and M3 concrete scopes on 2026-10-14. M1 and M2 are done; M3 publication is in progress.
+User confirmed M1, M2 and M3 concrete scopes on 2026-10-14. M1, M2 and M3 are done; coordinated 0.3.0 is published and verified.
 No carry-forward from prior retros: this is M1. Separate dirty native-provider
 work in the user's original checkout is preserved.
 
@@ -141,7 +141,7 @@ allocation limits, cancellation and OS lifecycle remain M2 prerequisites.
 |---|---|---|---|---|
 | M1 adapter | done | 2026-10-14 | 2026-10-14 | lessons/mobile-key-provider-m1.md; completion/mobile-key-provider-m1.md |
 | M2 native reference qualification | done | 2026-10-14 | 2026-10-14 | lessons/mobile-key-provider-m2.md; completion/mobile-key-provider-m2.md; physical properties unqualified |
-| M3 publication/migration | in_progress | 2026-10-14 | — | Issue98 remains open until verified registry publication and migration |
+| M3 publication/migration | done | 2026-10-14 | 2026-10-14 | Verified release v0.3.0; lessons/completion mobile-key-provider-m3.md; downstream proof remains separate |
 
 
 ## M2 confirmed native contract
@@ -212,7 +212,7 @@ are stated precisely; full diff stays inside this list; no new dependency,
 unsafe Rust, deterministic production key, raw KEK export or fake hardware claim.
 
 
-M2 status: in_progress; user confirmed exact scope/14 files. Read M1 lessons.
+M2 status: done; user confirmed exact scope/14 files and qualified software references. Read M1 lessons.
 Baseline: M1 allfeature199tests pass; clean task branch; existing installed SDKs
 identified; no new package graph. No physical Android connected.
 M2 critique (sequential): CEO hold scope (real custody implementation, honest
@@ -400,7 +400,7 @@ artifacts, not code edits. GitHub release/issue operations use existing task aut
 - `docs/slo/completion/mobile-key-provider-m3.md`
 - `crates/secure_data/native/README.md`
 
-Status: user confirmed 2026-10-14; in_progress.
+Status: user confirmed 2026-10-14; done.
 
 
 ### M3 sequential critique
@@ -414,14 +414,24 @@ Design: preserve scope. Migration gives concrete custody, plaintext ownership, c
 
 | Check | Actual result |
 |---|---|
-| Hygiene/readiness | Clean release/mobile-0.3.0 task branch before edits; M1 merged after all checks; M2 14-file diff qualified and CI rerunning on main; registry/signing proven by verified 0.2.1. |
+| Hygiene/readiness | Clean release/mobile-0.3.0 task branch before edits; M1 merged after all checks; M2 14-file diff qualified and all checks passed before merge #134; all source release checks #135 passed before merge. |
 | External lock graph | All external root package dictionaries identical before/after twelve local version changes; nested locks untouched. |
-| Scope/declarations/migration | Source preparation passed exact allow-list and official capability schema; twelve install versions agree and immutable release-tag migration links resolve after publication. Registry approval record is deferred until actual downloaded bytes exist. |
-| Root/candidate scans | Root six-lock OSV admission passed; exact archive admissions pending before package compilation/upload. |
-| Workspace/package verification | Root workspace all-feature suite passed: 1395 tests, zero failures; workspace all-target/all-feature Clippy with warnings denied, formatter/native guard pass. Exact package compilation remains pending after each archive scan. |
-| Registry/checksum/signature/schema | Pending. |
-| Docs/issue closeout | Pending publication; issue98 stays open. |
+| Scope/declarations/migration | Source preparation passed exact allow-list and official capability schema; twelve install versions agree and immutable release-tag migration links resolve after publication. Approval record #136 contains only actual downloaded registry checksums and immutable source e1f45068bfa011e559a8702d1407d05f7ab4ff0a. |
+| Root/candidate scans | Root six-lock OSV admission passed (1448 package occurrences); all twelve exact archive source/graph/provenance and official OSV admissions passed before package compilation/upload. |
+| Workspace/package verification | Root workspace all-feature suite passed: 1395 tests, zero failures; workspace all-target/all-feature Clippy with warnings denied, formatter/native guard pass. All twelve exact admitted packages compiled successfully before upload; downloaded registry bytes/source/checksums match. |
+| Registry/checksum/signature/schema | Twelve registry records; tag 8f77c4db26f3250386b3695a3339adb77bf75da3 contains approval record. Signing run 38627967780 passed; 27 exact workflow-identity signatures, twelve official-schema SBOMs and all 54 uploaded asset digests verified. |
+| Docs/issue closeout | Coordinated release https://github.com/kerberosmansour/SunLitSecurityLibraries/releases/tag/v0.3.0 and immutable migration guide published. Upstream issue98 closeout links Guardian issue1503; no downstream/physical qualification claim. |
 
 M3 detected work: incorrect proposed exhaustive-match breakage claim fixed in documentation before release. `DataError` is non-exhaustive and the actual variant is `MobileKeyProvider { kind }`; minor version remains appropriate for the new mobile capability. No scope or recovery-policy change.
 
 M3 independent publication review found mixed 0.2.1 install examples and relative migration links escaping crate archives. Both fixed inside the confirmed README allow-list: all twelve primary examples select 0.3.0; packaged guidance links the immutable release tag. No hardware claim or additional graph/source issue found. Official CycloneDX 1.6 capability schema and exact scope checks pass.
+
+### M3 verification, retro and release state
+
+Outcome oc-mobile-publish-1 / cuj-mobile-publish-1 passes the source -> exact packaged graph -> admission -> compilation -> immutable registry -> signed release chain. Native adapter/SDK source bytes remain identical to qualified M1/M2; no functional source or external dependency update occurred in M3. All thirty-eight allowed files cover source preparation and post-publication approval metadata. No fabricated checksum, tag before approval, MAL waiver, parked failure or undisbursed finding. Package substitution, unexpected dependency/target authority and normalization attacks remain covered by existing red-first release-admission gate regressions; no new source parser was introduced.
+
+Verify passes: source/runtime regression=1395 tests and all #135 platform/security gates; native regression=unchanged real M1/M2 evidence; package/source/admission=12 pass; signatures/schema/assets=27/12/54 pass. Physical device/browser/AI/Guardian binding are not applicable to this bounded upstream release and remain explicit downstream gates. Existing owned expiring reachability exceptions remain unchanged. Metadata-only approval #136 used the user-authorized admin merge after OSV and independent producer verification; no library source check was waived.
+
+ship_state: shipped
+rollback: immutable registry versions cannot be overwritten; retain prior provider/ciphertext until authorized migration validates durable replacement; never downgrade to plaintext.
+monitoring: daily OSV gate and downstream consumer/device qualification; maintainers review existing exception expiry 2026-11-14.
