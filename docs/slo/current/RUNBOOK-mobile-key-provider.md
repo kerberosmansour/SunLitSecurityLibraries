@@ -8,8 +8,7 @@ baseline: cargo test -p secure_data --features mobile-storage --locked
 ---
 # Mobile key provider
 
-User confirmed M1 scope and exact nine-file allow-list on 2026-10-14. M2 and M3
-remain proposed until their own concrete contracts are confirmed. M1 is in_progress.
+User confirmed M1, M2 and M3 concrete scopes on 2026-10-14. M1 and M2 are done; M3 publication is in progress.
 No carry-forward from prior retros: this is M1. Separate dirty native-provider
 work in the user's original checkout is preserved.
 
@@ -142,7 +141,7 @@ allocation limits, cancellation and OS lifecycle remain M2 prerequisites.
 |---|---|---|---|---|
 | M1 adapter | done | 2026-10-14 | 2026-10-14 | lessons/mobile-key-provider-m1.md; completion/mobile-key-provider-m1.md |
 | M2 native reference qualification | done | 2026-10-14 | 2026-10-14 | lessons/mobile-key-provider-m2.md; completion/mobile-key-provider-m2.md; physical properties unqualified |
-| M3 publication/downstream | proposed — contract not yet confirmed | — | — | Issue98 remains open until reviewed release and migration |
+| M3 publication/migration | in_progress | 2026-10-14 | — | Issue98 remains open until verified registry publication and migration |
 
 
 ## M2 confirmed native contract
@@ -265,3 +264,164 @@ M2 is done for the confirmed native-reference/software qualification scope.
 M3 publication/migration is still proposed, not authorized by this completion.
 Issue98 stays open until the reviewed crate and consumer guidance are published;
 Guardian's downstream device/reconciliation proof is a separate acceptance gate.
+
+
+## Confirmed mobile M3 — publication and migration contract
+
+M1's sealed Rust adapter and M2's native reference/software qualification are
+complete. Publish this reviewed upstream capability so a Tauri/Rust app can
+inject reviewed native operations without exporting long-lived KEKs. This
+milestone touches SunLitSecurityLibraries only. Guardian's application binding,
+exactly-once reconciliation and physical-device qualification remain downstream;
+no Guardian/Broker source edit is proposed.
+
+## Contract
+
+- Release all twelve coordinated libraries as **0.3.0**. The new public mobile adapter/native-reference capability warrants a minor
+  pre-1.0 release; DataError is already non-exhaustive.
+  Existing release tooling requires one family version, so the twelve manifest/
+  README pairs are mechanical version edits only; other crate APIs are unchanged.
+- Preserve every external package/source/checksum, audit and expiring exception.
+  No new Rust/npm/SPM/Maven dependency, unsafe Rust, native KEK getter, production
+  debug manifest or hardware claim. Any new graph identity stops this scope.
+- Advertise the sealed adapter and reviewed SDK reference capability with exact
+  software/physical/consumer-binding limits in CycloneDX. Hardware-required policy
+  rejects supplied iOS/Android software references; custom bridges must qualify
+  their operation-bound hardware metadata independently.
+- Provide concrete migration guidance: supply a reviewed NativeKeyBridge; transfer
+  native transient DEKs directly into Rust Zeroizing; close/clear native owners;
+  never serialize keys through JS; use the existing envelope state APIs; serialize
+  completion/cancellation and acknowledge only durable ciphertext. Re-enrol after
+  passcode removal/reset, with no downgrade or implicit decrypt recreation.
+- Version/changelog/docs updates, clean reviewed source, script-disabled exact
+  archive resolution, provenance plus OSV, then package verification/upload.
+  Verify downloaded registry bytes/VCS/checksums, committed record, exact signing
+  identity, all release asset digests and twelve official-schema SBOMs.
+- No refactor beyond these version/documentation/declaration edits. Native/Rust
+  implementation files remain unchanged; fixes discovered outside this list need
+  a separate confirmed scope, never a silent admission waiver.
+
+Data: release metadata Public; encrypted app state Confidential and transient
+DEKs/KEKs Restricted. Proactive controls: Protect Data Everywhere, Secure All
+Communication, Leverage Security Frameworks and Libraries, Handle All Errors and
+Exceptions. Threat model: existing tm-mobile-key-provider-abuse-1 through -5.
+AI tolerance: N/A, no AI component. Kani/TLA: N/A for publication/doc edits; no new
+parser/state machine/unsafe/concurrency implementation is introduced.
+Exemplar: verified0.2.1 publication, scripts/admit-release-package.py and
+scripts/prepare-release-artifacts.py. Anti-exemplar: cargo publish dry-run before
+admission, StaticDevKeyProvider in production, raw KEK exports, native plaintext
+JSON state, ignoring MAL or fabricated cargo-vet audits.
+
+## Operator readiness / controls
+
+Existing registry/GitHub publication and isolated signing pipeline are proven by
+0.2.1. Validate authentication and exact main ancestry without exposing tokens.
+Existing SDKs/devices are owned qualification fixtures. Before execution, check
+M1/M2 source/static/runtime evidence and successful merge checks. Third-party
+lock equality is mandatory. No physical device is required to publish this
+honestly bounded reference capability; hardware/device claims remain prohibited.
+If registry/scanner/signing readiness fails, do not publish or waive it.
+
+## Outcome and BDD
+
+oc-mobile-publish-1 / cuj-mobile-publish-1: a consuming app can obtain the published
+sealed adapter plus native reference sources and migration instructions; registry
+archives match reviewed source and exact admitted package graphs; tamper/deletion
+failures retain typed outcomes; assets have verified signatures and truthful limits.
+
+Cross-layer assertions: source API/docs/declaration -> script-disabled packaged
+sources/lock -> official scanner and compilation -> immutable registry bytes ->
+verified signature/SBOM assets. SDK-native recovery is real M2 evidence; it is not
+replaced with a mock-only publication claim. App-specific FFI/UI/reconciliation
+and physical hardware: not applicable to this upstream release; separate gates.
+
+BDD: all package versions agree; source/locks match; no external graph drift;
+private KEK APIs remain absent; declarations do not imply hardware/physical or
+complete consumer FFI support; package source substitution and unexpected target/
+dependency authority fail the existing red-first gate regressions; scanner or
+network failure stops before compilation/upload; partial publication resumes only
+with checksum-identical verified versions; wrong signing identity or asset digest
+fails verification. No test-only provider becomes production-capable.
+
+Measurements/DoD: twelve verified registry records, twelve candidate admissions,
+27 signed payloads/54 asset digests, twelve official-schema SBOMs; complete current
+workspace/platform/security checks; docs and public capability/limits agree. Update
+issue98's workpad and close the upstream capability only after publication, linking
+Guardian's downstream proof requirement. Maintainer owns readout at publication.
+Evidence rows (filled during execution): hygiene/baseline, unchanged external
+lock graph, scope/declaration checks, candidate scans, package verification,
+registry source/checksums, signatures/schema/assets, docs/workpad and closeout.
+Core regression matrix: envelope/native recovery=existing M1/M2 pass; cache/TLS=
+workspace gates; package/source/admission/signatures=release verification; browser/
+AI/physical consumer integration=not applicable with the reasons above.
+
+## Exact file allow-list
+
+The large count is mechanical family-version duplication, not permission for new
+features in other crates. Post-publication signature files are immutable release
+artifacts, not code edits. GitHub release/issue operations use existing task authority.
+
+- `Cargo.toml`
+- `Cargo.lock`
+- `README.md`
+- `CHANGELOG.md`
+- `crates/secure_authz/Cargo.toml`
+- `crates/secure_authz/README.md`
+- `crates/secure_boundary/Cargo.toml`
+- `crates/secure_boundary/README.md`
+- `crates/secure_data/Cargo.toml`
+- `crates/secure_data/README.md`
+- `crates/secure_device_trust/Cargo.toml`
+- `crates/secure_device_trust/README.md`
+- `crates/secure_errors/Cargo.toml`
+- `crates/secure_errors/README.md`
+- `crates/secure_identity/Cargo.toml`
+- `crates/secure_identity/README.md`
+- `crates/secure_network/Cargo.toml`
+- `crates/secure_network/README.md`
+- `crates/secure_output/Cargo.toml`
+- `crates/secure_output/README.md`
+- `crates/secure_privacy/Cargo.toml`
+- `crates/secure_privacy/README.md`
+- `crates/secure_resilience/Cargo.toml`
+- `crates/secure_resilience/README.md`
+- `crates/security_core/Cargo.toml`
+- `crates/security_core/README.md`
+- `crates/security_events/Cargo.toml`
+- `crates/security_events/README.md`
+- `declarations/cyclonedx-1.6-capabilities.json`
+- `declarations/release-0.3.0-packages.json`
+- `docs/dev-guide/release-process.md`
+- `docs/dev-guide/mobile-bridge-migration.md`
+- `docs/slo/current/RUNBOOK-mobile-key-provider.md`
+- `docs/slo/design/mobile-key-provider-reuse.md`
+- `docs/slo/design/mobile-key-provider-threat-model.md`
+- `docs/slo/lessons/mobile-key-provider-m3.md`
+- `docs/slo/completion/mobile-key-provider-m3.md`
+- `crates/secure_data/native/README.md`
+
+Status: user confirmed 2026-10-14; in_progress.
+
+
+### M3 sequential critique
+
+CEO: preserve scope. Coordinated release makes the upstream adapter consumable; consumer FFI and physical proof stay downstream, with precise declarations.
+Engineering: preserve scope. Thirty-eight files reflect twelve mechanical version/README pairs and publication metadata. Existing admission and source regressions cover packaging; no new functional code is authorized.
+Security: preserve scope. No newly admitted external dependency; root/package OSV, archive source verification and checksum/signature identity gates run before publication. Do not fabricate registry checksums or convert software tests into hardware claims.
+Design: preserve scope. Migration gives concrete custody, plaintext ownership, cancellation and re-enrolment requirements; a consuming app still owns user-facing recovery.
+
+### M3 evidence log
+
+| Check | Actual result |
+|---|---|
+| Hygiene/readiness | Clean release/mobile-0.3.0 task branch before edits; M1 merged after all checks; M2 14-file diff qualified and CI rerunning on main; registry/signing proven by verified 0.2.1. |
+| External lock graph | All external root package dictionaries identical before/after twelve local version changes; nested locks untouched. |
+| Scope/declarations/migration | Source preparation passed exact allow-list and official capability schema; twelve install versions agree and immutable release-tag migration links resolve after publication. Registry approval record is deferred until actual downloaded bytes exist. |
+| Root/candidate scans | Root six-lock OSV admission passed; exact archive admissions pending before package compilation/upload. |
+| Workspace/package verification | Root workspace all-feature suite passed: 1395 tests, zero failures; workspace all-target/all-feature Clippy with warnings denied, formatter/native guard pass. Exact package compilation remains pending after each archive scan. |
+| Registry/checksum/signature/schema | Pending. |
+| Docs/issue closeout | Pending publication; issue98 stays open. |
+
+M3 detected work: incorrect proposed exhaustive-match breakage claim fixed in documentation before release. `DataError` is non-exhaustive and the actual variant is `MobileKeyProvider { kind }`; minor version remains appropriate for the new mobile capability. No scope or recovery-policy change.
+
+M3 independent publication review found mixed 0.2.1 install examples and relative migration links escaping crate archives. Both fixed inside the confirmed README allow-list: all twelve primary examples select 0.3.0; packaged guidance links the immutable release tag. No hardware claim or additional graph/source issue found. Official CycloneDX 1.6 capability schema and exact scope checks pass.

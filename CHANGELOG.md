@@ -11,6 +11,17 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 _No changes yet._
 
+## [0.3.0] — 2026-10-14
+
+### Mobile storage and migration
+
+- Add the sealed `MobileKeyProvider<B>` and typed native errors behind the existing `mobile-storage` feature. Reuse envelope AEAD; keep long-lived KEKs native and bound alias/version, frame size and operation custody. Decrypt never recreates keys.
+- Include SDK-only iOS Keychain and AndroidKeyStore wrapping reference sources. Real simulator/emulator restart, tamper and key-deletion qualification passes. Physical-device custody, backup/passcode changes, hard preemption and application reconciliation remain unqualified.
+- Require iOS `WhenPasscodeSetThisDeviceOnly`, no fallback, with explicit trusted re-enrolment after passcode removal/reset. Hardware-required policy rejects software references.
+- Add typed `DataError::MobileKeyProvider { kind }` under `mobile-storage`; the error enum remains non-exhaustive. Qualify a native binding using the [migration guide](docs/dev-guide/mobile-bridge-migration.md). No existing envelope format change.
+- Coordinate all twelve crate versions as 0.3.0; other crate APIs are unchanged. Preserve every external locked version/source/checksum, cargo-vet audit and exact expiring advisory exception.
+
+
 ## [0.2.1] — 2026-10-14
 
 ### Security and dependency admission

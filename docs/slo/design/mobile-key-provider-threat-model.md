@@ -51,3 +51,5 @@ and not release ownership while native work remains; Guardian exactly-once
 reconciliation is downstream evidence, not provided by this library milestone.
 Swift/JVM/SDK internals, abort/crash/snapshots and hard OS-call preemption are not
 proved by ordinary buffer clearing. No new secret export or blanket waiver.
+
+M3 publication: the coordinated 0.3.0 adapter/native SDK reference capability is described in `docs/dev-guide/mobile-bridge-migration.md`. Physical-device proof, consumer binding/cancellation and Guardian application reconciliation remain downstream gates. No external graph or native implementation changes are admitted by the publication milestone.

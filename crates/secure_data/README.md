@@ -18,7 +18,7 @@ Secrets management, envelope encryption, and password hashing (OWASP C8). Part o
 
 ```toml
 [dependencies]
-secure_data = { version = "0.2.1", features = ["password"] }
+secure_data = { version = "0.3.0", features = ["password"] }
 ```
 
 ## Quick examples
@@ -139,7 +139,7 @@ Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibra
 
 AWS KMS dependency maintenance: the JSON parser advisory is repaired at aws-smithy-json 0.62.7 with the minimum compatible runtime/type/schema batch. The retained generated AWS SDK versions are pinned to avoid adopting new schema/codec paths during this review. Those new APIs have independently identified defects and are outside this provider's call path; two exact temporary cargo-vet exceptions expire 2026-11-14. They are not a general approval of those crates. The repository lock/audits describe its tested graph; downstream consumers must audit their final resolved graph and any custom SDK/runtime use.
 
-## Unreleased mobile native wrapping adapter (`mobile-storage`)
+## Mobile native wrapping adapter (0.3.0) (`mobile-storage`)
 
 `providers::mobile::MobileKeyProvider<B>` implements the sealed `KeyProvider`
 using a reviewed `NativeKeyBridge`. It reuses the same envelope AEAD and generates
@@ -183,8 +183,6 @@ Hardware-required policies reject the iOS software implementation and Android
 software keys. Physical-device lock/backup/passcode reset, native cancellation
 and downstream exactly-once application reconciliation are separate acceptance
 gates; no simulator evidence qualifies hardware support. Guardian's bridge shape
-is reused; Broker's private desktop custody root remains private. Publication and
-consumer migration are M3, not complete from reference-source qualification alone.
+is reused; Broker's private desktop custody root remains private. Use the [migration guide](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/v0.3.0/docs/dev-guide/mobile-bridge-migration.md) before consumer adoption.
 
-Publication note: released0.2.1does not contain this adapter/native reference
-capability. Registry adoption starts after reviewed M3 publication.
+This adapter and the packaged native references are introduced in 0.3.0; 0.2.1 lacks this capability.
