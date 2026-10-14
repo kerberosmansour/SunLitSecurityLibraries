@@ -1,0 +1,67 @@
+{
+  "formatVersion": 1,
+  "version": "0.3.0",
+  "sourceCommit": "e1f45068bfa011e559a8702d1407d05f7ab4ff0a",
+  "packages": [
+    {
+      "name": "security_core",
+      "version": "0.3.0",
+      "checksum": "5957473cdbb55f6566fe2f1ab08bd5dd09c58833bb428bcf042225f55c33c0dd"
+    },
+    {
+      "name": "security_events",
+      "version": "0.3.0",
+      "checksum": "bba06882231e352baf8776761379df5ca058794a0c43c7b6d3d2242623b28296"
+    },
+    {
+      "name": "secure_errors",
+      "version": "0.3.0",
+      "checksum": "214e5f63885545d5305a5a7834f9969e2add19c1d1bb1b4cc823870006234457"
+    },
+    {
+      "name": "secure_output",
+      "version": "0.3.0",
+      "checksum": "f8a4fec37d9ce27be42eb390e2aa8c76bd85c626e11e1ba8080e5a047c142e25"
+    },
+    {
+      "name": "secure_network",
+      "version": "0.3.0",
+      "checksum": "07dc0ea4bede807620ca19898bd6c58f4513f3790629b03a4f75b6b1dfc119bd"
+    },
+    {
+      "name": "secure_device_trust",
+      "version": "0.3.0",
+      "checksum": "aa4c1674a19c0bc0f1ad67f724e4967980c129f133fe0671c0e7ea991499b9d9"
+    },
+    {
+      "name": "secure_boundary",
+      "version": "0.3.0",
+      "checksum": "d294da034a456d63b6c8dc4691c9bf2c11ee001832f8cae41a0fba89106be67e"
+    },
+    {
+      "name": "secure_data",
+      "version": "0.3.0",
+      "checksum": "b3b7ae27a91835d70a24f2edc6f897f96f4abb96cdafa557d90165f18d3feb2a"
+    },
+    {
+      "name": "secure_resilience",
+      "version": "0.3.0",
+      "checksum": "0ce5dc1f15a027f0c21c21adc4cb62980a3ae6aac5773ffe853fa8c60ba1c92e"
+    },
+    {
+      "name": "secure_privacy",
+      "version": "0.3.0",
+      "checksum": "eaaed268ef116d36f50c8883306bc77cb8039d236f23a0d52bcf689ca3eee7aa"
+    },
+    {
+      "name": "secure_identity",
+      "version": "0.3.0",
+      "checksum": "83552336ca7d6373788de37da2fe0404a42de93b0ecc8fb92224ff27b770bffe"
+    },
+    {
+      "name": "secure_authz",
+      "version": "0.3.0",
+      "checksum": "dc2224c8715ed9bf8c026b7f86351987de2238e6e32ce0feea71c29450dcdfce"
+    }
+  ]
+}
