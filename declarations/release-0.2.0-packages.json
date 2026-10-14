@@ -1,0 +1,67 @@
+{
+  "formatVersion": 1,
+  "version": "0.2.0",
+  "sourceCommit": "bf52c98180ca4794cc01ca06b3ca71d2981737ef",
+  "packages": [
+    {
+      "name": "security_core",
+      "version": "0.2.0",
+      "checksum": "d40e110af57d2068283ac7866abb0db29c95d14a06dbff1c8caba2729459a219"
+    },
+    {
+      "name": "security_events",
+      "version": "0.2.0",
+      "checksum": "88ac61eb86354d70fbdf69366421eac0295b5ffe96596bea4abbd645f74f2925"
+    },
+    {
+      "name": "secure_errors",
+      "version": "0.2.0",
+      "checksum": "c07f843969d8e248fa31453a51743088fcc048158cd8076fe9058644f44decc4"
+    },
+    {
+      "name": "secure_output",
+      "version": "0.2.0",
+      "checksum": "f1969824541888a402aec408c059e71b29a34339ec0cd18b85c6470c60ac359d"
+    },
+    {
+      "name": "secure_network",
+      "version": "0.2.0",
+      "checksum": "145ad1d8689470bd7bc367fad952f803138a7322ffd7884e6d0cbacc83f68deb"
+    },
+    {
+      "name": "secure_device_trust",
+      "version": "0.2.0",
+      "checksum": "97858b788d24b73eef348cf6e419c1ddd814b6772cd3f4cf02957ae9905bbfbc"
+    },
+    {
+      "name": "secure_boundary",
+      "version": "0.2.0",
+      "checksum": "0e11c3fd99bbb168fadf6a189b5d27f989271b4444eb953c1af6abec3c16671a"
+    },
+    {
+      "name": "secure_data",
+      "version": "0.2.0",
+      "checksum": "5f705e448a198ade167c9223606b90ee6ecf4e01693570f4c4490c0a3de6303b"
+    },
+    {
+      "name": "secure_resilience",
+      "version": "0.2.0",
+      "checksum": "c55400acb9a0b881c815c70bc61ae1422553f7d873ed9145f97ef96496695e5a"
+    },
+    {
+      "name": "secure_privacy",
+      "version": "0.2.0",
+      "checksum": "7a037bb2133c773ad4b65431714f44e7cefd0d8c8fa2448f9b5382af0adedd25"
+    },
+    {
+      "name": "secure_identity",
+      "version": "0.2.0",
+      "checksum": "982d7e01ae491ebe7d3bb2d02eb0d5208722cce859c0dc266c7b4d24d8c8fcba"
+    },
+    {
+      "name": "secure_authz",
+      "version": "0.2.0",
+      "checksum": "65a30a67811a3cc6efe048cd7432326f573b892a9e50ede88879ab60e78073d5"
+    }
+  ]
+}

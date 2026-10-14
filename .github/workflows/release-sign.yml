@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       crate:
-        description: "Crate to package and sign, or all once internal dependencies are already published"
+        description: "Published crate to verify and sign; requires the committed release checksum record"
         required: true
         type: choice
         default: security_core
@@ -35,7 +35,7 @@ concurrency:
 
 jobs:
   package-and-sign:
-    name: Package release crates (read-only)
+    name: Verify published release crates (read-only)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
@@ -44,10 +44,6 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
-
-      - uses: Swatinem/rust-cache@258712b0b7b1ddf8bddc9fc3b0faca682b2736c3 # v2
 
       - name: Verify release commit and versions
         env:
@@ -63,48 +59,10 @@ jobs:
           if ref.startswith('refs/tags/'):
               assert ref == 'refs/tags/v' + next(iter(versions)), (ref, versions)
           PYTHON
-          python3 scripts/check-native-dependencies.py
-      - name: Package crates
-        shell: bash
+      - name: Retrieve exact published bytes and prepare dependency SBOMs
         env:
           SELECTED_CRATE: ${{ github.event.inputs.crate || 'all' }}
-        run: |
-          set -euo pipefail
-          selected="$SELECTED_CRATE"
-          if [ "$selected" = "all" ]; then
-            crates=(
-              security_core
-              security_events
-              secure_output
-              secure_device_trust
-              secure_network
-              secure_errors
-              secure_boundary
-              secure_data
-              secure_resilience
-              secure_privacy
-              secure_identity
-              secure_authz
-            )
-          else
-            crates=("$selected")
-          fi
-          for crate in "${crates[@]}"; do
-            cargo package --locked -p "$crate"
-          done
-
-      - name: Collect release artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p signed-artifacts
-          cp target/package/*.crate signed-artifacts/
-          cp declarations/cyclonedx-1.6-capabilities.json signed-artifacts/
-          (
-            cd signed-artifacts
-            mapfile -d '' files < <(find . -maxdepth 1 -type f ! -name SHA256SUMS -print0 | sort -z)
-            shasum -a 256 "${files[@]}" > SHA256SUMS
-          )
+        run: python3 scripts/prepare-release-artifacts.py --crate "$SELECTED_CRATE" --output signed-artifacts
 
       - name: Upload unsigned release artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
