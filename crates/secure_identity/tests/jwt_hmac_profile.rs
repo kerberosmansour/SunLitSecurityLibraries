@@ -46,6 +46,33 @@ async fn real_hs256_identity_and_claim_signature_rejections() {
     )
     .unwrap();
     authenticate(token.clone(), SECRET).await.unwrap();
+    for size in [0, 31, 1025] {
+        assert!(matches!(
+            authenticate(token.clone(), &vec![0x37; size]).await,
+            Err(IdentityError::TokenMalformed)
+        ));
+    }
+    // Real signatures under other supported HMAC algorithms must not change
+    // TokenValidator's explicit HS256 authentication policy.
+    for algorithm in [Algorithm::HS384, Algorithm::HS512] {
+        let key = [0x55; 64];
+        let other = encode(
+            &Header::new(algorithm),
+            &claims(),
+            &EncodingKey::from_secret(&key),
+        )
+        .unwrap();
+        assert!(matches!(
+            authenticate(other, &key).await,
+            Err(IdentityError::TokenMalformed)
+        ));
+    }
+    // Fixed base64url {"alg":"none"}, genuine claims segment, no signature.
+    let payload = token.split('.').nth(1).unwrap();
+    assert!(matches!(
+        authenticate(format!("eyJhbGciOiJub25lIn0.{payload}."), SECRET).await,
+        Err(IdentityError::TokenMalformed)
+    ));
     assert!(matches!(
         authenticate(token.clone(), &[0x37; 32]).await,
         Err(IdentityError::TokenMalformed)

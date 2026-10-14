@@ -214,3 +214,5 @@ fixed scenario names, no credentials or authority decisions. Two exact rule
 annotations document that boundary. All platform lanes now finish independently
 and retain admission/proof artifacts even when a gate fails. No production
 scanner/core file, advisory exception, dependency identity or allow-list changed.
+
+Additional real JWT rejection cases pass: unsigned alg=none, genuine HS384/HS512 tokens under the HS256 validator, and configured key lengths 0, 31 and 1025. No production change was required; selected profile Clippy also passes.
