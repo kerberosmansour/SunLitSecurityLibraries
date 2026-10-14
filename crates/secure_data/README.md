@@ -139,7 +139,7 @@ Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibra
 
 AWS KMS dependency maintenance: the JSON parser advisory is repaired at aws-smithy-json 0.62.7 with the minimum compatible runtime/type/schema batch. The retained generated AWS SDK versions are pinned to avoid adopting new schema/codec paths during this review. Those new APIs have independently identified defects and are outside this provider's call path; two exact temporary cargo-vet exceptions expire 2026-11-14. They are not a general approval of those crates. The repository lock/audits describe its tested graph; downstream consumers must audit their final resolved graph and any custom SDK/runtime use.
 
-## Mobile native wrapping adapter (`mobile-storage`)
+## Unreleased mobile native wrapping adapter (`mobile-storage`)
 
 `providers::mobile::MobileKeyProvider<B>` implements the sealed `KeyProvider`
 using a reviewed `NativeKeyBridge`. It reuses the same envelope AEAD and generates
@@ -162,9 +162,13 @@ native work on cancellation, clear native transient copies, authenticate frames
 against alias/version, and enforce allocation limits before returning vectors.
 Rust can validate returned metadata but cannot prove native custody claims.
 
-This release's M1 is the adapter contract and executable real-envelope tests;
+The proposed release's M1 is the adapter contract and executable real-envelope tests;
 it does not ship a native iOS/Android implementation or physical device
 qualification. The synthetic bridge is compiled only in tests. Guardian's bridge
 shape is reused; its attestation signing is not a wrapping implementation, and
 Broker's private desktop custody root is never exposed. See the mobile provider
 runbook/design/threat model. Native integration and device evidence are M2.
+
+Publication note: the released0.2.1crate does not yet contain this adapter.
+Use the forthcoming reviewed mobile release after M3 publication; do not infer
+registry availability from the development branch.
