@@ -13,11 +13,16 @@ shell, FFI, secret-store process or KEK export operation is introduced.
 | tm-mobile-key-provider-abuse-4 | Caller feeds huge alias/version/frame to exhaust native work | ASCII length bounds before allocations/native calls; backend response limits. Mitigated; trusted backend enforces allocation/timeout bounds. |
 | tm-mobile-key-provider-abuse-5 | Concurrent callers overlap a native operation or native code keeps a secret copy | Serialized provider operations; bridge must terminate its native work on cancellation and clear native transient copies. Mitigated; native lifecycle qualification M2. |
 
-Residuals: bridge claims are not hardware attestation; M1 cannot prove native
-no-export, OS accessibility, backup behavior, device lock/invalidation, timeout
-or cancellation. Owner maintainer; expires at M2 qualification (before production
-support/release claim). Issue98 remains open. Zeroizing Rust ownership protects
-ordinary drops; it does not guarantee memory locking, abort cleanup or snapshots.
+M1 residuals were reviewed in M2 and carried into the bounded M3 release:
+bridge metadata is not hardware attestation. Real software references prove
+native wrapping, attributes and recovery/tamper/deletion behavior; physical
+backup/passcode transitions, consumer FFI cancellation, OS hard preemption and
+internal SDK copy erasure remain unqualified. Owner: library maintainer and
+Guardian application maintainer; review 2026-11-14. Stronger hardware/production
+consumer claims require their own evidence before adoption, rather than a waiver.
+Zeroizing ownership protects ordinary drops, not memory locking, abort cleanup
+or snapshots. Upstream issue98 is resolved by the sealed adapter/reference and
+verified publication; Guardian issue1503 retains downstream proof.
 
 
 ## M2 native reference boundary and disposition
