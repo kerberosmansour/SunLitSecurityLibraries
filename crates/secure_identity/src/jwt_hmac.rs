@@ -207,6 +207,22 @@ mod proofs {
     fn key_acceptance_has_required_length_and_allocation_bounds() {
         let kind: HmacKind = kani::any();
         let length: usize = kani::any();
+        kani::cover!(length == 0, "JHK_KEY_ZERO");
+        kani::cover!(
+            matches!(kind, HmacKind::Sha256) && length == 32,
+            "JHK_KEY_256_MIN"
+        );
+        kani::cover!(
+            matches!(kind, HmacKind::Sha384) && length == 48,
+            "JHK_KEY_384_MIN"
+        );
+        kani::cover!(
+            matches!(kind, HmacKind::Sha512) && length == 64,
+            "JHK_KEY_512_MIN"
+        );
+        kani::cover!(length == 1024, "JHK_KEY_MAX");
+        kani::cover!(length == 1025, "JHK_KEY_OVER_MAX");
+        kani::cover!(length == usize::MAX, "JHK_KEY_USIZE_MAX");
         // Independent JWA contract, not the implementation's bytes() helper.
         let required = match kind {
             HmacKind::Sha256 => 32,
@@ -219,6 +235,21 @@ mod proofs {
     fn signing_size_never_wraps_or_exceeds_complete_token_bound() {
         let kind: HmacKind = kani::any();
         let length: usize = kani::any();
+        kani::cover!(length == 0, "JHK_MESSAGE_ZERO");
+        kani::cover!(
+            matches!(kind, HmacKind::Sha256) && length == 65492,
+            "JHK_MESSAGE_256_MAX"
+        );
+        kani::cover!(
+            matches!(kind, HmacKind::Sha384) && length == 65471,
+            "JHK_MESSAGE_384_MAX"
+        );
+        kani::cover!(
+            matches!(kind, HmacKind::Sha512) && length == 65449,
+            "JHK_MESSAGE_512_MAX"
+        );
+        kani::cover!(length == 65536, "JHK_MESSAGE_OVER_MAX");
+        kani::cover!(length == usize::MAX, "JHK_MESSAGE_USIZE_MAX");
         // Independent canonical unpadded base64 tag lengths for JWA SHA-2.
         let encoded_tag = match kind {
             HmacKind::Sha256 => 43,

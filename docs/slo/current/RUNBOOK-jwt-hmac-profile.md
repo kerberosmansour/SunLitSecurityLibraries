@@ -216,3 +216,14 @@ and retain admission/proof artifacts even when a gate fails. No production
 scanner/core file, advisory exception, dependency identity or allow-list changed.
 
 Additional real JWT rejection cases pass: unsigned alg=none, genuine HS384/HS512 tokens under the HS256 validator, and configured key lengths 0, 31 and 1025. No production change was required; selected profile Clippy also passes.
+
+Kani diagnosis from retained actual 0.68 logs: both original policy assertions
+were SUCCESS, but legacy old output used raw CBMC exits and counted successful
+reachability probes as failures. Upstream 0.68 call_cbmc.rs confirms Old bypasses
+Kani property post-processing. The gate now uses regular output, retains automatic
+assertion reachability, requires actual policy assertion FAILURE in each mutant
+and SUCCESS in each restored harness, and requires all thirteen named covers
+SATISFIED. Covers include all three algorithm boundaries, empty/oversize and
+usize::MAX domains. No assertion, memory/overflow check or source/tool graph is
+disabled; final actual regular-mode verdict remains pending CI. The hidden-file
+artifact correction now retains raw reports/logs on every completed platform.

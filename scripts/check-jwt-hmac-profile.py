@@ -143,15 +143,31 @@ def prove_kani(output, report, receipt):
         raise ValueError("Expected exact complete-token policy mutation target")
     command = [sys.executable, str(ROOT / "scripts/run-security-tool.py"), "--report", str(report),
                "--receipt", str(receipt), "kani-verifier", "--", "-p", "secure_identity",
-               "--no-default-features", "--features", "jwt-hmac", "--output-format", "old"]
+               "--no-default-features", "--features", "jwt-hmac", "--output-format", "regular"]
     names = ["key_acceptance_has_required_length_and_allocation_bounds", "signing_size_never_wraps_or_exceeds_complete_token_bound"]
+    covers = ["JHK_KEY_ZERO", "JHK_KEY_256_MIN", "JHK_KEY_384_MIN", "JHK_KEY_512_MIN",
+              "JHK_KEY_MAX", "JHK_KEY_OVER_MAX", "JHK_KEY_USIZE_MAX", "JHK_MESSAGE_ZERO",
+              "JHK_MESSAGE_256_MAX", "JHK_MESSAGE_384_MAX", "JHK_MESSAGE_512_MAX",
+              "JHK_MESSAGE_OVER_MAX", "JHK_MESSAGE_USIZE_MAX"]
     def run(label, expected_return, expected_summary):
         log = output.with_name(output.stem + "." + label + ".log")
         with log.open("w") as stream:
             result = subprocess.run(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT, timeout=900, shell=False)
         text = log.read_text()
+        text = re.sub(r"\x1b\[[0-9;]*m", "", text)
+        # Regular output uses Kani's own property classification. Old output
+        # uses raw CBMC exits and misclassifies successful reachability probes.
+        checks = re.findall(r'(?m)^Check \d+: ([^\n]+)\n[ \t]+- Status: (\w+)\n[ \t]+- Description: "([^\n]*)"', text)
+        required_status = "FAILURE" if label == "red" else "SUCCESS"
+        policy_status = all(any(name + ".assertion." in identity and status == required_status
+                               and "assertion failed: kind." in description
+                               for identity, status, description in checks) for name in names)
+        actual_covers = [(identity, status, description) for identity, status, description in checks if ".cover." in identity]
+        covered = len(actual_covers) == len(covers) and all(any(status == "SATISFIED" and name in description
+                    for _, status, description in actual_covers) for name in covers)
         if (result.returncode != expected_return or "Kani Rust Verifier 0.68.0" not in text
-                or expected_summary not in text or not all("Checking harness jwt_hmac::proofs::" + name in text for name in names)):
+                or expected_summary not in text or not policy_status or (label == "green" and not covered)
+                or not all("Checking harness jwt_hmac::proofs::" + name in text for name in names)):
             # Bound diagnostics; these pure-policy logs contain only source,
             # symbolic kinds/lengths and verifier output, never production keys.
             print("Kani " + label + " exit=" + str(result.returncode) + " log tail:\n" + text[-32768:], file=sys.stderr)
@@ -166,7 +182,8 @@ def prove_kani(output, report, receipt):
         raise ValueError("Kani mutation did not restore source")
     return {"version": "0.68.0", "mutantFailures": 2, "provedHarnesses": 2,
             "kinds": 3, "lengthDomain": "all usize values on x86_64", "noHeapOrLoopBound": True,
-            "stubs": [], "concurrencyOrCryptographyProved": False, "sourceRestored": True}
+            "stubs": [], "nonVacuityCovers": covers, "automaticAssertionReachability": True,
+            "concurrencyOrCryptographyProved": False, "sourceRestored": True}
 
 
 def ordinary_locks_for_proof():
