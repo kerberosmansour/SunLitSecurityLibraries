@@ -10,7 +10,7 @@ name: TLA+
 # Runtime cap: 10 minutes per the research dossier
 # (`docs/slo/research/formal-verification-kani-tla/synthesis.md`).
 #
-# Pin: tla2tools.jar version 1.8.0 (TLC 1.8.0, January 2024). Bumping
+# Pin: official v1.8.0 asset published 2026-10-13, source 210df3af8aff. Bumping
 # the pin is a deliberate runbook change.
 #
 # Specs covered (each runs both Hardened + Naive):
@@ -89,7 +89,7 @@ jobs:
           # SHA-256 of tla2tools.jar at v1.8.0 — pinned per /slo-tla SKILL §3.
           # If this checksum mismatches, do NOT proceed: the upstream
           # artifact may have been replaced.
-          TLA_TOOLS_SHA256: "b658b4e504fdf0b721caf7066320f6b6fe5805f4dd2f717d0e47baba4097205e"
+          TLA_TOOLS_SHA256: "0f56d6a813368c48008dfbecb23a73ab43a4a5e1bf09f026782a674aa9d4b3c9"
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.sldo/tla"

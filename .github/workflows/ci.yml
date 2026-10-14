@@ -30,6 +30,10 @@ jobs:
           persist-credentials: false
 
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v4
+        with:
+          # Exact default-secret-only hold; native guard enforces version and
+          # expiry in supply-chain/maintenance-exceptions.json (2026-11-14).
+          allow-ghsas: GHSA-6g2r-675j-hx59
 
   secret-pattern-scan:
     name: Secret Pattern Scan

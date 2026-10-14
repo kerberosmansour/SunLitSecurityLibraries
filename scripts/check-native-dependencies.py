@@ -17,6 +17,10 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def read_metadata(target):
+    return json.loads(subprocess.check_output(["cargo", "metadata", "--locked", "--all-features", "--format-version", "1", "--filter-platform", target], cwd=ROOT))
+
+
 def check_boundary(metadata, environment, cargo_config):
     errors = []
     setting = cargo_config.get("env", {}).get("AWS_LC_SYS_USE_SYSTEM", {})
@@ -86,6 +90,13 @@ def check_formatter():
 
 
 class NativeBoundaryTests(unittest.TestCase):
+    def test_metadata_uses_utf8_independent_of_windows_locale(self):
+        payload = json.dumps({"packages": [], "description": "smart quotes \u201d"}, ensure_ascii=False).encode("utf-8")
+        def output(*_args, **options):
+            return payload.decode(options.get("encoding", "cp1252")) if options.get("text") else payload
+        with patch("subprocess.check_output", side_effect=output):
+            self.assertEqual(read_metadata("x86_64-pc-windows-msvc")["description"], "smart quotes \u201d")
+
     def test_unknown_formatter_is_rejected_before_execution(self):
         with tempfile.TemporaryDirectory(prefix="sunlit-formatter-test-") as directory:
             executable = Path(directory) / ("rustfmt.exe" if os.name == "nt" else "rustfmt")
@@ -104,7 +115,7 @@ class NativeBoundaryTests(unittest.TestCase):
         self.assertTrue(any("exact" in error for error in check_exceptions(exceptions, [{"name": "vendor", "version": "2"}], date(2026, 10, 14))))
 
     def test_repository_selects_bundled_source(self):
-        config = tomllib.loads((ROOT / ".cargo/config.toml").read_text())
+        config = tomllib.loads((ROOT / ".cargo/config.toml").read_text(encoding="utf-8"))
         self.assertEqual(check_boundary({}, {}, config), [])
 
     def test_optional_des_feature_is_rejected(self):
@@ -124,10 +135,10 @@ if __name__ == "__main__":
     else:
         host = subprocess.check_output(["rustc", "-vV"], text=True)
         target = re.search(r"^host: (.+)$", host, re.MULTILINE).group(1)
-        metadata = json.loads(subprocess.check_output(["cargo", "metadata", "--locked", "--all-features", "--format-version", "1", "--filter-platform", target], cwd=ROOT, text=True))
-        config = tomllib.loads((ROOT / ".cargo/config.toml").read_text())
-        exceptions = json.loads((ROOT / "supply-chain/maintenance-exceptions.json").read_text())["exceptions"]
-        new_api_use = any(re.search(r"aws_smithy_(schema|json\s*::\s*(codec|protocol))", source.read_text()) for source in (ROOT / "crates").rglob("*.rs"))
+        metadata = read_metadata(target)
+        config = tomllib.loads((ROOT / ".cargo/config.toml").read_text(encoding="utf-8"))
+        exceptions = json.loads((ROOT / "supply-chain/maintenance-exceptions.json").read_text(encoding="utf-8"))["exceptions"]
+        new_api_use = any(re.search(r"aws_smithy_(schema|json\s*::\s*(codec|protocol))", source.read_text(encoding="utf-8")) for source in (ROOT / "crates").rglob("*.rs"))
         review_errors = ["New AWS schema/codec adoption requires review before the legacy-SDK exceptions can apply"] if new_api_use else []
         errors = review_errors + check_boundary(metadata, os.environ, config) + check_formatter() + check_exceptions(exceptions, metadata["packages"], datetime.now(timezone.utc).date())
         if errors:
