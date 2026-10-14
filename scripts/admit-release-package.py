@@ -66,6 +66,20 @@ def source_targets(root, name):
     return {k: sorted(v, key=lambda t: (t["name"], t["path"])) for k, v in result.items()}
 
 
+def normalized_lints(lints):
+    """Cargo makes the documented zero priority explicit when packaging."""
+    result = {}
+    for group, entries in lints.items():
+        if not isinstance(entries, dict):
+            raise ValueError("Inherited lint authority requires explicit review")
+        result[group] = {}
+        for name, value in entries.items():
+            value = {"level": value} if isinstance(value, str) else dict(value)
+            value.setdefault("priority", 0)
+            result[group][name] = value
+    return result
+
+
 def candidate(archive, root, commit, published):
     if archive.is_symlink() or not archive.is_file() or archive.stat().st_size > 16 * 1024 * 1024:
         raise ValueError("Release archive is invalid or exceeds bound")
@@ -133,7 +147,7 @@ def candidate(archive, root, commit, published):
         generated = set(normalized["package"]) - set(manifest["package"])
         if generated - {"build", "autolib", "autobins", "autoexamples", "autotests", "autobenches"} or any(normalized["package"][key] is not False for key in generated):
             raise ValueError("Unexpected normalized package authority")
-        if normalized.get("lints", {}) != manifest.get("lints", {}):
+        if normalized_lints(normalized.get("lints", {})) != normalized_lints(manifest.get("lints", {})):
             raise ValueError("Normalized lint authority differs from clean source")
         if (normalized["package"]["name"], normalized["package"]["version"]) != (name, version):
             raise ValueError("Normalized package identity differs")

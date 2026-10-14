@@ -19,10 +19,11 @@ class ReleaseTests(unittest.TestCase):
         self.target_patch=patch.object(release,"source_targets",return_value=targets)
         self.target_patch.start();self.addCleanup(self.target_patch.stop)
 
-    def fixture(self, root, *, checksum="0"*64, injected=False, bad_source=False, build=False, dirty=False, dep_path=False, changed_target=False, path_only_dev=False, injected_profile=False):
+    def fixture(self, root, *, checksum="0"*64, injected=False, bad_source=False, build=False, dirty=False, dep_path=False, changed_target=False, path_only_dev=False, injected_profile=False, lint_priority=None):
         crate = root / "crates/security_core"; (crate / "src").mkdir(parents=True)
         original = '[package]\nname="security_core"\nversion="0.2.1"\n[dependencies]\nfixture_dep="=1.0.0"\n'
         if path_only_dev: original += '[dev-dependencies]\nlocal_dev={path="../local_dev"}\n'
+        if lint_priority is not None: original += '[lints.rust]\nunexpected_cfgs={level="warn",check-cfg=["cfg(kani)"]}\n'
         (crate / "Cargo.toml").write_text(original)
         (crate / "src/lib.rs").write_text("pub fn fixture() {}\n")
         (root / "Cargo.toml").write_text('[workspace]\nmembers=["crates/security_core"]\n[workspace.dependencies]\n')
@@ -37,6 +38,7 @@ class ReleaseTests(unittest.TestCase):
         if dep_path: normalized=normalized.replace('fixture_dep="=1.0.0"','fixture_dep={version="=1.0.0",path="injected"}')
         if changed_target: normalized=normalized.replace('path="src/lib.rs"','path="Cargo.toml.orig"')
         if injected_profile: normalized+='[profile.dev]\ndebug-assertions=false\n'
+        if lint_priority is not None: normalized=normalized.replace('level="warn",check-cfg=', f'level="warn",priority={lint_priority},check-cfg=')
         packaged_lock=lock.replace('checksum="'+"0"*64+'"','checksum="'+checksum+'"')
         if injected: packaged_lock+='[[package]]\nname="unexpected"\nversion="1.0.0"\n'
         files = {"Cargo.toml.orig":original, "Cargo.toml":normalized, "Cargo.lock":packaged_lock, ".cargo_vcs_info.json":json.dumps({"git":{"sha1":commit,"dirty":dirty},"path_in_vcs":"crates/security_core"}), "src/lib.rs":"pub fn injected() {}\n" if bad_source else "pub fn fixture() {}\n"}
@@ -89,6 +91,17 @@ class ReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);archive,commit=self.fixture(root,injected_profile=True)
             with self.assertRaisesRegex(ValueError,"top-level"):
+                release.candidate(archive,root,commit,{})
+
+    def test_cargo_default_lint_priority_preserves_source_authority(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);archive,commit=self.fixture(root,lint_priority=0)
+            release.candidate(archive,root,commit,{})
+
+    def test_changed_lint_priority_cannot_inherit_source_authority(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);archive,commit=self.fixture(root,lint_priority=1)
+            with self.assertRaisesRegex(ValueError,"lint authority"):
                 release.candidate(archive,root,commit,{})
 
     def test_workspace_dependency_features_are_merged_before_comparison(self):
