@@ -141,5 +141,127 @@ allocation limits, cancellation and OS lifecycle remain M2 prerequisites.
 | Milestone | Status | Started | Completed | Evidence |
 |---|---|---|---|---|
 | M1 adapter | done | 2026-10-14 | 2026-10-14 | lessons/mobile-key-provider-m1.md; completion/mobile-key-provider-m1.md |
-| M2 native qualification | proposed — contract not yet confirmed | — | — | Device/simulator and native binding evidence required |
+| M2 native reference qualification | done | 2026-10-14 | 2026-10-14 | lessons/mobile-key-provider-m2.md; completion/mobile-key-provider-m2.md; physical properties unqualified |
 | M3 publication/downstream | proposed — contract not yet confirmed | — | — | Issue98 remains open until reviewed release and migration |
+
+
+## M2 confirmed native contract
+
+# Mobile provider M2 — concrete proposed scope
+
+M1 is reviewed in [PR130](https://github.com/kerberosmansour/SunLitSecurityLibraries/pull/130).
+M2 supplies reviewed native wrapping implementations and executable platform
+qualification without changing the sealed Rust API or importing a new package.
+The existing Guardian native bridge conventions and Broker's bounded custody
+failure handling are reused; signing-only stubs are not copied as wrapping.
+
+Native iOS implementation: Apple Security/Keychain + CryptoKit AES-GCM. A fresh
+32-byte wrapping key lives only in Keychain and transient native memory, uses
+WhenPasscodeSetThisDeviceOnly, synchronizable=false, and has no Rust KEK getter.
+It is explicitly software wrapping with device-protected storage; it never
+claims Secure Enclave/hardware wrapping. Native AES-GCM wraps the transient DEK
+with exact alias/version authenticated data; decrypt does not recreate a key.
+
+Native Android implementation: platform AndroidKeyStore AES-256-GCM; getKeyInfo
+reports the actual operation key's security level. Explicit software/TEE/
+StrongBox policy is enforced before returning success; hardware requests cannot
+fall back silently. Missing/locked/invalidated/error outcomes are fixed values.
+
+No Swift Package Manager, Maven/Gradle, Rust, npm or third-party crypto dependency
+is added. Compile/tests use existing Xcode26.6, iOS26.5/18.6 simulators and the
+installed Android36.1 SDK/emulator/JDK. If a new dependency proves necessary,
+stop before installation and apply exact script-disabled OSV/provenance admission.
+
+Exact allow-list in SunLitSecurityLibraries:
+- crates/secure_data/native/ios/MobileKeyBridge.swift
+- crates/secure_data/native/ios/Qualification.swift
+- crates/secure_data/native/ios/Info.plist
+- crates/secure_data/native/android/MobileKeyBridge.java
+- crates/secure_data/native/android/QualificationActivity.java
+- crates/secure_data/native/android/AndroidManifest.xml
+- crates/secure_data/native/README.md
+- scripts/qualify-mobile-native.py
+- crates/secure_data/README.md
+- docs/slo/current/RUNBOOK-mobile-key-provider.md
+- docs/slo/design/mobile-key-provider-reuse.md
+- docs/slo/design/mobile-key-provider-threat-model.md
+- docs/slo/lessons/mobile-key-provider-m2.md
+- docs/slo/completion/mobile-key-provider-m2.md
+
+Behavior/measurement: native wrap→persist frame→process stop/relaunch→unwrap
+recovers generated32byte DEK; changed alias/version/frame, deleted key and partial
+operation never return plaintext; software custody cannot satisfy hardware
+policy. Fixed aliases are prefixed by a generated qualification identifier.
+Native tests delete only their own generated keychain/keystore items and emulator
+app data; never consumer keys. Frames <=8192, alias/version<=128/64 ASCII, exact
+32byteDEKs, no secret logs/key files, serialized operations and no implicitretry.
+A synchronous native operation completes before ownership is released; bridges
+must not spawn detached key operations. Native error/cleanup paths are reviewed.
+
+Qualification records simulator/emulator as software evidence. Hardware TEE/
+StrongBox and physical-device lock/backup/invalidation require actual devices;
+those gates remain explicit and block any claim of qualified hardware support.
+The supplied native sources are callable bridge implementations; application FFI
+binding must map mutable native DEK buffers into Rust Zeroizing and clear native
+copies, with no JS/plaintext serialized persistence. Guardian's exactly-once
+application reconciliation remains a downstream acceptance gate, not a claim
+of this library milestone. Release/migration is M3 after reviewed evidence.
+
+DoD: real native platform tests, process restart/tamper/deletion/custody evidence,
+source review and library regression gates pass; unsupported physical properties
+are stated precisely; full diff stays inside this list; no new dependency,
+unsafe Rust, deterministic production key, raw KEK export or fake hardware claim.
+
+
+M2 status: in_progress; user confirmed exact scope/14 files. Read M1 lessons.
+Baseline: M1 allfeature199tests pass; clean task branch; existing installed SDKs
+identified; no new package graph. No physical Android connected.
+M2 critique (sequential): CEO hold scope (real custody implementation, honest
+software evidence); eng hold scope (same Rust interface, platform-controlled
+key stores and explicit process lifecycle); security hold scope (threat rows
+1–5 carry forward, fixed errors and no exported KEK; hardware/cancellation
+claims require actual evidence); design skipped (no product UI). No extra ask.
+
+M2 secure surface: native Keychain/Keystore and transient DEKs. Platform crypto
+APIs provide wrapping; secure_data remains the application-state envelope AEAD.
+OS-native wrapping primitives protect DEKs only, not a duplicate application
+encryption path. No shell secret-store command or app-local key file.
+
+M2 evidence: baseline/hygiene passed. Android/iOS native red-first qualification
+compiled and failed for expected unavailable/input behaviour. Both installed
+SDK runtimes now pass native wrapping, persisted ciphertext/frame, process stop/
+relaunch recovery, tamper/wrong alias/version and deletion/no recreation. Native
+reference sources are software-qualified; physical properties remain unqualified.
+
+Confirmed policy correction: user approved WhenPasscodeSetThisDeviceOnly/no fallback and documented re-enrolment on passcode removal/reset. This supersedes the original class.
+
+
+## M2 evidence and verification
+
+| Check | Actual result |
+|---|---|
+| Scope/hygiene | Task branch slo/mobile-key-provider-m2; exact 14-file allow-list; no Rust/npm/SPM/Maven dependency or unsafe Rust added; M1 Rust baseline unchanged |
+| Native BDD red | Actual Android APK unavailable stub failed before implementation; actual compiled iOS app input scenario failed before validation; no fixture dependency installation |
+| Android outcome | Android 36.1 generated emulator: native wrap→encrypted frame/digest persistence→force-stop→new bridge unwrap matches generated32byteDEK; normal production-source build passes |
+| Android faults | Injected lock-close failure failed clearing before fix, then passed; failed namespace commit failed before fix, then rejects without creating a key. Tamper/alias/version/software→hardware/StrongBox rejection, deletion/no-recreate, close/clear and cleanup pass |
+| iOS outcome | Xcode26.6 / iOS26.5 generated simulator: strict Keychain attributes, native CryptoKit wrap→persistence→terminate/relaunch→sameDEKdigest; tamper/alias/version/deletion/no-recreate/closed-owner tests and cleanup pass |
+| iOS faults | Rejection helper could catch its own expected error: native regression failed first, then sentinel moved outside catch. Host cleanup failure regression lost marker before fix; now app/namespace retained, prior cleanup required before seed |
+| Host regressions | Five Python tests pass, covering partial report, missing ownership, stale report/build failure, assertion/timeout/cleanup failures, retained iOS Keychain cleanup marker; no SDK calls in host unit tests |
+| Source review | Android five findings plus report race/exported control fixed; iOS two concrete findings fixed with red-first evidence. No known undisposed finding |
+| Static/admission | Native/host Semgrep eight scanned paths, zero findings/errors. Three exact subprocess sites annotate validated integer/serial and fixed executable/remote command, not a blanket suppression. Swift compiled with source warnings treated as errors and separately reviewed. Cargo/root/tool locks unchanged |
+| Operator identity | Separate task emulator data/PID/port/token and simulator UUID/name/runtime/token verified before installation; no user device erased or installed |
+| Cleanup | Own generated keys/state cleared and apps removed on successful runs. Android finally cleanup+uninstall; iOS failed deletion suppresses uninstall to preserve marker. SDK build temp directory removed. Device loss is an explicit failure |
+
+SLO verification: Pass0 native wrapping/persistence/restart outcome passes on both
+runtimes. Happy/degraded/tamper/partial and buffer-owner checks pass; source/static
+security checks pass. No browser/product UI or AI surface. Measurements distinguish
+observed Android SOFTWARE and iOS software wrapping from hardware; the two-second
+result deadline is not hard OS-call preemption. Device lock/passcode removal/reset,
+backup/reinstall, hardware, memory locking/abort/internal-copy erasure and consumer
+FFI/exactly-once reconciliation remain explicitly unqualified. No unsupported
+physical or production application-integration claim closes those gates.
+
+M2 is done for the confirmed native-reference/software qualification scope.
+M3 publication/migration is still proposed, not authorized by this completion.
+Issue98 stays open until the reviewed crate and consumer guidance are published;
+Guardian's downstream device/reconciliation proof is a separate acceptance gate.

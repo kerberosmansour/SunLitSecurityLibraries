@@ -162,9 +162,25 @@ native work on cancellation, clear native transient copies, authenticate frames
 against alias/version, and enforce allocation limits before returning vectors.
 Rust can validate returned metadata but cannot prove native custody claims.
 
-This release's M1 is the adapter contract and executable real-envelope tests;
-it does not ship a native iOS/Android implementation or physical device
-qualification. The synthetic bridge is compiled only in tests. Guardian's bridge
-shape is reused; its attestation signing is not a wrapping implementation, and
-Broker's private desktop custody root is never exposed. See the mobile provider
-runbook/design/threat model. Native integration and device evidence are M2.
+The first-party native reference implementations are in `native/ios` and
+`native/android`, with executable SDK qualification in
+`scripts/qualify-mobile-native.py`. iOS uses the confirmed
+`WhenPasscodeSetThisDeviceOnly` class with no fallback; passcode removal/reset
+requires explicit trusted re-enrolment and can make old state unrecoverable.
+Android reports the actual software/TEE/StrongBox key level and enforces explicit
+policy. Native wrap/persist/process restart/unwrap, tamper and deletion tests pass
+on the installed iOS simulator and Android emulator; these are software evidence.
+See [native integration and qualification](native/README.md) for ownership,
+cleanup, buffer handoff and result-deadline limits.
+
+A consuming Tauri/Rust app still supplies a reviewed `NativeKeyBridge` binding:
+copy transient DEKs directly into zeroizing native/Rust owners, clear native
+copies, keep operation ownership until synchronous native completion, and never
+serialize DEKs through JavaScript or plaintext storage. Persist only the existing
+`EnvelopeEncrypted` format through `encrypt_for_storage`/`decrypt_for_use`.
+Hardware-required policies reject the iOS software implementation and Android
+software keys. Physical-device lock/backup/passcode reset, native cancellation
+and downstream exactly-once application reconciliation are separate acceptance
+gates; no simulator evidence qualifies hardware support. Guardian's bridge shape
+is reused; Broker's private desktop custody root remains private. Publication and
+consumer migration are M3, not complete from reference-source qualification alone.
