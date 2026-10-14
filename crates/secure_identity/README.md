@@ -211,3 +211,21 @@ Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibra
 ### JWKS transport maintenance
 
 `JwksKeyStore::new` requires HTTPS for fetching keys. User information and fragments are rejected; redirects are disabled. Fetches have a ten-second timeout and a one-MiB response limit. Production HTTP now fails closed. With the `dev` feature, tests may explicitly call `new_insecure_loopback_for_testing` with a numeric loopback HTTP URL; this does not allow non-loopback HTTP endpoints. The HTTPS transport requires the `jwks` feature.
+
+## Unreleased HMAC-only profile
+
+The source milestone adds `default-features = false, features = ["jwt-hmac"]`
+for internal HS256 consumers; this feature is **not in published 0.3.0**. Existing
+default APIs keep asymmetric/SSH behavior through named default groups. Cargo
+feature unification can restore RSA; verify the actual consumer graph.
+
+Initialize `jwt_hmac::install_default_provider()` at trusted startup before direct
+JWT encoding. Foreign/preexisting provider initialization fails closed with
+ProviderUnavailable; never ignore it. The reduced profile bounds tokens to 64 KiB
+and keys to 1024 bytes with HS256/384/512 minimum 32/48/64-byte keys. Legacy/default
+claim and key acceptance behavior is preserved. Vendor JWT validation and admitted
+ring HMAC are reused; no parser/crypto implementation or new dependency identity.
+
+Read [the source milestone guide](../../docs/dev-guide/jwt-hmac-profile.md) for
+startup order, feature/API migration, bounds, explicit seven-lock admission and
+real isolated consumer tests. Publication is a separate verified milestone.

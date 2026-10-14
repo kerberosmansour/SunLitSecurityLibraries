@@ -37,6 +37,7 @@ pub struct TokenValidatorConfig {
 }
 
 /// Algorithm configuration for asymmetric JWT validation.
+#[cfg(feature = "asymmetric-jwt")]
 pub enum AlgorithmConfig {
     /// RSA PKCS#1 v1.5 with SHA-256.
     RS256 {
@@ -51,6 +52,7 @@ pub enum AlgorithmConfig {
 }
 
 /// Configuration for asymmetric JWT validation.
+#[cfg(feature = "asymmetric-jwt")]
 pub struct AsymmetricTokenValidatorConfig {
     /// The expected issuer claim (`iss`).
     pub issuer: String,
@@ -79,10 +81,12 @@ pub struct AsymmetricTokenValidatorConfig {
 ///     },
 /// });
 /// ```
+#[cfg(feature = "asymmetric-jwt")]
 pub struct AsymmetricTokenValidator {
     config: AsymmetricTokenValidatorConfig,
 }
 
+#[cfg(feature = "asymmetric-jwt")]
 impl AsymmetricTokenValidator {
     /// Creates a new [`AsymmetricTokenValidator`] with the given configuration.
     #[must_use]
@@ -114,8 +118,10 @@ impl AsymmetricTokenValidator {
     }
 }
 
+#[cfg(feature = "asymmetric-jwt")]
 impl private::Sealed for AsymmetricTokenValidator {}
 
+#[cfg(feature = "asymmetric-jwt")]
 impl crate::authenticator::Authenticator for AsymmetricTokenValidator {
     async fn authenticate(
         &self,
@@ -154,6 +160,7 @@ impl crate::authenticator::Authenticator for AsymmetricTokenValidator {
     }
 }
 
+#[cfg(feature = "asymmetric-jwt")]
 impl security_core::identity::IdentitySource for AsymmetricTokenValidator {
     async fn resolve(
         &self,
@@ -192,7 +199,8 @@ struct JwtClaims {
 
 /// Validates JWTs and resolves them to [`AuthenticatedIdentity`].
 ///
-/// Uses `jsonwebtoken` which internally uses `ring` for constant-time HMAC-SHA256 verification.
+/// Uses vendor JWT validation. Legacy defaults select RustCrypto; the reduced
+/// no-default-feature profile uses the admitted ring HMAC provider and bounds.
 ///
 /// # Examples
 ///
@@ -217,6 +225,15 @@ impl TokenValidator {
     }
 
     fn validate_jwt(&self, token: &str) -> Result<JwtClaims, IdentityError> {
+        #[cfg(not(feature = "asymmetric-jwt"))]
+        {
+            if token.len() > crate::jwt_hmac::MAX_JWT_BYTES
+                || !crate::jwt_hmac::accepts_hs256_key_length(self.config.secret.len())
+            {
+                return Err(IdentityError::TokenMalformed);
+            }
+            crate::jwt_hmac::install_default_provider()?;
+        }
         let key = DecodingKey::from_secret(&self.config.secret);
         let mut validation = Validation::new(Algorithm::HS256);
         validation.set_issuer(&[&self.config.issuer]);
@@ -283,6 +300,15 @@ impl security_core::identity::IdentitySource for TokenValidator {
         token: &str,
     ) -> Result<AuthenticatedIdentity, security_core::identity::IdentityResolutionError> {
         use crate::authenticator::{AuthenticationRequest, Authenticator, TokenKind};
+        #[cfg(not(feature = "asymmetric-jwt"))]
+        if token.len() > crate::jwt_hmac::MAX_JWT_BYTES {
+            emit_security_event(SecurityEvent::new(
+                EventKind::AuthnFailure,
+                SecuritySeverity::High,
+                EventOutcome::Failure,
+            ));
+            return Err(security_core::identity::IdentityResolutionError::InvalidToken);
+        }
         let request = AuthenticationRequest {
             token: token.to_owned(),
             token_kind: TokenKind::BearerJwt,
