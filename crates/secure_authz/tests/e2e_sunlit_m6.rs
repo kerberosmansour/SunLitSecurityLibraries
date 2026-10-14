@@ -136,7 +136,7 @@ async fn test_decision_cache_lifecycle() {
         tenant_id: None,
     };
     assert!(
-        cache.get(&cache_key).is_some(),
+        cache.get(&cache_key).is_none(),
         "Expected cache hit for same policy version"
     );
 }

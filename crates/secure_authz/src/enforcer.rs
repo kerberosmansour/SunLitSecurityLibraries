@@ -179,7 +179,7 @@ impl<P: PolicyEngine + 'static> Authorizer for DefaultAuthorizer<P> {
             // 6. Check cache
             let cache_key =
                 crate::cache::CacheKey::for_request(&subject, &action, &resource, policy_version);
-            if let Some(cached) = cache.get(&cache_key) {
+            if let Some(cached) = cache.get_for_request(&cache_key, &subject.roles) {
                 return cached;
             }
 
@@ -187,7 +187,7 @@ impl<P: PolicyEngine + 'static> Authorizer for DefaultAuthorizer<P> {
             let decision = evaluate_policy(&*engine, &subject, &resource.kind, &action_str).await;
 
             // 8. Cache and log
-            cache.insert(cache_key, decision.clone());
+            cache.insert_for_request(cache_key, &subject.roles, decision.clone());
             log_decision(&subject, &action, &resource, &decision);
             decision
         })

@@ -25,7 +25,12 @@ pub struct CacheKey {
 }
 
 impl CacheKey {
-    /// Constructs a cache key from an authorization request tuple.
+    /// Constructs the public, low-level request key.
+    ///
+    /// This key does not bind roles. `DefaultAuthorizer` adds an exact role
+    /// binding internally and isolates its entries from low-level `get`/`insert`.
+    /// Applications managing decisions directly must invalidate entries when
+    /// authorization context changes.
     #[must_use]
     pub fn for_request(
         subject: &Subject,
@@ -47,6 +52,18 @@ impl CacheKey {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Hash)]
+enum CacheScope {
+    Manual,
+    Roles(Vec<String>),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+struct ScopedKey {
+    request: CacheKey,
+    scope: CacheScope,
+}
+
 struct CachedEntry {
     decision: Decision,
     cached_at: Instant,
@@ -56,7 +73,7 @@ struct CachedEntry {
 ///
 /// Entries older than `ttl` are treated as cache misses. The cache is bounded by `max_size`.
 pub struct DecisionCache {
-    inner: Mutex<LruCache<CacheKey, CachedEntry>>,
+    inner: Mutex<LruCache<ScopedKey, CachedEntry>>,
     ttl: Duration,
 }
 
@@ -81,6 +98,20 @@ impl DecisionCache {
 
     /// Returns the cached decision if it exists and has not expired.
     pub fn get(&self, key: &CacheKey) -> Option<Decision> {
+        self.get_scoped(&ScopedKey {
+            request: key.clone(),
+            scope: CacheScope::Manual,
+        })
+    }
+
+    pub(crate) fn get_for_request(&self, key: &CacheKey, roles: &[String]) -> Option<Decision> {
+        self.get_scoped(&ScopedKey {
+            request: key.clone(),
+            scope: CacheScope::Roles(roles.to_vec()),
+        })
+    }
+
+    fn get_scoped(&self, key: &ScopedKey) -> Option<Decision> {
         let mut inner = self.inner.lock().unwrap();
         if let Some(entry) = inner.get(key) {
             if entry.cached_at.elapsed() < self.ttl {
@@ -92,6 +123,26 @@ impl DecisionCache {
 
     /// Stores a decision in the cache, evicting the oldest entry if at capacity.
     pub fn insert(&self, key: CacheKey, decision: Decision) {
+        self.insert_scoped(
+            ScopedKey {
+                request: key,
+                scope: CacheScope::Manual,
+            },
+            decision,
+        );
+    }
+
+    pub(crate) fn insert_for_request(&self, key: CacheKey, roles: &[String], decision: Decision) {
+        self.insert_scoped(
+            ScopedKey {
+                request: key,
+                scope: CacheScope::Roles(roles.to_vec()),
+            },
+            decision,
+        );
+    }
+
+    fn insert_scoped(&self, key: ScopedKey, decision: Decision) {
         let mut inner = self.inner.lock().unwrap();
         inner.put(
             key,
@@ -100,5 +151,51 @@ impl DecisionCache {
                 cached_at: Instant::now(),
             },
         );
+    }
+}
+
+#[cfg(test)]
+mod role_binding_tests {
+    use super::*;
+
+    fn key() -> CacheKey {
+        CacheKey::for_request(
+            &crate::testkit::test_subject("alice", &["owner"]),
+            &Action::Read,
+            &ResourceRef::new("document"),
+            1,
+        )
+    }
+
+    fn allow() -> Decision {
+        Decision::Allow {
+            obligations: vec![],
+        }
+    }
+
+    #[test]
+    fn request_entries_hit_only_for_exact_ordered_roles() {
+        let cache = DecisionCache::new(2, Duration::from_secs(60));
+        let roles = vec!["owner".to_owned(), "reader".to_owned()];
+        cache.insert_for_request(key(), &roles, allow());
+        assert_eq!(cache.get_for_request(&key(), &roles), Some(allow()));
+        assert!(cache
+            .get_for_request(&key(), &["reader".into(), "owner".into()])
+            .is_none());
+        assert!(cache.get_for_request(&key(), &[]).is_none());
+        assert!(cache.get(&key()).is_none());
+    }
+
+    #[test]
+    fn request_entries_share_capacity_and_expire() {
+        let roles = vec!["owner".to_owned()];
+        let cache = DecisionCache::new(1, Duration::from_secs(60));
+        cache.insert_for_request(key(), &roles, allow());
+        cache.insert(key(), allow());
+        assert!(cache.get_for_request(&key(), &roles).is_none());
+        assert_eq!(cache.get(&key()), Some(allow()));
+        let expired = DecisionCache::new(1, Duration::ZERO);
+        expired.insert_for_request(key(), &roles, allow());
+        assert!(expired.get_for_request(&key(), &roles).is_none());
     }
 }

@@ -75,6 +75,19 @@ cargo run --example actix_authz_minimal -p secure_authz --features actix-web
 | `axum` | ✅ | `middleware::AuthzLayer` as a tower `Layer`. |
 | `actix-web` | off | `actix::AuthzTransform` as an actix middleware. |
 
+## Authorization cache context
+
+`DefaultAuthorizer` binds cached decisions to the complete ordered role list as
+well as actor, action, resource, tenant and policy version. Role removal or grants
+therefore cause a fresh decision immediately. The existing capacity and TTL apply
+to all entries. Tenant, temporal and ABAC guards still run before cache lookup.
+
+The public low-level `CacheKey` and `DecisionCache::get/insert` remain compatible;
+they occupy a separate domain from authorizer decisions and cannot prepopulate
+an authorizer allow. If managing decisions directly, invalidate your own entries
+when authorization context changes. Use a separate cache for each policy engine.
+This does not refresh stale identities supplied by an upstream identity provider.
+
 ## Compatibility
 
 - MSRV: 1.78

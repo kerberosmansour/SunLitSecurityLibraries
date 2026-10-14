@@ -9,7 +9,12 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ## Unreleased
 
-_No changes yet._
+### Security
+
+- Fix issue #55: `secure_authz::DefaultAuthorizer` binds cached decisions to the
+  exact ordered roles, so role removal and grants cannot reuse stale decisions.
+  Preserve public cache APIs, TTL and capacity; isolate manually seeded entries
+  from internal authorizer entries. Identity-provider freshness remains required.
 
 ## [0.2.0] — 2026-10-14
 
