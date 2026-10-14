@@ -164,6 +164,8 @@ jobs:
         with:
           name: jwt-hmac-evidence-${{ matrix.os }}
           path: .cache/jwt-hmac-*
+          # Only generated public inventory/proof reports, never the full cache.
+          include-hidden-files: true
           if-no-files-found: error
 
   # sg-gate-a M4: presubmit gate enforcing Google's "preventing backsliding"

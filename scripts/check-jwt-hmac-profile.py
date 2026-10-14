@@ -152,6 +152,9 @@ def prove_kani(output, report, receipt):
         text = log.read_text()
         if (result.returncode != expected_return or "Kani Rust Verifier 0.68.0" not in text
                 or expected_summary not in text or not all("Checking harness jwt_hmac::proofs::" + name in text for name in names)):
+            # Bound diagnostics; these pure-policy logs contain only source,
+            # symbolic kinds/lengths and verifier output, never production keys.
+            print("Kani " + label + " exit=" + str(result.returncode) + " log tail:\n" + text[-32768:], file=sys.stderr)
             raise ValueError("Kani " + label + " did not positively classify both expected harnesses; inspect saved log")
     try:
         source.write_text(mutant)
