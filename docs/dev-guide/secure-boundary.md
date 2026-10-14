@@ -10,7 +10,7 @@
 
 ```toml
 [dependencies]
-secure_boundary = "0.1.2"
+secure_boundary = "0.2.0"
 ```
 
 ---

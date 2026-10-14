@@ -19,7 +19,7 @@ All types are pure-Rust **policy objects and validators** — they do not perfor
 
 ```toml
 [dependencies]
-secure_network = "0.1.2"
+secure_network = "0.2.0"
 ```
 
 ## Quick examples

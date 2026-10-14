@@ -10,7 +10,7 @@
 
 ```toml
 [dependencies]
-secure_errors = "0.1.2"
+secure_errors = "0.2.0"
 ```
 
 ---

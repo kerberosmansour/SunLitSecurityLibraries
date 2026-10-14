@@ -67,4 +67,4 @@ base64 = "0.22"
 secure_boundary = { workspace = true, features = ["actix-web"] }
 secure_authz = { workspace = true, features = ["actix-web"] }
 secure_errors = { workspace = true, features = ["actix-web"] }
-actix-web = "4"
+actix-web = { version = "4", default-features = false, features = ["macros"] }

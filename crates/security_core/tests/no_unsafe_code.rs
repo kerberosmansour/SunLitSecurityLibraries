@@ -48,17 +48,88 @@ fn workspace_root() -> PathBuf {
         .to_path_buf()
 }
 
-/// Returns the lib-root or main-root path for a crate, whichever exists.
-fn crate_root_file(workspace: &Path, krate: &str) -> Option<PathBuf> {
-    let lib = workspace.join("crates").join(krate).join("src/lib.rs");
-    if lib.exists() {
-        return Some(lib);
+/// All compiled crate roots, including binary targets in library packages.
+fn crate_root_files(workspace: &Path, krate: &str) -> Vec<PathBuf> {
+    let src = workspace.join("crates").join(krate).join("src");
+    [src.join("lib.rs"), src.join("main.rs")]
+        .into_iter()
+        .filter(|p| p.exists())
+        .collect()
+}
+
+fn has_real_forbid(contents: &str) -> bool {
+    let mut depth = 0usize;
+    for line in contents.lines() {
+        let mut rest = line.trim();
+        loop {
+            if depth > 0 {
+                let open = rest.find("/*");
+                let close = rest.find("*/");
+                match (open, close) {
+                    (Some(start), end) if end.is_none_or(|end| start < end) => {
+                        depth += 1;
+                        rest = &rest[start + 2..];
+                    }
+                    (_, Some(end)) => {
+                        depth -= 1;
+                        rest = rest[end + 2..].trim();
+                    }
+                    _ => break,
+                }
+                continue;
+            }
+            if rest.starts_with("/*") {
+                depth += 1;
+                rest = &rest[2..];
+                continue;
+            }
+            if rest.is_empty() || rest.starts_with("//") {
+                break;
+            }
+            if rest == "#![forbid(unsafe_code)]" {
+                return true;
+            }
+            if rest.starts_with("#![") && rest.ends_with(']') {
+                break;
+            }
+            return false;
+        }
     }
-    let main = workspace.join("crates").join(krate).join("src/main.rs");
-    if main.exists() {
-        return Some(main);
-    }
-    None
+    false
+}
+
+#[test]
+fn commented_attribute_is_not_an_attestation() {
+    assert!(!has_real_forbid(
+        "/*\n#![forbid(unsafe_code)]\n*/\nfn main() {}"
+    ));
+    assert!(!has_real_forbid("// #![forbid(unsafe_code)]\nfn main() {}"));
+    assert!(!has_real_forbid(
+        "/* outer /* inner */\n#![forbid(unsafe_code)]\n*/\nfn main() {}"
+    ));
+    assert!(has_real_forbid(
+        "//! docs\n#![forbid(unsafe_code)]\nfn main() {}"
+    ));
+}
+
+#[test]
+fn registered_members_match_cargo_workspace() {
+    let root = workspace_root();
+    let manifest = fs::read_to_string(root.join("Cargo.toml")).unwrap();
+    let members: std::collections::BTreeSet<_> = manifest
+        .lines()
+        .filter_map(|line| {
+            line.trim()
+                .strip_prefix("\"crates/")
+                .and_then(|v| v.strip_suffix("\","))
+        })
+        .collect();
+    let registered: std::collections::BTreeSet<_> =
+        CRATES_REQUIRING_FORBID.iter().copied().collect();
+    assert_eq!(
+        members, registered,
+        "new members must participate in compiler unsafe checks"
+    );
 }
 
 #[test]
@@ -67,36 +138,33 @@ fn every_workspace_crate_forbids_unsafe_code() {
     let mut failures: Vec<String> = Vec::new();
 
     for krate in CRATES_REQUIRING_FORBID {
-        let Some(file) = crate_root_file(&workspace, krate) else {
-            failures.push(format!(
-                "crate `{krate}`: no lib.rs or main.rs found under crates/{krate}/src/",
-            ));
-            continue;
-        };
+        let files = crate_root_files(&workspace, krate);
+        if files.is_empty() {
+            failures.push(format!("crate `{krate}` has no compiled root"));
+        }
+        for file in files {
+            let contents = match fs::read_to_string(&file) {
+                Ok(s) => s,
+                Err(err) => {
+                    failures.push(format!(
+                        "crate `{krate}`: cannot read {}: {err}",
+                        file.display()
+                    ));
+                    continue;
+                }
+            };
 
-        let contents = match fs::read_to_string(&file) {
-            Ok(s) => s,
-            Err(err) => {
+            if !has_real_forbid(&contents) {
                 failures.push(format!(
-                    "crate `{krate}`: cannot read {}: {err}",
-                    file.display()
-                ));
-                continue;
-            }
-        };
-
-        let head: String = contents.lines().take(20).collect::<Vec<_>>().join("\n");
-        if !head.contains("#![forbid(unsafe_code)]") {
-            failures.push(format!(
                 "crate `{krate}`: expected `#![forbid(unsafe_code)]` in the first 20 lines of {}; not found.\n\
                  Add the attribute at the top of the file (before any item declaration).\n\
                  If the crate genuinely needs unsafe, document the exception in \
                  docs/dev-guide/unsafe-budget.md and update CRATES_REQUIRING_FORBID.",
                 file.display()
             ));
+            }
         }
     }
-
     assert!(
         failures.is_empty(),
         "forbid(unsafe_code) regression test failed for {} crate(s):\n  - {}",

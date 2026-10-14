@@ -154,3 +154,59 @@ fn closed_path_failure_counter_resets_on_success() {
     let _: Result<u32, _> = breaker.call(|| Err::<u32, &'static str>("c"));
     assert_eq!(breaker.state().unwrap(), CircuitBreakerState::Closed);
 }
+
+#[test]
+fn stale_closed_completion_cannot_release_half_open_probe() {
+    use std::sync::{mpsc, Arc};
+    let breaker = Arc::new(CircuitBreaker::new(
+        CircuitBreakerPolicy::new()
+            .with_failure_threshold(1)
+            .with_open_duration(Duration::ZERO),
+    ));
+    let (started_tx, started_rx) = mpsc::channel();
+    let (finish_tx, finish_rx) = mpsc::channel();
+    let old_breaker = Arc::clone(&breaker);
+    let old = thread::spawn(move || {
+        old_breaker.call(|| {
+            started_tx.send(()).unwrap();
+            finish_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+            Ok::<_, &'static str>(())
+        })
+    });
+    started_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    assert!(breaker.call(|| Err::<(), _>("trip")).is_err());
+    let (probe_tx, probe_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let probe_breaker = Arc::clone(&breaker);
+    let probe = thread::spawn(move || {
+        probe_breaker.call(|| {
+            probe_tx.send(()).unwrap();
+            release_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+            Ok::<_, &'static str>(())
+        })
+    });
+    probe_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    finish_tx.send(()).unwrap();
+    old.join().unwrap().unwrap();
+    let state = breaker.state().unwrap();
+    let rejected = breaker.call(|| Ok::<_, &'static str>(()));
+    release_tx.send(()).unwrap();
+    probe.join().unwrap().unwrap();
+    assert_eq!(state, CircuitBreakerState::HalfOpen);
+    assert!(matches!(rejected, Err(CircuitBreakerError::ProbeInFlight)));
+}
+
+#[test]
+fn panicking_half_open_probe_releases_its_reservation() {
+    let breaker = CircuitBreaker::new(
+        CircuitBreakerPolicy::new()
+            .with_failure_threshold(1)
+            .with_open_duration(Duration::ZERO),
+    );
+    let _ = breaker.call(|| Err::<(), &str>("trip"));
+    let panic = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = breaker.call(|| -> Result<(), &str> { panic!("probe fixture panic") });
+    }));
+    assert!(panic.is_err());
+    assert_eq!(breaker.call(|| Ok::<_, &str>(42)).unwrap(), 42);
+}

@@ -42,6 +42,7 @@ fn start_mock_server(
 /// Start a mock endpoint whose response advances once per request, then holds
 /// the final document. Returns a request counter so rotation and rate-limiting
 /// behavior is observable without reaching a real identity provider.
+#[cfg(feature = "dev")]
 fn start_sequence_mock_server(
     response_bodies: Vec<String>,
 ) -> (
@@ -99,12 +100,14 @@ fn test_jwks_json() -> String {
     }"#.to_string()
 }
 
+#[cfg(feature = "dev")]
 fn test_jwks_json_with_kid(kid: &str) -> String {
     test_jwks_json().replace("test-key-1", kid)
 }
 
 // --- Feature: JWKS key store ---
 
+#[cfg(feature = "dev")]
 #[tokio::test]
 async fn scenario_fetch_keys_from_endpoint() {
     // Given: JWKS endpoint returns valid keys
@@ -113,7 +116,8 @@ async fn scenario_fetch_keys_from_endpoint() {
     let url = format!("http://{addr}/.well-known/jwks.json");
 
     // When: JwksKeyStore::fetch(url)
-    let store = JwksKeyStore::new(&url, std::time::Duration::from_secs(300));
+    let store =
+        JwksKeyStore::new_insecure_loopback_for_testing(&url, std::time::Duration::from_secs(300));
     let result = store.fetch().await;
 
     // Then: keys cached
@@ -121,6 +125,7 @@ async fn scenario_fetch_keys_from_endpoint() {
     stop.store(true, std::sync::atomic::Ordering::Relaxed);
 }
 
+#[cfg(feature = "dev")]
 #[tokio::test]
 async fn scenario_cache_hit_avoids_refetch() {
     // Given: keys cached within TTL
@@ -128,7 +133,8 @@ async fn scenario_cache_hit_avoids_refetch() {
     let (addr, stop) = start_mock_server(&jwks_json);
     let url = format!("http://{addr}/.well-known/jwks.json");
 
-    let store = JwksKeyStore::new(&url, std::time::Duration::from_secs(300));
+    let store =
+        JwksKeyStore::new_insecure_loopback_for_testing(&url, std::time::Duration::from_secs(300));
     store.fetch().await.expect("first fetch");
 
     // When: get_key (should use cache)
@@ -139,19 +145,22 @@ async fn scenario_cache_hit_avoids_refetch() {
     stop.store(true, std::sync::atomic::Ordering::Relaxed);
 }
 
+#[cfg(feature = "dev")]
 #[tokio::test]
 async fn scenario_endpoint_unavailable_cold_start() {
     // Given: JWKS endpoint down, cold start (port 1 won't connect)
     let url = "http://127.0.0.1:1/.well-known/jwks.json";
 
     // When: fetch
-    let store = JwksKeyStore::new(url, std::time::Duration::from_secs(300));
+    let store =
+        JwksKeyStore::new_insecure_loopback_for_testing(url, std::time::Duration::from_secs(300));
     let result = store.fetch().await;
 
     // Then: error
     assert!(result.is_err(), "Should fail on unreachable endpoint");
 }
 
+#[cfg(feature = "dev")]
 #[tokio::test]
 async fn scenario_unknown_kid_returns_none() {
     // Given: JWKS with known kid
@@ -159,7 +168,8 @@ async fn scenario_unknown_kid_returns_none() {
     let (addr, stop) = start_mock_server(&jwks_json);
     let url = format!("http://{addr}/.well-known/jwks.json");
 
-    let store = JwksKeyStore::new(&url, std::time::Duration::from_secs(300));
+    let store =
+        JwksKeyStore::new_insecure_loopback_for_testing(&url, std::time::Duration::from_secs(300));
     store.fetch().await.expect("fetch");
 
     // When: get_key with unknown kid
@@ -170,6 +180,7 @@ async fn scenario_unknown_kid_returns_none() {
     stop.store(true, std::sync::atomic::Ordering::Relaxed);
 }
 
+#[cfg(feature = "dev")]
 #[tokio::test]
 async fn scenario_unknown_kid_forces_bounded_refresh_for_rotation() {
     // Given: the cache is fresh with the old issuer key, while the next JWKS
@@ -179,7 +190,8 @@ async fn scenario_unknown_kid_forces_bounded_refresh_for_rotation() {
         test_jwks_json_with_kid("rotated-key"),
     ]);
     let url = format!("http://{addr}/.well-known/jwks.json");
-    let store = JwksKeyStore::new(&url, std::time::Duration::from_secs(300));
+    let store =
+        JwksKeyStore::new_insecure_loopback_for_testing(&url, std::time::Duration::from_secs(300));
     assert!(store.get_key("old-key").await.is_some());
 
     // When: a token signed by the rotated key arrives before the five-minute
@@ -200,13 +212,15 @@ async fn scenario_unknown_kid_forces_bounded_refresh_for_rotation() {
     stop.store(true, std::sync::atomic::Ordering::Relaxed);
 }
 
+#[cfg(feature = "dev")]
 #[tokio::test]
 async fn scenario_unknown_kid_refresh_is_globally_rate_limited() {
     // Given: a fresh cache that will never contain attacker-chosen key IDs.
     let (addr, request_count, stop) =
         start_sequence_mock_server(vec![test_jwks_json(), test_jwks_json()]);
     let url = format!("http://{addr}/.well-known/jwks.json");
-    let store = JwksKeyStore::new(&url, std::time::Duration::from_secs(300));
+    let store =
+        JwksKeyStore::new_insecure_loopback_for_testing(&url, std::time::Duration::from_secs(300));
     assert!(store.get_key("test-key-1").await.is_some());
 
     // The first miss may check for rotation; a second distinct hostile `kid`
@@ -221,6 +235,7 @@ async fn scenario_unknown_kid_refresh_is_globally_rate_limited() {
     stop.store(true, std::sync::atomic::Ordering::Relaxed);
 }
 
+#[cfg(feature = "dev")]
 #[tokio::test]
 async fn scenario_cache_valid_after_fetch() {
     // Given: fresh fetch
@@ -228,7 +243,8 @@ async fn scenario_cache_valid_after_fetch() {
     let (addr, stop) = start_mock_server(&jwks_json);
     let url = format!("http://{addr}/.well-known/jwks.json");
 
-    let store = JwksKeyStore::new(&url, std::time::Duration::from_secs(300));
+    let store =
+        JwksKeyStore::new_insecure_loopback_for_testing(&url, std::time::Duration::from_secs(300));
     store.fetch().await.expect("fetch");
 
     // When: check cache validity
@@ -239,6 +255,7 @@ async fn scenario_cache_valid_after_fetch() {
     stop.store(true, std::sync::atomic::Ordering::Relaxed);
 }
 
+#[cfg(feature = "dev")]
 #[tokio::test]
 async fn scenario_get_algorithm_returns_correct_alg() {
     // Given: JWKS with RS256 key
@@ -246,7 +263,8 @@ async fn scenario_get_algorithm_returns_correct_alg() {
     let (addr, stop) = start_mock_server(&jwks_json);
     let url = format!("http://{addr}/.well-known/jwks.json");
 
-    let store = JwksKeyStore::new(&url, std::time::Duration::from_secs(300));
+    let store =
+        JwksKeyStore::new_insecure_loopback_for_testing(&url, std::time::Duration::from_secs(300));
     store.fetch().await.expect("fetch");
 
     // When: get algorithm for known kid
@@ -255,4 +273,16 @@ async fn scenario_get_algorithm_returns_correct_alg() {
     // Then: RS256
     assert_eq!(alg.as_deref(), Some("RS256"));
     stop.store(true, std::sync::atomic::Ordering::Relaxed);
+}
+
+#[tokio::test]
+async fn production_jwks_rejects_plaintext_before_connecting() {
+    let (addr, stop) = start_mock_server(&test_jwks_json());
+    let store = JwksKeyStore::new(
+        &format!("http://{addr}/keys"),
+        std::time::Duration::from_secs(300),
+    );
+    let result = store.fetch().await;
+    stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    assert!(result.is_err(), "plaintext key retrieval must fail closed");
 }

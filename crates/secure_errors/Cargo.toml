@@ -1,6 +1,6 @@
 [package]
 name = "secure_errors"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Secure error handling with public-safe responses, incident IDs, and panic boundaries."
@@ -29,7 +29,7 @@ security_events = { workspace = true }
 thiserror = "2"
 axum-core = { version = "0.5", optional = true }
 tower-layer = { version = "0.3", optional = true }
-actix-web = { version = "4", optional = true }
+actix-web = { version = "4", default-features = false, features = ["macros"], optional = true }
 http = "1"
 serde = { workspace = true }
 serde_json = "1"
@@ -38,7 +38,7 @@ tracing = "0.1"
 [dev-dependencies]
 serde_json = "1"
 axum = "0.8"
-actix-web = { version = "4" }
+actix-web = { version = "4", default-features = false, features = ["macros"] }
 http = "1"
 http-body-util = "0.1"
 tokio = { version = "1", features = ["full"] }

@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 //! Entry point for the secure smoke-test microservice.
 
 use secure_smoke_service::config::SecurityConfig;

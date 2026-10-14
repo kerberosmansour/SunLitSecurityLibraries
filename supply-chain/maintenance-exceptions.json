@@ -1,0 +1,64 @@
+{
+  "reviewed_on": "2026-10-14",
+  "exceptions": [
+    {
+      "package": "smartstring",
+      "version": "1.0.1",
+      "kind": "unmaintained",
+      "advisory": "RUSTSEC-2026-0249",
+      "owner": "repository maintainer",
+      "expires": "2026-11-14",
+      "reason": "Unchanged transitive dependency through casbin 2.20.0/rhai 1.24.0. No patched version exists; latest inspected Rhai also depends on it. Replacing the policy engine is outside this security patch batch. No memory-safety certification is inferred from this exception."
+    },
+    {
+      "package": "aws-lc-rs",
+      "version": "1.18.2",
+      "kind": "cargo-vet-exemption",
+      "owner": "repository maintainer",
+      "expires": "2026-11-14",
+      "reason": "Required by rustls 0.23.45 security repair. Focused independent FFI/source review completed; legacy DES/native FIPS/SSL features outside review are blocked and bundled native source is forced. Exact-version temporary exception preserves honest limits; not a complete cryptographic or C/assembly audit."
+    },
+    {
+      "package": "aws-lc-sys",
+      "version": "0.46.0",
+      "kind": "cargo-vet-exemption",
+      "owner": "repository maintainer",
+      "expires": "2026-11-14",
+      "reason": "Required bundled implementation for AWS-LC/rustls security repair. Native build authority and selected changed C boundaries were independently inspected. Opaque NASM objects, all C/assembly functions and ABI/architecture behavior were not fully reviewed. System-library substitution is blocked. Exact-version temporary exception, not a fabricated audit."
+    },
+    {
+      "package": "rsa",
+      "version": "0.9.10",
+      "kind": "public-verification-only",
+      "advisory": "RUSTSEC-2023-0071",
+      "owner": "repository maintainer",
+      "expires": "2026-11-14",
+      "reason": "Existing public-key JWT/OIDC verification dependency; no private-key RSA signing/decryption API is exposed by these libraries. RustSec still lists no patched release. Revalidated this usage and synchronize the expired OSV exception with cargo audit/deny. Consumers using private-key operations require separate assessment; not a general safety certification."
+    },
+    {
+      "package": "xxhash-rust",
+      "version": "0.8.15",
+      "kind": "unreachable-custom-secret-api",
+      "advisory": "GHSA-6g2r-675j-hx59",
+      "owner": "repository maintainer",
+      "expires": "2026-11-14",
+      "reason": "Redis 1.2.1 invokes only xxh3_64 default-secret hashing; no custom-secret API used or re-exported by SunLit. Reviewed newer source introduces a different custom-secret wrapper safety flaw, so do not replace one advisory with newly identified unsafe code. Exact temporary hold, not a claim the general crate API is sound."
+    },
+    {
+      "package": "aws-smithy-json",
+      "version": "0.62.7",
+      "kind": "legacy-sdk-paths-only",
+      "owner": "repository maintainer",
+      "expires": "2026-11-14",
+      "reason": "Required minimum batch for GHSA-8ffr-xgwf-xj56 iterative depth-bounded repair. Independent source review found defects in new schema/codec APIs; retained AWS-config/KMS/STS generated SDKs use legacy serializer/deserializer paths and do not adopt those APIs. SDK/parser versions and review boundary guarded in CI. Not a broad crate audit. Re-review before new API adoption or version changes."
+    },
+    {
+      "package": "aws-smithy-schema",
+      "version": "0.1.0",
+      "kind": "legacy-sdk-paths-only",
+      "owner": "repository maintainer",
+      "expires": "2026-11-14",
+      "reason": "Required minimum batch for GHSA-8ffr-xgwf-xj56 iterative depth-bounded repair. Independent source review found defects in new schema/codec APIs; retained AWS-config/KMS/STS generated SDKs use legacy serializer/deserializer paths and do not adopt those APIs. SDK/parser versions and review boundary guarded in CI. Not a broad crate audit. Re-review before new API adoption or version changes."
+    }
+  ]
+}

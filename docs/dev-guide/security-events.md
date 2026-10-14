@@ -10,7 +10,7 @@
 
 ```toml
 [dependencies]
-security_events = "0.1.3"
+security_events = "0.2.0"
 ```
 
 ---

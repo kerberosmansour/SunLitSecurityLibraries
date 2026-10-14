@@ -48,6 +48,7 @@ enum CacheLookup {
 pub struct JwksKeyStore {
     url: String,
     ttl: Duration,
+    allow_insecure_loopback: bool,
     cache: Arc<RwLock<CacheState>>,
     /// Single-flight guard for cache refreshes. Without this, a key rotation can
     /// make every concurrent request fetch the same JWKS document.
@@ -61,6 +62,7 @@ impl JwksKeyStore {
         Self {
             url: url.to_owned(),
             ttl,
+            allow_insecure_loopback: false,
             cache: Arc::new(RwLock::new(CacheState {
                 keys: HashMap::new(),
                 fetched_at: None,
@@ -70,12 +72,37 @@ impl JwksKeyStore {
         }
     }
 
+    /// Creates an explicitly insecure store for numeric loopback HTTP fixtures.
+    /// Available only with `dev`; never use for production issuer keys.
+    #[cfg(feature = "dev")]
+    #[must_use]
+    pub fn new_insecure_loopback_for_testing(url: &str, ttl: Duration) -> Self {
+        let mut store = Self::new(url, ttl);
+        store.allow_insecure_loopback = true;
+        store
+    }
+
     /// Fetches the JWKS from the configured endpoint and updates the cache.
     ///
     /// # Errors
     /// Returns `IdentityError::ProviderUnavailable` if the endpoint cannot be reached.
     pub async fn fetch(&self) -> Result<(), IdentityError> {
-        let jwks = fetch_jwks_http(&self.url).await?;
+        let parsed = url::Url::parse(&self.url).map_err(|_| IdentityError::ProviderUnavailable)?;
+        let insecure = self.allow_insecure_loopback
+            && parsed.scheme() == "http"
+            && parsed
+                .host_str()
+                .and_then(|h| h.trim_matches(['[', ']']).parse::<std::net::IpAddr>().ok())
+                .is_some_and(|ip| ip.is_loopback());
+        if (!insecure && parsed.scheme() != "https")
+            || !parsed.username().is_empty()
+            || parsed.password().is_some()
+            || parsed.host_str().is_none()
+            || parsed.fragment().is_some()
+        {
+            return Err(IdentityError::ProviderUnavailable);
+        }
+        let jwks = fetch_jwks_http(&self.url, insecure).await?;
         let keys = parse_jwks(&jwks)?;
 
         let mut cache = self.cache.write().await;
@@ -183,17 +210,17 @@ struct JwkKey {
 
 /// Production JWKS fetch over **HTTPS** via reqwest (rustls-tls). Enabled by the `jwks` feature.
 ///
-/// The feature-less fallback below uses a raw plaintext TCP socket and CANNOT perform a TLS
-/// handshake, so against a real `https://` JWKS endpoint it reads back TLS-handshake bytes instead
-/// of JSON and every parse fails with `TokenMalformed` (no keys ever load). Any deployment that
-/// validates real OIDC/Cognito tokens MUST build with `--features jwks`.
+/// Only HTTPS is accepted for production stores. Redirects are disabled and the
+/// response is capped at 1 MiB. Build with `jwks` for production key retrieval.
 #[cfg(feature = "jwks")]
-async fn fetch_jwks_http(url: &str) -> Result<String, IdentityError> {
+async fn fetch_jwks_http(url: &str, insecure: bool) -> Result<String, IdentityError> {
     let client = reqwest::Client::builder()
+        .https_only(!insecure)
+        .redirect(reqwest::redirect::Policy::none())
         .timeout(Duration::from_secs(10))
         .build()
         .map_err(|_| IdentityError::ProviderUnavailable)?;
-    let resp = client
+    let mut resp = client
         .get(url)
         .send()
         .await
@@ -201,53 +228,71 @@ async fn fetch_jwks_http(url: &str) -> Result<String, IdentityError> {
     if !resp.status().is_success() {
         return Err(IdentityError::ProviderUnavailable);
     }
-    resp.text()
+    let mut body = Vec::new();
+    while let Some(chunk) = resp
+        .chunk()
         .await
-        .map_err(|_| IdentityError::ProviderUnavailable)
+        .map_err(|_| IdentityError::ProviderUnavailable)?
+    {
+        if body.len().saturating_add(chunk.len()) > 1_048_576 {
+            return Err(IdentityError::ProviderUnavailable);
+        }
+        body.extend_from_slice(&chunk);
+    }
+    String::from_utf8(body).map_err(|_| IdentityError::ProviderUnavailable)
 }
 
-/// Feature-less fallback: a minimal **plaintext-TCP** HTTP GET for `http://` test endpoints only.
-/// Does NOT support TLS — enable the `jwks` feature (above) for production `https://` endpoints.
+/// Bounded numeric-loopback HTTP transport for explicit `dev` fixtures.
+/// Production stores fail closed without the `jwks` feature.
 #[cfg(not(feature = "jwks"))]
-async fn fetch_jwks_http(url: &str) -> Result<String, IdentityError> {
-    // Intentionally simple; http:// test servers only. See the `jwks`-feature variant for HTTPS.
-    let url_parsed = url::Url::parse(url).map_err(|_| IdentityError::ProviderUnavailable)?;
-
-    let host = url_parsed
+async fn fetch_jwks_http(url: &str, insecure: bool) -> Result<String, IdentityError> {
+    // Without `jwks`, production fetches fail closed. Only the explicit dev
+    // constructor can reach this numeric-loopback fixture transport.
+    if !insecure {
+        return Err(IdentityError::ProviderUnavailable);
+    }
+    let parsed = url::Url::parse(url).map_err(|_| IdentityError::ProviderUnavailable)?;
+    let host = parsed
         .host_str()
         .ok_or(IdentityError::ProviderUnavailable)?;
-    let port = url_parsed.port().unwrap_or(match url_parsed.scheme() {
-        "https" => 443,
-        _ => 80,
-    });
-    let path = url_parsed.path();
-
-    let addr = format!("{host}:{port}");
-    let stream = tokio::net::TcpStream::connect(&addr)
-        .await
+    let ip = host
+        .trim_matches(['[', ']'])
+        .parse::<std::net::IpAddr>()
         .map_err(|_| IdentityError::ProviderUnavailable)?;
-
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    let mut stream = stream;
-    let request = format!("GET {path} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n");
-    stream
-        .write_all(request.as_bytes())
-        .await
-        .map_err(|_| IdentityError::ProviderUnavailable)?;
-
-    let mut response = Vec::new();
-    stream
-        .read_to_end(&mut response)
-        .await
-        .map_err(|_| IdentityError::ProviderUnavailable)?;
-
-    let response_str = String::from_utf8_lossy(&response);
-    // Find body after \r\n\r\n
-    let body_start = response_str
-        .find("\r\n\r\n")
-        .map(|i| i + 4)
-        .ok_or(IdentityError::ProviderUnavailable)?;
-    Ok(response_str[body_start..].to_string())
+    let addr = std::net::SocketAddr::new(ip, parsed.port().unwrap_or(80));
+    tokio::time::timeout(Duration::from_secs(10), async {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let mut stream = tokio::net::TcpStream::connect(addr)
+            .await
+            .map_err(|_| IdentityError::ProviderUnavailable)?;
+        let path = &parsed[url::Position::BeforePath..url::Position::AfterQuery];
+        let request = format!("GET {path} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n");
+        stream
+            .write_all(request.as_bytes())
+            .await
+            .map_err(|_| IdentityError::ProviderUnavailable)?;
+        let mut response = Vec::new();
+        stream
+            .take(1_048_577)
+            .read_to_end(&mut response)
+            .await
+            .map_err(|_| IdentityError::ProviderUnavailable)?;
+        if response.len() > 1_048_576 {
+            return Err(IdentityError::ProviderUnavailable);
+        }
+        let response =
+            String::from_utf8(response).map_err(|_| IdentityError::ProviderUnavailable)?;
+        if !response.starts_with("HTTP/1.1 200 ") && !response.starts_with("HTTP/1.0 200 ") {
+            return Err(IdentityError::ProviderUnavailable);
+        }
+        let body = response
+            .find("\r\n\r\n")
+            .map(|i| &response[i + 4..])
+            .ok_or(IdentityError::ProviderUnavailable)?;
+        Ok(body.to_owned())
+    })
+    .await
+    .map_err(|_| IdentityError::ProviderUnavailable)?
 }
 
 /// Parses a JWKS JSON document into a map of kid → CachedKey.

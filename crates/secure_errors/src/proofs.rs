@@ -12,7 +12,7 @@
 
 #![cfg(kani)]
 
-use crate::http::{into_response_parts, public_error_code_for, PublicErrorCode};
+use crate::http::into_response_parts;
 use crate::kind::AppError;
 
 fn symbolic_app_error() -> AppError {
@@ -57,10 +57,8 @@ fn public_status_code_is_in_4xx_5xx_range() {
 /// Proof: every `AppError` variant produces a `PublicError` with a
 /// non-empty, static `code` field.
 ///
-/// The `code` field is `&'static str` by type — Kani trivially verifies
-/// it cannot be derived from the runtime `err.to_string()`. The
-/// non-emptiness check guards against a future refactor that returns
-/// `""` for a variant.
+/// This harness checks non-emptiness for the finite symbolic error variants.
+/// A static string type does not by itself prove absence of internal details.
 #[kani::proof]
 fn public_error_code_is_non_empty_static_literal() {
     let err = symbolic_app_error();
@@ -77,19 +75,19 @@ fn public_error_code_is_non_empty_static_literal() {
 /// the proof fails and the contributor extends the whitelist
 /// deliberately.
 #[kani::proof]
+#[kani::unwind(64)]
 fn public_error_code_is_in_whitelist() {
     let err = symbolic_app_error();
-    let code = public_error_code_for(&err);
-
+    let (_status, public) = into_response_parts(&err);
     let allowed = matches!(
-        code,
-        PublicErrorCode::InvalidRequest
-            | PublicErrorCode::Forbidden
-            | PublicErrorCode::NotFound
-            | PublicErrorCode::Conflict
-            | PublicErrorCode::TemporarilyUnavailable
-            | PublicErrorCode::InternalError
-            | PublicErrorCode::RateLimited
+        public.code,
+        "invalid_request"
+            | "forbidden"
+            | "not_found"
+            | "conflict"
+            | "temporarily_unavailable"
+            | "internal_error"
+            | "rate_limited"
     );
     assert!(allowed);
 }

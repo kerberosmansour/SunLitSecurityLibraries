@@ -2,7 +2,7 @@ name: TLA+
 
 # Advisory TLA+ / TLC model-checking lane.
 #
-# Runs on every PR and push to main. Failures do NOT block merges in M5
+# Runs on relevant source/spec changes, weekly and manually. Failures do NOT block merges in M5
 # (`continue-on-error: true`). Promotion to a blocking gate is a separate
 # follow-up after >=1 release cycle of stable signal — see
 # `docs/dev-guide/formal-verification.md` for the criteria.
@@ -10,7 +10,7 @@ name: TLA+
 # Runtime cap: 10 minutes per the research dossier
 # (`docs/slo/research/formal-verification-kani-tla/synthesis.md`).
 #
-# Pin: tla2tools.jar version 1.8.0 (TLC 1.8.0, January 2024). Bumping
+# Pin: official v1.8.0 asset published 2026-10-13, source 210df3af8aff. Bumping
 # the pin is a deliberate runbook change.
 #
 # Specs covered (each runs both Hardened + Naive):
@@ -20,9 +20,17 @@ name: TLA+
 on:
   push:
     branches: [main]
+    paths:
+      - ".github/workflows/tla.yml"
+      - "specs/**"
   pull_request:
     branches: [main]
+    paths:
+      - ".github/workflows/tla.yml"
+      - "specs/**"
   workflow_dispatch:
+  schedule:
+    - cron: "29 6 * * 1"
 
 permissions:
   contents: read
@@ -81,17 +89,12 @@ jobs:
           # SHA-256 of tla2tools.jar at v1.8.0 — pinned per /slo-tla SKILL §3.
           # If this checksum mismatches, do NOT proceed: the upstream
           # artifact may have been replaced.
-          TLA_TOOLS_SHA256: "fc43cb574efc36ee9a02eaf7e87f37e2e1d2c92ff6d0c39be4f64dadcad19bc0"
+          TLA_TOOLS_SHA256: "0f56d6a813368c48008dfbecb23a73ab43a4a5e1bf09f026782a674aa9d4b3c9"
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.sldo/tla"
           curl -fL "$TLA_TOOLS_URL" -o "$HOME/.sldo/tla/tla2tools.jar.partial"
-          # Note: M5 documents the pinned SHA via the env var. If a real
-          # SHA mismatch occurs, the verify step below fails. The SHA is
-          # not validated locally because the artifact is fetched fresh
-          # every run; reproducibility comes from the pinned version
-          # tag, not the SHA. (A future fv runbook can add SHA pinning
-          # via a vendored binary.)
+          printf '%s  %s\n' "$TLA_TOOLS_SHA256" "$HOME/.sldo/tla/tla2tools.jar.partial" | sha256sum -c -
           mv "$HOME/.sldo/tla/tla2tools.jar.partial" "$HOME/.sldo/tla/tla2tools.jar"
           ls -la "$HOME/.sldo/tla/"
 
@@ -100,8 +103,8 @@ jobs:
         run: |
           set -euo pipefail
           if [ ! -f "specs/${{ matrix.tla }}" ] || [ ! -f "specs/${{ matrix.cfg }}" ]; then
-            echo "::warning::specs/${{ matrix.tla }} or specs/${{ matrix.cfg }} not present in this PR — skipping"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::error::Required model/spec file is missing"
+            exit 1
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
@@ -135,7 +138,7 @@ jobs:
               fi
               echo "Hardened variant ${{ matrix.cfg }} passed."
           else
-              if [ "$tlc_exit" -eq 0 ]; then
+              if [ "$tlc_exit" -eq 0 ] || ! grep -q "Error: Invariant .* is violated" tlc-output.log; then
                   echo "::error::Naive variant ${{ matrix.cfg }} expected to FAIL (find a counterexample) but TLC exited 0 — the spec is too abstract"
                   exit 1
               fi

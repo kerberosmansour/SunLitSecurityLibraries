@@ -10,7 +10,7 @@
 
 ```toml
 [dependencies]
-secure_privacy = "0.1.2"
+secure_privacy = "0.2.0"
 ```
 
 ```rust

@@ -58,20 +58,15 @@ pub fn is_recognised_combiner(id: u8) -> bool {
 /// Returns the runtime FIPS posture of the PQ path on this build.
 ///
 /// - `None` — the `pq` feature is not enabled; the question does not apply.
-/// - `Some("pending_cmvp")` — the `pq` feature is enabled. As of 2026-05,
-///   no CMVP cert covers ML-KEM-768 in any Rust-callable cryptographic
-///   module; the PQ path is honestly labelled as validation-pending,
-///   regardless of whether the `fips` feature is also enabled.
-/// - `Some("validated")` — the `pq-aws-lc` feature (or successor) selects
-///   a CMVP-validated PQ implementation. This branch does not exist as
-///   of M4; it is reserved for the future runbook that promotes the
-///   FIPS-track posture per `docs/slo/design/pq-migration-plan.md` §5.
+/// - `Some("pending_cmvp")` — this project's current PQ implementation
+///   does not claim CMVP validation, regardless of the `fips` feature.
+///   This is an implementation label, not proof of compliance or a claim
+///   about the availability of certificates for other vendors' modules.
 ///
-/// Auditors / SBOM consumers can call this function (or grep for its
-/// returned literal in compiled binaries) to verify the honest label is
-/// in place. The CI lint `scripts/lint-fips-pq-claims.sh` enforces the
-/// project's documentation posture; this function enforces the runtime
-/// posture.
+/// The `fips` feature is currently a compatibility placeholder and does
+/// not switch envelope AEAD to a validated module. Documentation lint
+/// supplements review; searching a binary for this literal cannot prove
+/// the implementation or operating environment meets FIPS requirements.
 ///
 /// # Examples
 ///

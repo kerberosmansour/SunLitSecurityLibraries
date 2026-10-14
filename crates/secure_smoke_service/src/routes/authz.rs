@@ -39,18 +39,20 @@ fn decision_to_response(decision: Decision) -> Response {
 async fn resolve_identity(
     state: &AppState,
     headers: &HeaderMap,
-) -> Result<security_core::identity::AuthenticatedIdentity, Response> {
+) -> Result<security_core::identity::AuthenticatedIdentity, Box<Response>> {
     let token = headers
         .get("authorization")
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.strip_prefix("Bearer "))
         .map(str::to_string)
         .ok_or_else(|| {
-            (
-                StatusCode::UNAUTHORIZED,
-                serde_json::json!({ "code": "missing_token" }).to_string(),
+            Box::new(
+                (
+                    StatusCode::UNAUTHORIZED,
+                    serde_json::json!({ "code": "missing_token" }).to_string(),
+                )
+                    .into_response(),
             )
-                .into_response()
         })?;
 
     let request = AuthenticationRequest {
@@ -63,11 +65,13 @@ async fn resolve_identity(
         .authenticate(&request)
         .await
         .map_err(|_| {
-            (
-                StatusCode::UNAUTHORIZED,
-                serde_json::json!({ "code": "authentication_failed" }).to_string(),
+            Box::new(
+                (
+                    StatusCode::UNAUTHORIZED,
+                    serde_json::json!({ "code": "authentication_failed" }).to_string(),
+                )
+                    .into_response(),
             )
-                .into_response()
         })
 }
 
@@ -75,7 +79,7 @@ async fn resolve_identity(
 pub async fn authz_allow(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let identity = match resolve_identity(&state, &headers).await {
         Ok(id) => id,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
 
     let subject = DefaultSubjectResolver::resolve(&identity);
@@ -92,7 +96,7 @@ pub async fn authz_allow(State(state): State<AppState>, headers: HeaderMap) -> R
 pub async fn authz_deny(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let identity = match resolve_identity(&state, &headers).await {
         Ok(id) => id,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
 
     let subject = DefaultSubjectResolver::resolve(&identity);
@@ -110,7 +114,7 @@ pub async fn authz_deny(State(state): State<AppState>, headers: HeaderMap) -> Re
 pub async fn authz_cross_tenant(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let identity = match resolve_identity(&state, &headers).await {
         Ok(id) => id,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
 
     let subject = DefaultSubjectResolver::resolve(&identity);
@@ -131,7 +135,7 @@ pub async fn authz_privilege_escalation(
 ) -> Response {
     let identity = match resolve_identity(&state, &headers).await {
         Ok(id) => id,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
 
     let subject = DefaultSubjectResolver::resolve(&identity);
@@ -149,7 +153,7 @@ pub async fn authz_privilege_escalation(
 pub async fn authz_idor(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let identity = match resolve_identity(&state, &headers).await {
         Ok(id) => id,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
 
     let subject = DefaultSubjectResolver::resolve(&identity);

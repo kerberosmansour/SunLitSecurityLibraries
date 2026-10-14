@@ -226,3 +226,31 @@ fn hex_nibble(byte: u8) -> u8 {
         other => panic!("invalid hex byte: {other}"),
     }
 }
+
+#[cfg(feature = "pq")]
+#[test]
+fn hybrid_encapsulation_debug_never_exposes_derived_key() {
+    let value = secure_data::pq::HybridEncapsulation {
+        kem_ciphertext: vec![1; 1088],
+        x25519_share: vec![2; 32],
+        derived_key: [173; 32],
+    };
+    let debug = format!("{value:?}");
+    assert!(!debug.contains("173"), "derived key leaked in Debug");
+    assert!(debug.contains("[REDACTED]"));
+}
+
+#[cfg(feature = "pq")]
+#[test]
+fn hybrid_combiner_matches_independent_hkdf_sha256_vector() {
+    let left: Vec<u8> = (0..32).collect();
+    let right: Vec<u8> = (32..64).collect();
+    let expected = [
+        88, 23, 42, 49, 202, 2, 187, 31, 89, 69, 114, 35, 172, 88, 57, 2, 243, 146, 55, 145, 79,
+        215, 238, 37, 82, 64, 100, 175, 150, 141, 60, 195,
+    ];
+    assert_eq!(
+        secure_data::pq::combiner::combine_shared_secrets(&left, &right).unwrap(),
+        expected
+    );
+}

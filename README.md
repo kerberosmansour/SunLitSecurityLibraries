@@ -1,5 +1,7 @@
 # SunLit Security Libraries
 
+Current coordinated library release: **0.2.0**. Review [migration and residual dependency limits](./CHANGELOG.md) and the [release process](./docs/dev-guide/release-process.md).
+
 A production-grade Cargo workspace of Rust security crates and reference
 services implementing [OWASP Proactive Controls](https://owasp.org/www-project-proactive-controls/)
 C1/C2/C4/C5/C6/C7/C8/C9/C10 and OWASP MASVS-aligned controls for services
@@ -117,7 +119,7 @@ The production milestone plan lives in
 |---|---|---|
 | `vault` | `reqwest` | HashiCorp Vault Transit key provider + KV secret resolution |
 | `aws-kms` | `aws-sdk-kms`, `aws-config` | AWS KMS `GenerateDataKey`/`Decrypt` key provider |
-| `fips` | `aws-lc-rs` | FIPS 140-2/3 validated AEAD backend |
+| `fips` | `aws-lc-rs` | Compatibility placeholder; does not change envelope encryption or confer FIPS validation |
 | `password` | `argon2` | Argon2id password hashing and verification |
 | `azure-kv` | — | Azure Key Vault key provider (wrap/unwrap only) |
 | `mobile-storage` | — | Mobile secure storage: `SensitiveBuffer`, `BackupExclusion`, `MobileStoragePolicy` (MASVS-STORAGE-1) |

@@ -1,7 +1,17 @@
 # OSV Scanner exception file for the root Cargo.lock.
-# Keep this aligned with deny.toml and revisit before public release.
+# Keep aligned with deny.toml and exact-version/expiry CI guards.
 
 [[IgnoredVulns]]
 id = "RUSTSEC-2023-0071"
-ignoreUntil = 2026-09-01
+ignoreUntil = 2026-11-14
 reason = "rsa 0.9.10 is pulled by jsonwebtoken/openidconnect for JWT/OIDC public-key verification paths. The Marvin advisory is a private-key operation timing channel; this library does not expose RSA private-key decryption. Tracked by #54 while a no-RSA feature profile is designed."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0249"
+ignoreUntil = 2026-11-14
+reason = "Exact smartstring 1.0.1 through existing Casbin/Rhai; no patched version. Informational unmaintained notice, owner repository maintainer, exact version/expiry enforced by CI."
+
+[[IgnoredVulns]]
+id = "GHSA-6g2r-675j-hx59"
+ignoreUntil = 2026-11-14
+reason = "Exact xxhash-rust 0.8.15: Redis 1.2.1 calls only xxh3_64 with the library default secret; no custom-secret API is used or exposed by SunLit. Newer versions introduce another generic custom-secret flaw found during independent review. Hold pending upstream review; owner repository maintainer, exact version/expiry enforced by CI. Not a general crate safety claim."

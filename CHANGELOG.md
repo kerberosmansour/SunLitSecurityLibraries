@@ -9,6 +9,27 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ## Unreleased
 
+_No changes yet._
+
+## [0.2.0] — 2026-10-14
+
+### Security and migration
+
+- Coordinate all twelve library crates at 0.2.0; update sibling dependency requirements and installation examples. The two service crates remain unpublished fixtures.
+- JWKS production fetches require HTTPS without userinfo/fragments, disable redirects, and enforce a 10-second timeout and 1 MiB response limit. Development HTTP is explicit and restricted to numeric loopback. Migrate local fixtures to the development constructor.
+- Hybrid encapsulation Debug redacts derived keys. Prompt validation rejects additional bidirectional controls. Circuit-breaker generations prevent stale completions from changing current state; unwind releases the matching half-open probe reservation.
+- Disable unused Actix HTTP/2 features that retained an unpatched h2 dependency. Consumers enabling those features separately must audit their own graph.
+- The fips feature does not replace envelope encryption with a validated backend. Remove the misleading envelope FIPS field and correct documentation; the dependency feature label is not a validation certificate. Generic event sinks require explicit RedactionEngine processing; classification alone does not redact arbitrary fields.
+- Tighten source-attestation checks and improve bounded proof harnesses. TLC models are abstract state models, and bounded Kani evidence does not establish cryptographic correctness or RNG uniqueness.
+
+### Dependencies and verification
+
+- Apply targeted advisory repairs and paired HKDF/SHA updates while preserving other audited versions. Hold lru at exactly 0.18.3 and xxhash-rust at exactly 0.8.15 pending further upstream review; newer versions are not automatically accepted.
+- Add honest AI-assisted cargo-vet records and force source-built AWS-LC; reject system-library overrides, unreviewed native features and untrusted formatter binaries. Two exact native-crypto audit exceptions, the unchanged smartstring maintenance advisory and the unreachable xxhash custom-secret advisory expire 2026-11-14. Redis uses default-secret hashing only. The existing RSA timing exception is revalidated and expires on the same date; it applies to public-key signature verification, not private-key operations.
+- Simplify CI duplication, make daily SCA/manual fixture drills read-only, retain OS/feature coverage, and checksum the formal-tool download. Native dependency guards fail on exception expiry.
+
+## Previously published additions
+
 ### Added
 
 - `secure_identity 0.1.10` adds a bounded, fail-closed OpenSSH public-key
@@ -196,3 +217,6 @@ could not be fixed downstream; it needed this release.
   contributing guide, security policy, code of conduct, issue templates, and PR
   template.
 - Normalized runbooks and milestone artifacts under `docs/slo/`.
+
+
+AWS KMS dependency maintenance: the JSON parser advisory is repaired at aws-smithy-json 0.62.7 with the minimum compatible runtime/type/schema batch. The retained generated AWS SDK versions are pinned to avoid adopting new schema/codec paths during this review. Those new APIs have independently identified defects and are outside this provider's call path; two exact temporary cargo-vet exceptions expire 2026-11-14. They are not a general approval of those crates. The repository lock/audits describe its tested graph; downstream consumers must audit their final resolved graph and any custom SDK/runtime use.

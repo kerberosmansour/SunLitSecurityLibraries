@@ -30,7 +30,7 @@
 // Hard-coded here so the fv M1 PR does not depend on `pq::sizes` (which
 // lands in pq-readiness M1, a separate PR). Once both PRs merge, future
 // fv proofs can import `pq::sizes::AES_256_GCM_NONCE_LEN` instead.
-const AES_256_GCM_NONCE_LEN: usize = 12;
+const AES_256_GCM_NONCE_LEN: usize = crate::pq::sizes::AES_256_GCM_NONCE_LEN;
 
 /// Proof: a 12-byte nonce array, seeded from a CSPRNG that is assumed not
 /// to return all-zeros, remains non-zero after the structural copies the
@@ -79,7 +79,7 @@ fn nonce_non_zero() {
 /// `crate::pq::sizes` that would silently break wire-format compatibility.
 #[kani::proof]
 fn aes_256_gcm_nonce_len_is_12() {
-    assert_eq!(AES_256_GCM_NONCE_LEN, 12);
+    assert_eq!(crate::pq::sizes::AES_256_GCM_NONCE_LEN, 12);
 }
 
 // ── fv M3 — nonce-property proofs on the AEAD path ─────────────────────────
