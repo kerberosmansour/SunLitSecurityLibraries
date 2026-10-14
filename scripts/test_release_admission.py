@@ -19,7 +19,7 @@ class ReleaseTests(unittest.TestCase):
         self.target_patch=patch.object(release,"source_targets",return_value=targets)
         self.target_patch.start();self.addCleanup(self.target_patch.stop)
 
-    def fixture(self, root, *, checksum="0"*64, injected=False, bad_source=False, build=False, dirty=False, dep_path=False, changed_target=False, path_only_dev=False):
+    def fixture(self, root, *, checksum="0"*64, injected=False, bad_source=False, build=False, dirty=False, dep_path=False, changed_target=False, path_only_dev=False, injected_profile=False):
         crate = root / "crates/security_core"; (crate / "src").mkdir(parents=True)
         original = '[package]\nname="security_core"\nversion="0.2.1"\n[dependencies]\nfixture_dep="=1.0.0"\n'
         if path_only_dev: original += '[dev-dependencies]\nlocal_dev={path="../local_dev"}\n'
@@ -36,6 +36,7 @@ class ReleaseTests(unittest.TestCase):
         if path_only_dev: normalized=normalized.split('[dev-dependencies]')[0]
         if dep_path: normalized=normalized.replace('fixture_dep="=1.0.0"','fixture_dep={version="=1.0.0",path="injected"}')
         if changed_target: normalized=normalized.replace('path="src/lib.rs"','path="Cargo.toml.orig"')
+        if injected_profile: normalized+='[profile.dev]\ndebug-assertions=false\n'
         packaged_lock=lock.replace('checksum="'+"0"*64+'"','checksum="'+checksum+'"')
         if injected: packaged_lock+='[[package]]\nname="unexpected"\nversion="1.0.0"\n'
         files = {"Cargo.toml.orig":original, "Cargo.toml":normalized, "Cargo.lock":packaged_lock, ".cargo_vcs_info.json":json.dumps({"git":{"sha1":commit,"dirty":dirty},"path_in_vcs":"crates/security_core"}), "src/lib.rs":"pub fn injected() {}\n" if bad_source else "pub fn fixture() {}\n"}
@@ -83,6 +84,12 @@ class ReleaseTests(unittest.TestCase):
             archive.write_bytes(b"replaced archive")
             with self.assertRaisesRegex(ValueError,"changed during admission"):
                 release.verify_unchanged_archive(archive,digest)
+
+    def test_injected_top_level_build_profile_is_rejected(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);archive,commit=self.fixture(root,injected_profile=True)
+            with self.assertRaisesRegex(ValueError,"top-level"):
+                release.candidate(archive,root,commit,{})
 
     def test_workspace_dependency_features_are_merged_before_comparison(self):
         workspace={"workspace":{"dependencies":{"example":{"version":"1","features":["a"],"path":"../example"}}}}
