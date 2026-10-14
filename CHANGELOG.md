@@ -9,6 +9,10 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ## Unreleased
 
+_No changes yet._
+
+## [0.2.1] — 2026-10-14
+
 ### Security and dependency admission
 
 - Fix issue #55: `secure_authz::DefaultAuthorizer` binds cached decisions to the
@@ -27,6 +31,13 @@ breaking API changes, but security fixes and migration notes should be explicit.
   dependency requirements with a documented manifest-only overlay. Park the
   optional cargo-geiger inventory because the latest tool still has unpatched
   dependencies; retain required source/native/SAST/formal checks.
+
+- Freeze the admitted Semgrep 1.180.0 wheel graph and remove the redundant
+  example-service DAST job by explicit maintainer decision. OSV admission replaces
+  its required check, with all twenty other required checks retained.
+- Coordinate all twelve libraries at 0.2.1. Scan exact packaged locks before verification
+  and publication; bind packaged source/manifest authority and dependency
+  checksums to the clean reviewed release and already verified siblings.
 
 ## [0.2.0] — 2026-10-14
 

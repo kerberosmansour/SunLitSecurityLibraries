@@ -1,6 +1,6 @@
 # SunLit Security Libraries
 
-Current coordinated library release: **0.2.0**. Review [migration and residual dependency limits](./CHANGELOG.md) and the [release process](./docs/dev-guide/release-process.md).
+Current coordinated library release: **0.2.1**. Includes role-sensitive authorization cache invalidation and the targeted rustls 0.23.46 advisory repairs. Review [migration and residual dependency limits](./CHANGELOG.md) and the [release process](./docs/dev-guide/release-process.md).
 
 A production-grade Cargo workspace of Rust security crates and reference
 services implementing [OWASP Proactive Controls](https://owasp.org/www-project-proactive-controls/)

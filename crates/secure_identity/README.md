@@ -22,19 +22,19 @@ Output is a `security_core::identity::AuthenticatedIdentity`, which `secure_auth
 
 ```toml
 [dependencies]
-secure_identity = "0.2.0"
+secure_identity = "0.2.1"
 
 # OIDC (PKCE) flows:
-# secure_identity = { version = "0.2.0", features = ["oidc"] }
+# secure_identity = { version = "0.2.1", features = ["oidc"] }
 
 # Projected Kubernetes workload JWTs over HTTPS or bounded inline public JWKS:
-# secure_identity = { version = "0.2.0", features = ["jwks"] }
+# secure_identity = { version = "0.2.1", features = ["jwks"] }
 
 # Redis-backed sessions:
-# secure_identity = { version = "0.2.0", features = ["session-redis"] }
+# secure_identity = { version = "0.2.1", features = ["session-redis"] }
 
 # Biometric / device-binding / step-up:
-# secure_identity = { version = "0.2.0", features = ["biometric"] }
+# secure_identity = { version = "0.2.1", features = ["biometric"] }
 ```
 
 ## Quick example — production boot check

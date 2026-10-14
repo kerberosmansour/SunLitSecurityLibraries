@@ -18,7 +18,7 @@ Secrets management, envelope encryption, and password hashing (OWASP C8). Part o
 
 ```toml
 [dependencies]
-secure_data = { version = "0.2.0", features = ["password"] }
+secure_data = { version = "0.2.1", features = ["password"] }
 ```
 
 ## Quick examples
@@ -53,13 +53,13 @@ use secure_data::envelope::{encrypt_for_storage, decrypt_for_use};
 use secure_data::kms::StaticDevKeyProvider;
 use std::sync::Arc;
 
-let kms = Arc::new(StaticDevKeyProvider::with_dev_key());
+let kms = Arc::new(StaticDevKeyProvider::new());
 let plaintext = b"private medical record";
 
-let envelope = encrypt_for_storage(&*kms, "phi:patient:42", plaintext)?;
-// envelope.ciphertext is AES-256-GCM, envelope.wrapped_dek is the KMS-wrapped DEK.
+let envelope = encrypt_for_storage(plaintext, "phi:patient:42", &*kms).await?;
+// envelope.ciphertext is AES-256-GCM, envelope.wrapped_data_key is the KMS-wrapped DEK.
 
-let recovered = decrypt_for_use(&*kms, &envelope)?;
+let recovered = decrypt_for_use(&envelope, &*kms).await?;
 assert_eq!(recovered.as_slice(), plaintext);
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```

@@ -8,7 +8,7 @@
     "component": {
       "type": "application",
       "name": "SunLitSecurityLibraries",
-      "version": "0.2.0"
+      "version": "0.2.1"
     }
   },
   "declarations": {
@@ -40,7 +40,7 @@
               "value": "variant-analysis-result-schema"
             }
           ],
-          "version": "0.2.0"
+          "version": "0.2.1"
         },
         {
           "bom-ref": "component:secure_errors",
@@ -64,7 +64,7 @@
               "value": "panic-boundary"
             }
           ],
-          "version": "0.2.0"
+          "version": "0.2.1"
         },
         {
           "bom-ref": "component:security_events",
@@ -96,7 +96,7 @@
               "value": "Hard-deny matching covers only consumer-configured exact target roots and their :: descendants. Near-prefix and unlisted targets remain enabled, so consumers must inventory dependency targets and maintain runtime canaries."
             }
           ],
-          "version": "0.2.0"
+          "version": "0.2.1"
         },
         {
           "bom-ref": "component:secure_boundary",
@@ -124,7 +124,7 @@
               "value": "agent-prompt-injection-boundary"
             }
           ],
-          "version": "0.2.0"
+          "version": "0.2.1"
         },
         {
           "bom-ref": "component:secure_output",
@@ -144,7 +144,7 @@
               "value": "uri-scheme-sanitization"
             }
           ],
-          "version": "0.2.0"
+          "version": "0.2.1"
         },
         {
           "bom-ref": "component:secure_identity",
@@ -200,7 +200,7 @@
               "value": "OpenSSH public-key validation accepts only an algorithm and Base64 blob, not an authorized_keys options field or comment. The compatibility entry point permits 1024..16384-bit RSA; validate_openssh_public_key_with_rsa_minimum_bits enforces a caller-selected minimum in that range during validation."
             }
           ],
-          "version": "0.2.0"
+          "version": "0.2.1"
         },
         {
           "bom-ref": "component:secure_authz",
@@ -224,7 +224,7 @@
               "value": "tenant-isolation"
             }
           ],
-          "version": "0.2.0"
+          "version": "0.2.1"
         },
         {
           "bom-ref": "component:secure_data",
@@ -256,7 +256,7 @@
               "value": "password"
             }
           ],
-          "version": "0.2.0"
+          "version": "0.2.1"
         },
         {
           "bom-ref": "component:secure_network",
@@ -280,7 +280,7 @@
               "value": "cleartext-traffic-detection"
             }
           ],
-          "version": "0.2.0"
+          "version": "0.2.1"
         },
         {
           "bom-ref": "component:secure_resilience",
@@ -300,7 +300,7 @@
               "value": "timeout-budgeting"
             }
           ],
-          "version": "0.2.0"
+          "version": "0.2.1"
         },
         {
           "bom-ref": "component:secure_privacy",
@@ -320,7 +320,7 @@
               "value": "data-classification-handling"
             }
           ],
-          "version": "0.2.0"
+          "version": "0.2.1"
         }
       ]
     },
