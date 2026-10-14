@@ -139,15 +139,16 @@ Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibra
 
 AWS KMS dependency maintenance: the JSON parser advisory is repaired at aws-smithy-json 0.62.7 with the minimum compatible runtime/type/schema batch. The retained generated AWS SDK versions are pinned to avoid adopting new schema/codec paths during this review. Those new APIs have independently identified defects and are outside this provider's call path; two exact temporary cargo-vet exceptions expire 2026-11-14. They are not a general approval of those crates. The repository lock/audits describe its tested graph; downstream consumers must audit their final resolved graph and any custom SDK/runtime use.
 
-## Mobile native wrapping adapter (`mobile-storage`)
+## Unreleased mobile native wrapping adapter (`mobile-storage`)
 
 `providers::mobile::MobileKeyProvider<B>` implements the sealed `KeyProvider`
 using a reviewed `NativeKeyBridge`. It reuses the same envelope AEAD and generates
 fresh zeroizing 32-byte DEKs. KEKs remain in native code. `new(bridge, platform,
 storage_policy)` combines an explicit `MobilePlatformPolicy` with the existing
 `MobileStoragePolicy`: iOS must be device-only, nonsynchronized and backup-excluded;
-Android software, TEE and StrongBox are distinct choices. Requiring hardware via
-storage policy always rejects software and unqualified iOS hardware claims.
+Android software, TEE and StrongBox are distinct choices. Hardware requirements
+reject the supplied software references. A custom bridge must independently
+qualify its hardware metadata; Rust cannot attest the truth of its claims.
 
 The native operation returns its exact alias/version and actual key custody with
 the wrapped frame or zeroizing DEK. A preflight device check is insufficient.
@@ -184,3 +185,6 @@ and downstream exactly-once application reconciliation are separate acceptance
 gates; no simulator evidence qualifies hardware support. Guardian's bridge shape
 is reused; Broker's private desktop custody root remains private. Publication and
 consumer migration are M3, not complete from reference-source qualification alone.
+
+Publication note: released0.2.1does not contain this adapter/native reference
+capability. Registry adoption starts after reviewed M3 publication.
