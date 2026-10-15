@@ -261,6 +261,13 @@ production/toolchain lockfile before candidate dependencies execute:
 python3 scripts/osv-dependency-gate.py
 ```
 
+The OSV gate blocks known malicious packages (`MAL-*` IDs or aliases), scanner
+errors and incomplete inventories. Ordinary vulnerabilities are **reported without
+blocking**: the full JSON report, `.summary.json`, receipt counts and CI warning
+remain available for review and remediation. This is not a claim that dependencies
+are vulnerability-free or free of unknown malware. Other provenance, source,
+license and cargo-vet checks keep their existing policies.
+
 CI matrices, releases that build dependencies, and the daily scan use the same
 read-only gate. Reports include direct and transitive dependencies. Network,
 scanner and incomplete-inventory failures fail closed. Known malicious packages
