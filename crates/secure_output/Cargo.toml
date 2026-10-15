@@ -9,6 +9,8 @@ repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/secure_output"
 keywords = ["security", "encoding", "xss", "output"]
 
+categories = ["web-programming"]
+
 [lib]
 name = "secure_output"
 

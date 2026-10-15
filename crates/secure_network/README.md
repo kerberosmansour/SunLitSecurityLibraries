@@ -70,15 +70,15 @@ match detector.evaluate("http://api.example.com/data") {
 
 ## What's inside
 
-| Module | Use it for |
-|---|---|
-| `cert_pin::PinSet` / `CertPinValidator` | SPKI SHA-256 pin validation with multi-pin rotation. |
-| `tls_policy::TlsPolicy` | Allowed-version and allowed-cipher policy for connection setup. |
-| `tls_policy::TlsValidationResult` / `TlsDenyReason` | Structured validation results for logging/telemetry. |
-| `cleartext::CleartextDetector` | Detect cleartext URLs/hosts for mobile/desktop egress checks. |
-| `mtls::MtlsClientIdentity` / `MtlsClientIdentityStatus` | Typed mTLS client identity extraction from a verified chain. |
-| `mtls::MtlsRevocationLookup` / `NoMtlsRevocations` | Pluggable revocation hooks (CRL, OCSP, custom store). |
-| `error::NetworkSecurityError` | Structured errors with no PII or hostnames. |
+| Module                                                  | Use it for                                                      |
+| ------------------------------------------------------- | --------------------------------------------------------------- |
+| `cert_pin::PinSet` / `CertPinValidator`                 | SPKI SHA-256 pin validation with multi-pin rotation.            |
+| `tls_policy::TlsPolicy`                                 | Allowed-version and allowed-cipher policy for connection setup. |
+| `tls_policy::TlsValidationResult` / `TlsDenyReason`     | Structured validation results for logging/telemetry.            |
+| `cleartext::CleartextDetector`                          | Detect cleartext URLs/hosts for mobile/desktop egress checks.   |
+| `mtls::MtlsClientIdentity` / `MtlsClientIdentityStatus` | Typed mTLS client identity extraction from a verified chain.    |
+| `mtls::MtlsRevocationLookup` / `NoMtlsRevocations`      | Pluggable revocation hooks (CRL, OCSP, custom store).           |
+| `error::NetworkSecurityError`                           | Structured errors with no PII or hostnames.                     |
 
 ## Compatibility
 
@@ -94,19 +94,19 @@ Alpha.
 
 Part of the [SunLit Security Libraries](https://github.com/kerberosmansour/SunLitSecurityLibraries) workspace:
 
-| Crate | Purpose |
-|---|---|
-| [`security_core`](https://crates.io/crates/security_core) | Shared types, identity, classification, severity, redaction. |
-| [`security_events`](https://crates.io/crates/security_events) | Security logging and tamper-evident audit chain. |
-| [`secure_errors`](https://crates.io/crates/secure_errors) | Three-layer error model with redaction-safe public errors. |
-| [`secure_output`](https://crates.io/crates/secure_output) | Context-aware output encoders (HTML, JSON, URL, JS, CSS, XML, LDAP, shell). |
-| [`secure_data`](https://crates.io/crates/secure_data) | Secrets, envelope encryption, Argon2id, FIPS, mobile storage. |
-| [`secure_device_trust`](https://crates.io/crates/secure_device_trust) | Native-client device trust and session certificates. |
-| [`secure_resilience`](https://crates.io/crates/secure_resilience) | RASP and environment-detection policy. |
-| [`secure_privacy`](https://crates.io/crates/secure_privacy) | PII classification, consent, retention, pseudonymization. |
-| [`secure_boundary`](https://crates.io/crates/secure_boundary) | Input validation, security headers, boundary protections. |
-| [`secure_identity`](https://crates.io/crates/secure_identity) | JWT/OIDC, MFA, sessions, biometric step-up. |
-| [`secure_authz`](https://crates.io/crates/secure_authz) | Typed deny-by-default authorization with device-trust predicates. |
+| Crate                                                                 | Purpose                                                                     |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [`security_core`](https://crates.io/crates/security_core)             | Shared types, identity, classification, severity, redaction.                |
+| [`security_events`](https://crates.io/crates/security_events)         | Security logging and tamper-evident audit chain.                            |
+| [`secure_errors`](https://crates.io/crates/secure_errors)             | Three-layer error model with redaction-safe public errors.                  |
+| [`secure_output`](https://crates.io/crates/secure_output)             | Context-aware output encoders (HTML, JSON, URL, JS, CSS, XML, LDAP, shell). |
+| [`secure_data`](https://crates.io/crates/secure_data)                 | Secrets, envelope encryption, Argon2id, FIPS, mobile storage.               |
+| [`secure_device_trust`](https://crates.io/crates/secure_device_trust) | Native-client device trust and session certificates.                        |
+| [`secure_resilience`](https://crates.io/crates/secure_resilience)     | RASP and environment-detection policy.                                      |
+| [`secure_privacy`](https://crates.io/crates/secure_privacy)           | PII classification, consent, retention, pseudonymization.                   |
+| [`secure_boundary`](https://crates.io/crates/secure_boundary)         | Input validation, security headers, boundary protections.                   |
+| [`secure_identity`](https://crates.io/crates/secure_identity)         | JWT/OIDC, MFA, sessions, biometric step-up.                                 |
+| [`secure_authz`](https://crates.io/crates/secure_authz)               | Typed deny-by-default authorization with device-trust predicates.           |
 
 ## Getting help
 
@@ -121,3 +121,14 @@ Contributions are welcome. Please read [CONTRIBUTING.md](https://github.com/kerb
 ## License
 
 Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-MIT) or [Apache-2.0](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-APACHE) at your option.
+
+## Using this with a coding agent
+
+Use the [consumer integration guide](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/docs/agents/integration.md)
+and its published-version skill reference. Check prerequisites, dependency admission
+and the relevant success and failure-path tests before adopting this package.
+Feedback is optional: share general usage in [Discussions](https://github.com/kerberosmansour/SunLitSecurityLibraries/discussions),
+and use the [integration report](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/new?template=integration_feedback.yml)
+for a concrete blocker or documentation gap. An agent must obtain operator permission
+before posting. Use [private security reporting](https://github.com/kerberosmansour/SunLitSecurityLibraries/security/advisories/new)
+for suspected vulnerabilities. Never share secrets, private code or transcripts.

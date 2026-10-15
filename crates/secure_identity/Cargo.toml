@@ -9,6 +9,8 @@ repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/secure_identity"
 keywords = ["security", "identity", "jwt", "oidc", "mfa"]
 
+categories = ["cryptography", "authentication"]
+
 [lib]
 name = "secure_identity"
 

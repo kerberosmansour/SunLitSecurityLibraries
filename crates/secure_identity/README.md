@@ -138,36 +138,36 @@ assert_eq!(
 
 ## What's inside
 
-| Module | Use it for |
-|---|---|
-| `authenticator::Authenticator` / `AuthenticationRequest` / `TokenKind` | Pluggable authentication entry-point. |
-| `jwks` | JWKS discovery, caching, and RSA/EC signature verification, with a single-flight, rate-limited refresh on unknown `kid` so signing-key rotation does not wait for cache expiry. |
-| `workload` (`jwks` feature) | Projected Kubernetes JWT validation: exact HTTPS or bounded inline public JWKS, RS256-only bounded `kid`, exact issuer/audience/time checks, and a bounded service-account subject with no tenant or operation authority. |
-| `openssh` | Bounded OpenSSH algorithm+Base64 validation with exact algorithm binding, RSA parameter policy, Ed25519 point validation, and NIST curve membership. |
-| `token` | JWT issuance/validation with strict alg enforcement. |
-| `mfa` / `totp` | TOTP step-up with replay defense and skew tolerance. |
-| `api_key` | API key issuance and constant-time validation. |
-| `session` | Session creation, expiration, and revocation policy. |
-| `session_redis` (feature) | Redis-backed session storage. |
-| `passwordless` | Passwordless authentication helpers. |
-| `oidc` (feature) | OIDC discovery + PKCE auth-code flow via `openidconnect`. |
-| `biometric` / `device_binding` / `step_up` (feature) | Biometric, device-binding, and step-up policy (MASVS-AUTH-2/3). |
-| `boot` | `assert_no_dev_identity_in_production` startup guard. |
-| `dev` | A `DevAuthenticator` for tests; production boot guards against this. |
-| `auth_events` | `security_events`-typed authentication audit events. |
-| `capability` | Strict single-use tenant+operation capabilities: RS256-only, protected-`kid` exact key selection and rotation, ≤60s TTL, request-bound, jti consumed through a caller-supplied replay store. |
+| Module                                                                 | Use it for                                                                                                                                                                                                                |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `authenticator::Authenticator` / `AuthenticationRequest` / `TokenKind` | Pluggable authentication entry-point.                                                                                                                                                                                     |
+| `jwks`                                                                 | JWKS discovery, caching, and RSA/EC signature verification, with a single-flight, rate-limited refresh on unknown `kid` so signing-key rotation does not wait for cache expiry.                                           |
+| `workload` (`jwks` feature)                                            | Projected Kubernetes JWT validation: exact HTTPS or bounded inline public JWKS, RS256-only bounded `kid`, exact issuer/audience/time checks, and a bounded service-account subject with no tenant or operation authority. |
+| `openssh`                                                              | Bounded OpenSSH algorithm+Base64 validation with exact algorithm binding, RSA parameter policy, Ed25519 point validation, and NIST curve membership.                                                                      |
+| `token`                                                                | JWT issuance/validation with strict alg enforcement.                                                                                                                                                                      |
+| `mfa` / `totp`                                                         | TOTP step-up with replay defense and skew tolerance.                                                                                                                                                                      |
+| `api_key`                                                              | API key issuance and constant-time validation.                                                                                                                                                                            |
+| `session`                                                              | Session creation, expiration, and revocation policy.                                                                                                                                                                      |
+| `session_redis` (feature)                                              | Redis-backed session storage.                                                                                                                                                                                             |
+| `passwordless`                                                         | Passwordless authentication helpers.                                                                                                                                                                                      |
+| `oidc` (feature)                                                       | OIDC discovery + PKCE auth-code flow via `openidconnect`.                                                                                                                                                                 |
+| `biometric` / `device_binding` / `step_up` (feature)                   | Biometric, device-binding, and step-up policy (MASVS-AUTH-2/3).                                                                                                                                                           |
+| `boot`                                                                 | `assert_no_dev_identity_in_production` startup guard.                                                                                                                                                                     |
+| `dev`                                                                  | A `DevAuthenticator` for tests; production boot guards against this.                                                                                                                                                      |
+| `auth_events`                                                          | `security_events`-typed authentication audit events.                                                                                                                                                                      |
+| `capability`                                                           | Strict single-use tenant+operation capabilities: RS256-only, protected-`kid` exact key selection and rotation, ≤60s TTL, request-bound, jti consumed through a caller-supplied replay store.                              |
 
 ## Feature flags
 
-| Flag | Default | Enables |
-|---|---|---|
-| `asymmetric-jwt` | on | Existing asymmetric JWT/capability APIs and vendor RustCrypto provider. |
-| `ssh-public-keys` | on | OpenSSH validation and public-key dependencies. |
-| `jwt-hmac` | off | Explicit reduced HMAC profile; select with defaults disabled. |
-| `jwks` | off | HTTPS JWKS retrieval and projected Kubernetes workload JWT validation via `workload`. |
-| `oidc` | off | `oidc` module — OIDC discovery and PKCE-first authentication via `openidconnect` + `reqwest`. |
-| `session-redis` | off | `session_redis` — Redis-backed session storage. |
-| `biometric` | off | `biometric`, `device_binding`, `step_up` (MASVS-AUTH-2, MASVS-AUTH-3). |
+| Flag              | Default | Enables                                                                                       |
+| ----------------- | ------- | --------------------------------------------------------------------------------------------- |
+| `asymmetric-jwt`  | on      | Existing asymmetric JWT/capability APIs and vendor RustCrypto provider.                       |
+| `ssh-public-keys` | on      | OpenSSH validation and public-key dependencies.                                               |
+| `jwt-hmac`        | off     | Explicit reduced HMAC profile; select with defaults disabled.                                 |
+| `jwks`            | off     | HTTPS JWKS retrieval and projected Kubernetes workload JWT validation via `workload`.         |
+| `oidc`            | off     | `oidc` module — OIDC discovery and PKCE-first authentication via `openidconnect` + `reqwest`. |
+| `session-redis`   | off     | `session_redis` — Redis-backed session storage.                                               |
+| `biometric`       | off     | `biometric`, `device_binding`, `step_up` (MASVS-AUTH-2, MASVS-AUTH-3).                        |
 
 ## Compatibility
 
@@ -183,19 +183,19 @@ Alpha.
 
 Part of the [SunLit Security Libraries](https://github.com/kerberosmansour/SunLitSecurityLibraries) workspace:
 
-| Crate | Purpose |
-|---|---|
-| [`security_core`](https://crates.io/crates/security_core) | Shared types, identity, classification, severity, redaction. |
-| [`security_events`](https://crates.io/crates/security_events) | Security logging and tamper-evident audit chain. |
-| [`secure_errors`](https://crates.io/crates/secure_errors) | Three-layer error model with redaction-safe public errors. |
-| [`secure_output`](https://crates.io/crates/secure_output) | Context-aware output encoders (HTML, JSON, URL, JS, CSS, XML, LDAP, shell). |
-| [`secure_data`](https://crates.io/crates/secure_data) | Secrets, envelope encryption, Argon2id, FIPS, mobile storage. |
-| [`secure_network`](https://crates.io/crates/secure_network) | TLS policy, SPKI pinning, mTLS, cleartext detection. |
-| [`secure_device_trust`](https://crates.io/crates/secure_device_trust) | Native-client device trust and session certificates. |
-| [`secure_resilience`](https://crates.io/crates/secure_resilience) | RASP and environment-detection policy. |
-| [`secure_privacy`](https://crates.io/crates/secure_privacy) | PII classification, consent, retention, pseudonymization. |
-| [`secure_boundary`](https://crates.io/crates/secure_boundary) | Input validation, security headers, boundary protections. |
-| [`secure_authz`](https://crates.io/crates/secure_authz) | Typed deny-by-default authorization with device-trust predicates. |
+| Crate                                                                 | Purpose                                                                     |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [`security_core`](https://crates.io/crates/security_core)             | Shared types, identity, classification, severity, redaction.                |
+| [`security_events`](https://crates.io/crates/security_events)         | Security logging and tamper-evident audit chain.                            |
+| [`secure_errors`](https://crates.io/crates/secure_errors)             | Three-layer error model with redaction-safe public errors.                  |
+| [`secure_output`](https://crates.io/crates/secure_output)             | Context-aware output encoders (HTML, JSON, URL, JS, CSS, XML, LDAP, shell). |
+| [`secure_data`](https://crates.io/crates/secure_data)                 | Secrets, envelope encryption, Argon2id, FIPS, mobile storage.               |
+| [`secure_network`](https://crates.io/crates/secure_network)           | TLS policy, SPKI pinning, mTLS, cleartext detection.                        |
+| [`secure_device_trust`](https://crates.io/crates/secure_device_trust) | Native-client device trust and session certificates.                        |
+| [`secure_resilience`](https://crates.io/crates/secure_resilience)     | RASP and environment-detection policy.                                      |
+| [`secure_privacy`](https://crates.io/crates/secure_privacy)           | PII classification, consent, retention, pseudonymization.                   |
+| [`secure_boundary`](https://crates.io/crates/secure_boundary)         | Input validation, security headers, boundary protections.                   |
+| [`secure_authz`](https://crates.io/crates/secure_authz)               | Typed deny-by-default authorization with device-trust predicates.           |
 
 ## Getting help
 
@@ -239,3 +239,14 @@ graph, not arbitrary unions, default SBOMs or absence of RSA code from ring.
 
 Read the [0.4.0 migration guide](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/v0.4.0/docs/dev-guide/jwt-hmac-profile.md)
 for full startup/error, bounds, admission, real consumer and proof limits.
+
+## Using this with a coding agent
+
+Use the [consumer integration guide](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/docs/agents/integration.md)
+and its published-version skill reference. Check prerequisites, dependency admission
+and the relevant success and failure-path tests before adopting this package.
+Feedback is optional: share general usage in [Discussions](https://github.com/kerberosmansour/SunLitSecurityLibraries/discussions),
+and use the [integration report](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/new?template=integration_feedback.yml)
+for a concrete blocker or documentation gap. An agent must obtain operator permission
+before posting. Use [private security reporting](https://github.com/kerberosmansour/SunLitSecurityLibraries/security/advisories/new)
+for suspected vulnerabilities. Never share secrets, private code or transcripts.

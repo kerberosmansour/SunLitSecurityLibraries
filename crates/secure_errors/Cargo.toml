@@ -9,6 +9,8 @@ repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/secure_errors"
 keywords = ["security", "errors", "incident", "axum", "actix"]
 
+categories = ["web-programming"]
+
 [lib]
 name = "secure_errors"
 

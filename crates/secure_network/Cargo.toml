@@ -9,6 +9,8 @@ repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/secure_network"
 keywords = ["security", "tls", "pinning", "network"]
 
+categories = ["development-tools"]
+
 [lib]
 name = "secure_network"
 
