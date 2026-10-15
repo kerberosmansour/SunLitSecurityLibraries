@@ -59,24 +59,26 @@ for crates.io publication.
 
 ### Cargo package and import names
 
+Each published library links to its crates.io package page below; those pages link back to this repository.
+
 The current `Cargo.toml` manifests use unprefixed package names. Each published
 package name matches its Rust import name exactly, so consumers should use the
 same identifier in `[dependencies]`, `cargo add`, and `use` paths.
 
 | Cargo package | Rust import | crates.io |
 |---|---|---|
-| `security_core` | `security_core` | published |
-| `security_events` | `security_events` | published |
-| `secure_errors` | `secure_errors` | published |
-| `secure_boundary` | `secure_boundary` | published |
-| `secure_output` | `secure_output` | published |
-| `secure_identity` | `secure_identity` | published |
-| `secure_device_trust` | `secure_device_trust` | published |
-| `secure_authz` | `secure_authz` | published |
-| `secure_data` | `secure_data` | published |
-| `secure_network` | `secure_network` | published |
-| `secure_resilience` | `secure_resilience` | published |
-| `secure_privacy` | `secure_privacy` | published |
+| `security_core` | `security_core` | [crates.io](https://crates.io/crates/security_core) |
+| `security_events` | `security_events` | [crates.io](https://crates.io/crates/security_events) |
+| `secure_errors` | `secure_errors` | [crates.io](https://crates.io/crates/secure_errors) |
+| `secure_boundary` | `secure_boundary` | [crates.io](https://crates.io/crates/secure_boundary) |
+| `secure_output` | `secure_output` | [crates.io](https://crates.io/crates/secure_output) |
+| `secure_identity` | `secure_identity` | [crates.io](https://crates.io/crates/secure_identity) |
+| `secure_device_trust` | `secure_device_trust` | [crates.io](https://crates.io/crates/secure_device_trust) |
+| `secure_authz` | `secure_authz` | [crates.io](https://crates.io/crates/secure_authz) |
+| `secure_data` | `secure_data` | [crates.io](https://crates.io/crates/secure_data) |
+| `secure_network` | `secure_network` | [crates.io](https://crates.io/crates/secure_network) |
+| `secure_resilience` | `secure_resilience` | [crates.io](https://crates.io/crates/secure_resilience) |
+| `secure_privacy` | `secure_privacy` | [crates.io](https://crates.io/crates/secure_privacy) |
 | `secure_reference_service` | `secure_reference_service` | private workspace crate |
 | `secure_smoke_service` | `secure_smoke_service` | private workspace crate |
 
