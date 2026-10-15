@@ -4,7 +4,7 @@
 
 | Milestone | Title | Status | Notes |
 |---|---|---|---|
-| M1 | Enforce a bounded exception for Semgrep's resolver-locked MCP advisory | in progress | MCP 1.30.0 is fixed, but Semgrep 1.180.0 and 1.181.0 require MCP 1.29.0 exactly. Removing MCP also breaks the ordinary `semgrep scan` import path. |
+| M1 | Enforce a bounded exception for Semgrep's resolver-locked MCP advisory | done (2026-10-15) | MCP 1.30.0 is fixed, but Semgrep 1.180.0 and 1.181.0 require MCP 1.29.0 exactly. Removing MCP also breaks the ordinary `semgrep scan` import path. See the [verification](../verify/semgrep-mcp-1.30.0.md), [lessons](../lessons/semgrep-mcp-1.30.0.md) and [completion record](../completion/semgrep-mcp-1.30.0.md). |
 
 ## Goal
 
