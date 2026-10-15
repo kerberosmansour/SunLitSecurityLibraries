@@ -75,3 +75,11 @@ verify producer bytes, workflow identity, official schemas and release assets.
 See [HMAC migration](jwt-hmac-profile.md) for feature/provider startup boundaries.
 Default package SBOMs may contain rsa; the no-rsa claim is only the separately
 reviewed isolated normal/build profile, never an arbitrary additive feature union.
+
+Verified 0.4.0 release: [run 38687007436](https://github.com/kerberosmansour/SunLitSecurityLibraries/actions/runs/38687007436),
+package source 49612e1fe525ec87a9e0c60181d7d023a08aaa51; tag/approval
+318512ab65a6894d81a8b73e3ac8df4eef0753ea. Twelve registry archives/source/checksums,
+27 exact workflow/tag/commit/ref signatures, 12 official-schema SBOMs and 54 uploaded
+asset digests plus independently downloaded bytes verify. The registry-only HMAC
+consumer has 195 normal/build packages/zero rsa, passes exception-free OSV and all
+six real startup/JWT/race scenarios. No external identity/source/checksum changed.
