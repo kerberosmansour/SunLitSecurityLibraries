@@ -1,5 +1,6 @@
 """Dependency admission regressions; synthetic files only, no package install."""
 import importlib.util
+from datetime import date, timedelta
 import json
 from pathlib import Path
 import re
@@ -13,6 +14,117 @@ gate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gate)
 
 class AdmissionTests(unittest.TestCase):
+    def write_toolchain_exception(self, root, **overrides):
+        lock = root / "tools/security-toolchains/semgrep/requirements.txt"
+        lock.parent.mkdir(parents=True, exist_ok=True)
+        lock.write_text("mcp==1.29.0 --hash=sha256:" + "a" * 64 + "\n")
+        record = {
+            "lockfile": "tools/security-toolchains/semgrep/requirements.txt",
+            "ecosystem": "PyPI",
+            "package": "mcp",
+            "version": "1.29.0",
+            "advisory": "GHSA-84m7-p3x7-pcfv",
+            "owner": "repository maintainers",
+            "expires": (date.today() + timedelta(days=14)).isoformat(),
+            "kind": "unreachable-code-path",
+            "reason": "CI invokes only semgrep scan; the stateful HTTP MCP server is not started or exposed.",
+        }
+        record.update(overrides)
+        manifest = lock.with_name("exceptions.json")
+        manifest.write_text(json.dumps({"schema": "sunlit.toolchain-osv-exceptions/v1", "exceptions": [record]}))
+        return lock, manifest
+
+    @staticmethod
+    def toolchain_package(lock, vulnerabilities=None):
+        return {
+            "_admission_source": str(lock),
+            "package": {"name": "mcp", "version": "1.29.0", "ecosystem": "PyPI"},
+            "vulnerabilities": vulnerabilities if vulnerabilities is not None else [
+                {"id": "GHSA-84m7-p3x7-pcfv", "aliases": ["CVE-2026-59951"]}
+            ],
+        }
+
+    def test_exact_toolchain_exception_is_reviewed_without_hiding_finding(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            lock, _ = self.write_toolchain_exception(root)
+            packages = [self.toolchain_package(lock)]
+            with patch.object(gate, "ROOT", root):
+                reviewed = gate.reviewed_toolchain_exceptions(packages)
+            self.assertEqual(len(reviewed), 1)
+            self.assertEqual(reviewed[0]["advisory"], "GHSA-84m7-p3x7-pcfv")
+            self.assertEqual(gate.findings_summary(packages)["vulnerabilityFindings"], 1)
+
+    def test_toolchain_exception_identity_drift_fails_closed(self):
+        cases = (
+            ({"lockfile": "tools/security-toolchains/other/requirements.txt"}, "lockfile"),
+            ({"version": "1.30.0"}, "identity"),
+            ({"advisory": "GHSA-other"}, "advisory"),
+            ({"ecosystem": "npm"}, "identity"),
+        )
+        for overrides, message in cases:
+            with self.subTest(overrides=overrides), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder).resolve()
+                lock, _ = self.write_toolchain_exception(root, **overrides)
+                with patch.object(gate, "ROOT", root):
+                    with self.assertRaisesRegex(ValueError, message):
+                        gate.reviewed_toolchain_exceptions([self.toolchain_package(lock)])
+
+    def test_expired_toolchain_exception_fails_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            lock, _ = self.write_toolchain_exception(root, expires="2000-01-01")
+            with patch.object(gate, "ROOT", root):
+                with self.assertRaisesRegex(ValueError, "expired"):
+                    gate.reviewed_toolchain_exceptions([self.toolchain_package(lock)])
+
+    def test_overlong_toolchain_exception_fails_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            expiry = (date.today() + timedelta(days=32)).isoformat()
+            lock, _ = self.write_toolchain_exception(root, expires=expiry)
+            with patch.object(gate, "ROOT", root):
+                with self.assertRaisesRegex(ValueError, "maximum review window"):
+                    gate.reviewed_toolchain_exceptions([self.toolchain_package(lock)])
+
+    def test_stale_toolchain_exception_fails_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            lock, _ = self.write_toolchain_exception(root)
+            with patch.object(gate, "ROOT", root):
+                with self.assertRaisesRegex(ValueError, "stale"):
+                    gate.reviewed_toolchain_exceptions([self.toolchain_package(lock, [])])
+
+    def test_toolchain_malware_alias_cannot_be_excepted(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            lock, _ = self.write_toolchain_exception(root)
+            finding = {"id": "GHSA-84m7-p3x7-pcfv", "aliases": ["MAL-TEST-1"]}
+            with patch.object(gate, "ROOT", root):
+                with self.assertRaisesRegex(ValueError, "malicious"):
+                    gate.reviewed_toolchain_exceptions([self.toolchain_package(lock, [finding])])
+
+    def test_unreviewed_toolchain_vulnerability_fails_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            lock = root / "tools/security-toolchains/semgrep/requirements.txt"
+            lock.parent.mkdir(parents=True)
+            lock.write_text("mcp==1.29.0 --hash=sha256:" + "a" * 64 + "\n")
+            with patch.object(gate, "ROOT", root):
+                with self.assertRaisesRegex(ValueError, "requires an exact reviewed exception"):
+                    gate.reviewed_toolchain_exceptions([self.toolchain_package(lock)])
+
+    def test_toolchain_exception_manifest_has_strict_schema(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            lock, manifest = self.write_toolchain_exception(root)
+            data = json.loads(manifest.read_text())
+            data["exceptions"][0]["unexpected"] = True
+            manifest.write_text(json.dumps(data))
+            with patch.object(gate, "ROOT", root):
+                with self.assertRaisesRegex(ValueError, "schema"):
+                    gate.reviewed_toolchain_exceptions([self.toolchain_package(lock)])
+
     def test_vulnerability_only_scan_is_reported_without_blocking(self):
         packages = [{"package": {"name": "synthetic", "version": "1", "ecosystem": "npm"}, "vulnerabilities": [{"id": "GHSA-example", "aliases": ["CVE-2099-0001"]}]}]
         for code in (0, 1):
