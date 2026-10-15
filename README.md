@@ -952,3 +952,10 @@ Engineer-facing documentation for consuming these libraries lives in [`docs/dev-
 The canonical supply-chain policy lives at [`deny.toml`](./deny.toml) at the repo root. Downstream consumers may copy or `curl` it directly to adopt the same policy (licenses allowed, banned crates, source verification). The policy is enforced on every PR via the `supply-chain` job in `.github/workflows/ci.yml` (`cargo audit` + `cargo deny check` + `cargo vet`).
 
 Mobile consumers: see [native bridge migration](docs/dev-guide/mobile-bridge-migration.md) for integration, passcode recovery and qualification limits. Native references have simulator/emulator software evidence; physical devices and application bindings require separate qualification.
+
+## Coding agents and integration feedback
+
+Use the [sunlit-rust-security](skills/sunlit-rust-security/SKILL.md) skill for relevant tasks.
+See the [agent integration guide](docs/agents/integration.md) for installation,
+versioned examples and optional feedback. The [usage reference](skills/sunlit-rust-security/references/usage.md)
+links each published package to its registry.

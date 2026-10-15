@@ -1,0 +1,35 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "SunLit Security Libraries",
+  "description": "Rust security crates for authorization, authentication, request validation, envelope encryption, security events and device-trust evidence.",
+  "folders": ["docs/agents", "skills/sunlit-rust-security/references"],
+  "excludeFolders": [
+    "docs/slo",
+    "tests",
+    "examples",
+    "node_modules",
+    "target",
+    ".github"
+  ],
+  "excludeFiles": [
+    "README.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "ARCHITECTURE.md",
+    "GOVERNANCE.md",
+    "CODE_OF_CONDUCT.md",
+    "TRADEMARKS.md",
+    "adoption-measurement.md",
+    "SECURITY.md",
+    "MAINTAINERS.md",
+    "THREAT_MODEL.md"
+  ],
+  "rules": [
+    "Use APIs from the documented published version; check versioned references before upgrading.",
+    "Respect the consuming project's dependency-admission policy and explicit user authorization."
+  ],
+  "url": "https://context7.com/kerberosmansour/sunlitsecuritylibraries",
+  "public_key": "pk_iqapWOzUZtJ20Kp5Z1hlG"
+}

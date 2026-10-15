@@ -32,3 +32,8 @@ policies are unchanged.
 Both Codex and Claude must follow this rule. Dependency changes use reviewed PRs;
 scan jobs remain read-only and do not remediate or merge automatically.
 <!-- /dependency-admission-osv:v1 -->
+
+## Consumer integration skill
+
+- [`sunlit-rust-security`](skills/sunlit-rust-security/SKILL.md) — published package selection and integration.
+  See [consumer installation](docs/agents/integration.md); this index does not install the skill in other projects.
