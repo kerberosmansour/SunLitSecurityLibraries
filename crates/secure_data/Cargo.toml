@@ -9,6 +9,8 @@ repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/secure_data"
 keywords = ["security", "crypto", "secrets", "kms", "argon2"]
 
+categories = ["cryptography"]
+
 [lib]
 name = "secure_data"
 

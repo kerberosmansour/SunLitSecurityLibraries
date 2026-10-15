@@ -56,24 +56,24 @@ cargo run --example actix_authz_minimal -p secure_authz --features actix-web
 
 ## What's inside
 
-| Module / type | Use it for |
-|---|---|
-| `subject` / `action::Action` / `resource::ResourceRef` | Typed subject/action/resource vocabulary. |
-| `policy` / `Authorizer` trait | Plug your own policy engine. |
-| `casbin_engine` | Default casbin RBAC implementation. |
-| `tenant` | Tenant-isolation primitives. |
-| `cache` | Bounded LRU decision cache with TTL. |
-| `device_trust` | Predicates combining `secure_device_trust`, `secure_identity`, and `secure_network` context. |
-| `middleware::AuthzLayer` | axum tower `Layer` (feature `axum`). |
-| `actix::AuthzTransform` | actix-web middleware (feature `actix-web`). |
-| `testkit::MockAuthorizer` | `MockAuthorizer::allow()` / `::deny()` for unit tests. |
+| Module / type                                          | Use it for                                                                                   |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| `subject` / `action::Action` / `resource::ResourceRef` | Typed subject/action/resource vocabulary.                                                    |
+| `policy` / `Authorizer` trait                          | Plug your own policy engine.                                                                 |
+| `casbin_engine`                                        | Default casbin RBAC implementation.                                                          |
+| `tenant`                                               | Tenant-isolation primitives.                                                                 |
+| `cache`                                                | Bounded LRU decision cache with TTL.                                                         |
+| `device_trust`                                         | Predicates combining `secure_device_trust`, `secure_identity`, and `secure_network` context. |
+| `middleware::AuthzLayer`                               | axum tower `Layer` (feature `axum`).                                                         |
+| `actix::AuthzTransform`                                | actix-web middleware (feature `actix-web`).                                                  |
+| `testkit::MockAuthorizer`                              | `MockAuthorizer::allow()` / `::deny()` for unit tests.                                       |
 
 ## Feature flags
 
-| Flag | Default | Enables |
-|---|---|---|
-| `axum` | ✅ | `middleware::AuthzLayer` as a tower `Layer`. |
-| `actix-web` | off | `actix::AuthzTransform` as an actix middleware. |
+| Flag        | Default | Enables                                         |
+| ----------- | ------- | ----------------------------------------------- |
+| `axum`      | ✅      | `middleware::AuthzLayer` as a tower `Layer`.    |
+| `actix-web` | off     | `actix::AuthzTransform` as an actix middleware. |
 
 ## Authorization cache context
 
@@ -101,19 +101,19 @@ Alpha.
 
 Part of the [SunLit Security Libraries](https://github.com/kerberosmansour/SunLitSecurityLibraries) workspace:
 
-| Crate | Purpose |
-|---|---|
-| [`security_core`](https://crates.io/crates/security_core) | Shared types, identity, classification, severity, redaction. |
-| [`security_events`](https://crates.io/crates/security_events) | Security logging and tamper-evident audit chain. |
-| [`secure_errors`](https://crates.io/crates/secure_errors) | Three-layer error model with redaction-safe public errors. |
-| [`secure_output`](https://crates.io/crates/secure_output) | Context-aware output encoders (HTML, JSON, URL, JS, CSS, XML, LDAP, shell). |
-| [`secure_data`](https://crates.io/crates/secure_data) | Secrets, envelope encryption, Argon2id, FIPS, mobile storage. |
-| [`secure_network`](https://crates.io/crates/secure_network) | TLS policy, SPKI pinning, mTLS, cleartext detection. |
-| [`secure_device_trust`](https://crates.io/crates/secure_device_trust) | Native-client device trust and session certificates. |
-| [`secure_resilience`](https://crates.io/crates/secure_resilience) | RASP and environment-detection policy. |
-| [`secure_privacy`](https://crates.io/crates/secure_privacy) | PII classification, consent, retention, pseudonymization. |
-| [`secure_boundary`](https://crates.io/crates/secure_boundary) | Input validation, security headers, boundary protections. |
-| [`secure_identity`](https://crates.io/crates/secure_identity) | JWT/OIDC, MFA, sessions, biometric step-up. |
+| Crate                                                                 | Purpose                                                                     |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [`security_core`](https://crates.io/crates/security_core)             | Shared types, identity, classification, severity, redaction.                |
+| [`security_events`](https://crates.io/crates/security_events)         | Security logging and tamper-evident audit chain.                            |
+| [`secure_errors`](https://crates.io/crates/secure_errors)             | Three-layer error model with redaction-safe public errors.                  |
+| [`secure_output`](https://crates.io/crates/secure_output)             | Context-aware output encoders (HTML, JSON, URL, JS, CSS, XML, LDAP, shell). |
+| [`secure_data`](https://crates.io/crates/secure_data)                 | Secrets, envelope encryption, Argon2id, FIPS, mobile storage.               |
+| [`secure_network`](https://crates.io/crates/secure_network)           | TLS policy, SPKI pinning, mTLS, cleartext detection.                        |
+| [`secure_device_trust`](https://crates.io/crates/secure_device_trust) | Native-client device trust and session certificates.                        |
+| [`secure_resilience`](https://crates.io/crates/secure_resilience)     | RASP and environment-detection policy.                                      |
+| [`secure_privacy`](https://crates.io/crates/secure_privacy)           | PII classification, consent, retention, pseudonymization.                   |
+| [`secure_boundary`](https://crates.io/crates/secure_boundary)         | Input validation, security headers, boundary protections.                   |
+| [`secure_identity`](https://crates.io/crates/secure_identity)         | JWT/OIDC, MFA, sessions, biometric step-up.                                 |
 
 ## Getting help
 
@@ -128,3 +128,14 @@ Contributions are welcome. Please read [CONTRIBUTING.md](https://github.com/kerb
 ## License
 
 Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-MIT) or [Apache-2.0](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-APACHE) at your option.
+
+## Using this with a coding agent
+
+Use the [consumer integration guide](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/docs/agents/integration.md)
+and its published-version skill reference. Check prerequisites, dependency admission
+and the relevant success and failure-path tests before adopting this package.
+Feedback is optional: share general usage in [Discussions](https://github.com/kerberosmansour/SunLitSecurityLibraries/discussions),
+and use the [integration report](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/new?template=integration_feedback.yml)
+for a concrete blocker or documentation gap. An agent must obtain operator permission
+before posting. Use [private security reporting](https://github.com/kerberosmansour/SunLitSecurityLibraries/security/advisories/new)
+for suspected vulnerabilities. Never share secrets, private code or transcripts.

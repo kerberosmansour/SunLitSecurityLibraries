@@ -9,6 +9,8 @@ repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/secure_boundary"
 keywords = ["security", "validation", "headers", "axum", "actix"]
 
+categories = ["web-programming"]
+
 [lib]
 name = "secure_boundary"
 
