@@ -14,7 +14,7 @@ You're building a mobile or desktop client that needs **runtime self-protection*
 - Decide an action (`Allow`, `Warn`, `Block`, `Degrade`) based on configurable policy.
 - Emit `security_events` for every block/degrade decision so you have an audit trail.
 
-This crate is a **pure policy engine** — *you* write the platform-specific probes (or use a vendor SDK), and you feed signals in. This crate decides what to do with them.
+This crate is a **pure policy engine** — _you_ write the platform-specific probes (or use a vendor SDK), and you feed signals in. This crate decides what to do with them.
 
 ## Install
 
@@ -59,12 +59,12 @@ match engine.evaluate(&signal) {
 
 ## What's inside
 
-| Module | Use it for |
-|---|---|
-| `environment::EnvironmentSignal` / `Confidence` / `ThreatLevel` | The signal-input vocabulary your probes feed in. |
-| `rasp::RaspEngine` / `RaspPolicy` / `RaspDecision` / `ResponseAction` | Policy aggregation and decision output. |
-| `integrity::IntegrityCheck` / `IntegrityCheckResult` / `IntegrityResult` | App-bundle integrity verification primitives. |
-| `error::ResilienceError` | Structured, redaction-safe errors. |
+| Module                                                                   | Use it for                                       |
+| ------------------------------------------------------------------------ | ------------------------------------------------ |
+| `environment::EnvironmentSignal` / `Confidence` / `ThreatLevel`          | The signal-input vocabulary your probes feed in. |
+| `rasp::RaspEngine` / `RaspPolicy` / `RaspDecision` / `ResponseAction`    | Policy aggregation and decision output.          |
+| `integrity::IntegrityCheck` / `IntegrityCheckResult` / `IntegrityResult` | App-bundle integrity verification primitives.    |
+| `error::ResilienceError`                                                 | Structured, redaction-safe errors.               |
 
 ## Compatibility
 
@@ -80,19 +80,19 @@ Alpha.
 
 Part of the [SunLit Security Libraries](https://github.com/kerberosmansour/SunLitSecurityLibraries) workspace:
 
-| Crate | Purpose |
-|---|---|
-| [`security_core`](https://crates.io/crates/security_core) | Shared types, identity, classification, severity, redaction. |
-| [`security_events`](https://crates.io/crates/security_events) | Security logging and tamper-evident audit chain. |
-| [`secure_errors`](https://crates.io/crates/secure_errors) | Three-layer error model with redaction-safe public errors. |
-| [`secure_output`](https://crates.io/crates/secure_output) | Context-aware output encoders (HTML, JSON, URL, JS, CSS, XML, LDAP, shell). |
-| [`secure_data`](https://crates.io/crates/secure_data) | Secrets, envelope encryption, Argon2id, FIPS, mobile storage. |
-| [`secure_network`](https://crates.io/crates/secure_network) | TLS policy, SPKI pinning, mTLS, cleartext detection. |
-| [`secure_device_trust`](https://crates.io/crates/secure_device_trust) | Native-client device trust and session certificates. |
-| [`secure_privacy`](https://crates.io/crates/secure_privacy) | PII classification, consent, retention, pseudonymization. |
-| [`secure_boundary`](https://crates.io/crates/secure_boundary) | Input validation, security headers, boundary protections. |
-| [`secure_identity`](https://crates.io/crates/secure_identity) | JWT/OIDC, MFA, sessions, biometric step-up. |
-| [`secure_authz`](https://crates.io/crates/secure_authz) | Typed deny-by-default authorization with device-trust predicates. |
+| Crate                                                                 | Purpose                                                                     |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [`security_core`](https://crates.io/crates/security_core)             | Shared types, identity, classification, severity, redaction.                |
+| [`security_events`](https://crates.io/crates/security_events)         | Security logging and tamper-evident audit chain.                            |
+| [`secure_errors`](https://crates.io/crates/secure_errors)             | Three-layer error model with redaction-safe public errors.                  |
+| [`secure_output`](https://crates.io/crates/secure_output)             | Context-aware output encoders (HTML, JSON, URL, JS, CSS, XML, LDAP, shell). |
+| [`secure_data`](https://crates.io/crates/secure_data)                 | Secrets, envelope encryption, Argon2id, FIPS, mobile storage.               |
+| [`secure_network`](https://crates.io/crates/secure_network)           | TLS policy, SPKI pinning, mTLS, cleartext detection.                        |
+| [`secure_device_trust`](https://crates.io/crates/secure_device_trust) | Native-client device trust and session certificates.                        |
+| [`secure_privacy`](https://crates.io/crates/secure_privacy)           | PII classification, consent, retention, pseudonymization.                   |
+| [`secure_boundary`](https://crates.io/crates/secure_boundary)         | Input validation, security headers, boundary protections.                   |
+| [`secure_identity`](https://crates.io/crates/secure_identity)         | JWT/OIDC, MFA, sessions, biometric step-up.                                 |
+| [`secure_authz`](https://crates.io/crates/secure_authz)               | Typed deny-by-default authorization with device-trust predicates.           |
 
 ## Getting help
 
@@ -107,3 +107,14 @@ Contributions are welcome. Please read [CONTRIBUTING.md](https://github.com/kerb
 ## License
 
 Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-MIT) or [Apache-2.0](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-APACHE) at your option.
+
+## Using this with a coding agent
+
+Use the [consumer integration guide](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/docs/agents/integration.md)
+and its published-version skill reference. Check prerequisites, dependency admission
+and the relevant success and failure-path tests before adopting this package.
+Feedback is optional: share general usage in [Discussions](https://github.com/kerberosmansour/SunLitSecurityLibraries/discussions),
+and use the [integration report](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/new?template=integration_feedback.yml)
+for a concrete blocker or documentation gap. An agent must obtain operator permission
+before posting. Use [private security reporting](https://github.com/kerberosmansour/SunLitSecurityLibraries/security/advisories/new)
+for suspected vulnerabilities. Never share secrets, private code or transcripts.

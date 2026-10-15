@@ -9,6 +9,8 @@ repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/security_core"
 keywords = ["security", "identity", "types", "audit"]
 
+categories = ["development-tools"]
+
 [lib]
 name = "security_core"
 
