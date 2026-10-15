@@ -1,0 +1,16 @@
+{
+  "schema": "sunlit.toolchain-osv-exceptions/v1",
+  "exceptions": [
+    {
+      "lockfile": "tools/security-toolchains/semgrep/requirements.txt",
+      "ecosystem": "PyPI",
+      "package": "mcp",
+      "version": "1.29.0",
+      "advisory": "GHSA-84m7-p3x7-pcfv",
+      "owner": "repository maintainers",
+      "expires": "2026-10-29",
+      "kind": "unreachable-code-path",
+      "reason": "Semgrep 1.180.0 requires mcp 1.29.0 exactly. CI invokes only semgrep scan; it never starts or exposes the stateful Streamable HTTP MCP server affected by this denial-of-service advisory. Replace this exception when upstream Semgrep admits mcp 1.30.0 or later."
+    }
+  ]
+}

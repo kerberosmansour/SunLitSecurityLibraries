@@ -11,6 +11,12 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ### Dependency assurance
 
+- Keep Semgrep's resolver-consistent MCP 1.29.0 graph while enforcing a bounded
+  2026-10-29 exception for GHSA-84m7-p3x7-pcfv. The OSV report retains the
+  advisory; CI rejects identity drift, expiry, stale records and every malware
+  identity. This repository invokes `semgrep scan` and does not expose the
+  affected stateful HTTP MCP server. Upgrade when upstream Semgrep admits MCP
+  1.30.0 or later.
 - Update the resolved `smallvec` patch from 1.15.1 to 1.15.2 in the workspace
   and isolated HMAC consumer locks. The reviewed delta fixes zero-inline
   `DrainFilter::keep_rest` ownership handling and changes internal empty-storage
