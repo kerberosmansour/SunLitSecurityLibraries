@@ -444,4 +444,4 @@ accepted-risk row. Self-review all yes within the confirmed contract. M2 lessons
 `docs/slo/lessons/jwt-hmac-profile-m2.md`; completion:
 `docs/slo/completion/jwt-hmac-profile-m2.md`.
 
-M2 explicit migration: no-default asymmetric-jwt+ssh-public-keys profile passed15 SSH and36 capability integration tests (51 total), preserving the actual public APIs under the documented explicit selection.
+M2 explicit migration: no-default asymmetric-jwt+ssh-public-keys profile passed 15 SSH and 36 capability integration tests (51 total), preserving the actual public APIs under the documented explicit selection.

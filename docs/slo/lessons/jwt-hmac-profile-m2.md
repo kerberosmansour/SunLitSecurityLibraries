@@ -74,4 +74,4 @@ All M2 findings were fix_now within the confirmed files and are resolved. Existi
 issue54 covers this work; no new upstream defect or duplicate follow-up is filed.
 Other Hulumi features and dependency batches remain in the broad maintenance task.
 
-Explicit migration validation also passed: `cargo test -p secure_identity --no-default-features --features asymmetric-jwt,ssh-public-keys --test openssh_public_key --test sunlit_imp_capability --locked` —15 SSH and36 capability tests, zero failures, on the unchanged admitted workspace graph.
+Explicit migration validation also passed: `cargo test -p secure_identity --no-default-features --features asymmetric-jwt,ssh-public-keys --test openssh_public_key --test sunlit_imp_capability --locked` — 15 SSH and 36 capability tests, zero failures, on the unchanged admitted workspace graph.

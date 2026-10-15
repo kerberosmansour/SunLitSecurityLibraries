@@ -42,4 +42,4 @@ Lessons: docs/slo/lessons/jwt-hmac-profile-m2.md. Issue54 can close with publish
 capability evidence; Guardian application migration is not claimed complete.
 The broader maintenance task and larger Hulumi features remain incomplete.
 
-Explicit migration validation also passed: `cargo test -p secure_identity --no-default-features --features asymmetric-jwt,ssh-public-keys --test openssh_public_key --test sunlit_imp_capability --locked` —15 SSH and36 capability tests, zero failures, on the unchanged admitted workspace graph.
+Explicit migration validation also passed: `cargo test -p secure_identity --no-default-features --features asymmetric-jwt,ssh-public-keys --test openssh_public_key --test sunlit_imp_capability --locked` — 15 SSH and 36 capability tests, zero failures, on the unchanged admitted workspace graph.
