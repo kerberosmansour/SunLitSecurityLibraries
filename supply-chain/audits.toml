@@ -223,6 +223,12 @@ criteria = "safe-to-deploy"
 version = "0.10.9"
 notes = "Direct pq feature dependency for HKDF-SHA-256 reviewed for pqd M2. Pure Rust implementation; Apache-2.0 OR MIT license accepted by deny policy."
 
+[[audits.smallvec]]
+who = "Codex (AI-assisted maintenance review)"
+criteria = "safe-to-deploy"
+delta = "1.15.1 -> 1.15.2"
+notes = "AI-assisted exact delta review of manifests and all changed source. The new empty helper initializes only MaybeUninit wrappers for union and enum storage; from_vec, grow and shrink retain initialized-prefix and allocation-ownership bounds. DrainFilter keep_rest now tests Item size, fixing stale moved ownership for zero-inline arrays with non-ZST items. Kani 0.68 reproduces the old deallocated read and verifies the candidate concrete path, plus bounded candidate initialization/from_vec and arbitrary spill/unspill under enum and union. Native candidate tests cover alignment, ZST behavior, order and exactly-once drops. No new dependency, build script or ambient authority. Scope excludes debugger_visualizer because the package omits its referenced natvis file and this graph does not enable that feature. This is not a whole-crate proof, compiler-performance claim or endorsement of excluded optional features."
+
 [[audits.spin]]
 who = "Codex (AI-assisted maintenance review)"
 criteria = "safe-to-deploy"

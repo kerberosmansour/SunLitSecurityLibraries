@@ -9,6 +9,16 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ## Unreleased
 
+### Dependency assurance
+
+- Update the resolved `smallvec` patch from 1.15.1 to 1.15.2 in the workspace
+  and isolated HMAC consumer locks. The reviewed delta fixes zero-inline
+  `DrainFilter::keep_rest` ownership handling and changes internal empty-storage
+  construction without changing this workspace's enabled features or adding a
+  dependency. The optional `debugger_visualizer` feature remains unsupported by
+  the upstream package because its referenced Natvis file is absent; this
+  workspace does not enable that feature.
+
 ## [0.4.0] — 2026-10-15
 
 ### Identity and migration
