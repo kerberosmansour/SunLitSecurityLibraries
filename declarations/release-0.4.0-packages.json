@@ -1,0 +1,67 @@
+{
+  "formatVersion": 1,
+  "version": "0.4.0",
+  "sourceCommit": "49612e1fe525ec87a9e0c60181d7d023a08aaa51",
+  "packages": [
+    {
+      "name": "security_core",
+      "version": "0.4.0",
+      "checksum": "838545ed3b903637ddbc196d3acdc8abd07ea7c5d88475bb100ffeac97b5a5e8"
+    },
+    {
+      "name": "security_events",
+      "version": "0.4.0",
+      "checksum": "620f2050f1462f7e7dadfd1a0829be6a845348b819c83080b7fdca6bafceeb69"
+    },
+    {
+      "name": "secure_errors",
+      "version": "0.4.0",
+      "checksum": "2d3f1d07b4c9e57ff609eb4df20596c288fa5685cca757db1a0f805ec6a77a2d"
+    },
+    {
+      "name": "secure_output",
+      "version": "0.4.0",
+      "checksum": "b0c64e3e4c3cc2cae76adf5730555657ef893a81e46f852b93a37c1af9273ad6"
+    },
+    {
+      "name": "secure_network",
+      "version": "0.4.0",
+      "checksum": "7f8c33c0d4286262a32cee732762e524028cb923c1374426165cd676c8f8acc1"
+    },
+    {
+      "name": "secure_device_trust",
+      "version": "0.4.0",
+      "checksum": "e418c6718b9b3faa90e5246812ac3a45228afdfbb748423265e8ce78cba6dae8"
+    },
+    {
+      "name": "secure_boundary",
+      "version": "0.4.0",
+      "checksum": "00d144114c4475ef30310a9936a10999ecc3b4fb5378482745fd9faab9f25716"
+    },
+    {
+      "name": "secure_data",
+      "version": "0.4.0",
+      "checksum": "6b46661038ef29aee30ee49ba9d95841d9f93b0286319440c0d8dd594b3d080a"
+    },
+    {
+      "name": "secure_resilience",
+      "version": "0.4.0",
+      "checksum": "ed2d0c25bec2411259456ac5eef3707855f336e930392f904f22e7aa55e82288"
+    },
+    {
+      "name": "secure_privacy",
+      "version": "0.4.0",
+      "checksum": "05d54617f36f0b5c58c6dbf03e931599917ecf59039eb2ae3a0facbe2e0f9d62"
+    },
+    {
+      "name": "secure_identity",
+      "version": "0.4.0",
+      "checksum": "189882ad3ab626f4cf0cadab49faf17d4ef57440b9299f132f454f82f69bdfe2"
+    },
+    {
+      "name": "secure_authz",
+      "version": "0.4.0",
+      "checksum": "6c5a00d647cac4bfde294a2270e3ec2b9d39d731348df459ab7aabbaa6325436"
+    }
+  ]
+}
