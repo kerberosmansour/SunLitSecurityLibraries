@@ -155,7 +155,7 @@ Status: user confirmed 2026-10-14; M1 done, 2026-10-14.
 | Milestone | Status | Started | Finished |
 |---|---|---|---|
 | M1 reduced profile / actual consumer proof | done | 2026-10-14 | 2026-10-14 |
-| M2 coordinated publication / consumer migration | proposed; contract not yet authored | — | — |
+| M2 coordinated publication / consumer migration | in_progress; user confirmed | 2026-10-15 | — |
 
 ## Sequential critique
 
@@ -263,3 +263,160 @@ upstream defect/accepted-risk waiver or duplicate issue is filed.
 Completed2026-10-14. Lessons: docs/slo/lessons/jwt-hmac-profile-m1.md.
 Completion: docs/slo/completion/jwt-hmac-profile-m1.md.
 Final code verification: https://github.com/kerberosmansour/SunLitSecurityLibraries/actions/runs/38645105658
+
+
+## M2 confirmed publication contract
+
+# Rust issue54 M2 — confirmed coordinated 0.4.0 publication contract
+
+Publish M1's reviewed HMAC-only identity profile after its actual platform/security
+checks and red/green Kani proofs pass and its source is merged. M1 passed actual platform/security/Kani checks and merged at
+4c2e4da763d5baa65442ce0ae10cc2f516db6678. No publication or
+implementation outside this contract is authorized by this document alone.
+
+## Contract and compatibility
+
+- Publish all twelve coordinated crates as **0.4.0**, using the proven family
+  release/signing tooling. The public feature groups and migration for prior
+  no-default-feature asymmetric callers justify a minor pre-1.0 release. Changes
+  to the other eleven crates are mechanical family-version/docs updates only.
+- Preserve all external package versions/sources/checksums, audit records and
+  exact expiring advisory dispositions. Root and positive consumer lock updates
+  change only local family versions. Any new external graph identity stops this
+  scope for a separately reviewed admission batch.
+- Update install examples, changelog and concrete migration: existing defaults
+  preserve asymmetric/SSH behavior; no-default callers explicitly opt into
+  asymmetric-jwt/ssh-public-keys as appropriate; the reduced consumer selects
+  jwt-hmac and initializes its checked provider at trusted startup before vendor
+  encoding. Keep fixed ProviderUnavailable failure, bounds and restart guidance.
+- Advertise the optional HMAC profile honestly in CycloneDX: no rsa package in
+  the exact reviewed isolated normal/build graph, not arbitrary additive feature
+  unions, default package graphs or absence of RSA code from ring. Default full
+  package SBOMs may legitimately contain rsa. Existing public-key reachability
+  exceptions remain; they are never inherited by the reduced positive fixture.
+- Keep provider/process/key-size/entropy/internal-copy limits. No new crypto,
+  unsafe code, KEK export, custom token parser, algorithm-policy broadening,
+  verifier version or production cloud configuration is permitted.
+- Use script-disabled archive resolution, all-lock and exact candidate-package
+  OSV, full graph/source/provenance review **before** compilation or upload.
+  Verify immutable registry bytes, VCS source, exact checksums, committed approval
+  record, twelve official-schema SBOMs, exact workflow signature identity and all
+  GitHub asset digests. No expected/fabricated registry approval values.
+- Use the same reviewed candidate uploader and immutable release producer as
+  0.3.0; no helper/tool recipe/CI file is changed in M2. User's existing merge and
+  publication authorization applies once all concrete gates pass.
+
+Data: package/source/release evidence Public; synthetic test credentials Public;
+production keys/tokens Restricted. Proactive controls: Leverage Security Frameworks
+and Libraries, Validate All Input and Handle All Errors and Exceptions. Threat
+model: the confirmed M1 jwt-hmac model; publication introduces source/package/
+provenance substitution boundaries only. Kani/TLA for these mechanical release
+edits: not applicable; actual M1 bounded proofs remain a mandatory prerequisite.
+AI tolerance: not applicable, no AI feature. No refactor beyond these edits.
+
+## Operator readiness and outcome
+
+Require successful M1 merged source and independent review, complete platform CI,
+actual two-kernel red/green Kani evidence, clean dedicated release branch,
+unchanged external identities and proven registry/GitHub signing authentication.
+Do not expose tokens or substitute a different scanner/verifier when unavailable.
+
+oc-jwt-publish-1 / cuj-jwt-publish-1: a consumer obtains 0.4.0, follows the packaged
+migration/startup instructions, selects the reviewed reduced graph and authenticates
+its real HS256 JWT with correct rejection behavior. Registry archives and signed
+release assets exactly match reviewed, admitted source. Cross-layer validation:
+source/API/docs/declaration -> exact archive/lock admission -> compilation and
+real reduced-profile runtime -> registry checksum/VCS -> signed assets/SBOM.
+
+BDD: default consumer behavior remains compatible; explicit reduced consumer has
+no rsa in its normal/build graph; previous reduced asymmetric callers have a
+working explicit migration; a foreign/frozen provider still fails closed; malformed/
+wrong algorithm/oversize inputs still reject. Changed external identity, scanner
+error, tampered registry/source/signature or missing M1 proof stops publication.
+Review signed artifact/registry bytes rather than writing contrived doc tests.
+
+Evidence rows: source/readiness, exact scope, unchanged external graph, seven-lock
+admission, candidate archive/source/provenance scans, workspace/profile regressions,
+registry bytes/VCS/checksums, official SBOM schema/signatures/asset digests and
+issue54 closeout. Core regressions: identity/profile=actual M1 and release consumer
+pass; other libraries=workspace CI; mobile custody/qualification=retained 0.3 limits;
+cloud/browser/AI integration=not applicable to this Rust package release.
+
+## Exact file allow-list
+
+The 37-file count includes 24 mechanical family manifest/README entries. Immutable
+registry/signature artifacts are release outputs, not permission for code changes.
+The task's outputs/ deliverables and private work/ evidence are separate from this
+repository source allow-list. Issue/PR/release operations use existing authority.
+
+- `Cargo.toml`
+- `Cargo.lock`
+- `README.md`
+- `CHANGELOG.md`
+- `crates/secure_authz/Cargo.toml`
+- `crates/secure_authz/README.md`
+- `crates/secure_boundary/Cargo.toml`
+- `crates/secure_boundary/README.md`
+- `crates/secure_data/Cargo.toml`
+- `crates/secure_data/README.md`
+- `crates/secure_device_trust/Cargo.toml`
+- `crates/secure_device_trust/README.md`
+- `crates/secure_errors/Cargo.toml`
+- `crates/secure_errors/README.md`
+- `crates/secure_identity/Cargo.toml`
+- `crates/secure_identity/README.md`
+- `crates/secure_network/Cargo.toml`
+- `crates/secure_network/README.md`
+- `crates/secure_output/Cargo.toml`
+- `crates/secure_output/README.md`
+- `crates/secure_privacy/Cargo.toml`
+- `crates/secure_privacy/README.md`
+- `crates/secure_resilience/Cargo.toml`
+- `crates/secure_resilience/README.md`
+- `crates/security_core/Cargo.toml`
+- `crates/security_core/README.md`
+- `crates/security_events/Cargo.toml`
+- `crates/security_events/README.md`
+- `fixtures/jwt-hmac-consumer/Cargo.lock`
+- `declarations/cyclonedx-1.6-capabilities.json`
+- `declarations/release-0.4.0-packages.json`
+- `docs/dev-guide/release-process.md`
+- `docs/dev-guide/jwt-hmac-profile.md`
+- `docs/slo/current/RUNBOOK-jwt-hmac-profile.md`
+- `docs/slo/design/jwt-hmac-profile-threat-model.md`
+- `docs/slo/lessons/jwt-hmac-profile-m2.md`
+- `docs/slo/completion/jwt-hmac-profile-m2.md`
+
+Status: user confirmed 2026-10-15; in progress. M1 readiness prerequisites verified.
+
+
+### M2 sequential critique and readiness
+
+CEO: hold scope. A consumer cannot use the reviewed profile from 0.3.0; publish
+0.4.0 with the explicit migration, without importing pending dependency batches.
+Engineering: hold scope. Partial immutable multi-crate publication is recoverable
+only by checking actual registry versions/checksums before retrying. Reuse the
+reviewed sequential uploader and commit the real approval record before tagging.
+Security: hold scope. Registry/source substitution and graph drift (CWE-494/829)
+are mitigated by archive admission, downloaded immutable-byte comparison and exact
+signature identity, not inferred clean scans. Variant analysis is bounded to the
+unchanged package/producer helpers; no new helper authority is introduced.
+Design: no UI surface; skip UI review. The packaged README links an immutable
+migration guide and names startup failure, feature-union and proof boundaries.
+No new ask/scope finding. Legacy Markdown threat model has no schema companion;
+review is degraded for abuse-ID stability, with no invented canonical IDs.
+
+| M2 evidence | Actual result |
+|---|---|
+| Hygiene/readiness | Clean dedicated release/jwt-hmac-0.4.0 at main4c2e4da; M1 all platform/Kani checks passed and merged. No prior-retro issues returned. |
+| Baseline | Fresh seven-lock OSV: 1643 package occurrences, exit0; actual focused all-feature baseline passed. |
+| Scope/external graph | 34 paths within 37 confirmed; root/consumer external package dictionaries identical, only 12/6 local versions changed. No runtime/helper/workflow/audit edits. |
+| Admission/runtime | Fresh candidate seven-lock gate passed 1643 occurrences; separate generic six-lock gate passed 1448. Workspace/profile runtime checks in progress; candidate archive admission remains mandatory before each compile/upload. |
+| Registry/signatures/schema/assets | Pending actual publication and independent verification. |
+| Outcome/retro/closeout | Pending registry consumer proof and complete release evidence. |
+
+Surface map: no new request, parser, crypto or secret API. Reuse secure_identity's
+reviewed profile plus the existing package admission/producer/signing boundaries.
+Production release tokens remain restricted; build/scan environments omit them.
+No new capability gap. Rollback before publication is the branch; afterwards,
+versions are immutable and any repair needs a new release, never retag/repack.

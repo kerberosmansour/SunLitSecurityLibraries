@@ -1,19 +1,21 @@
-# HMAC-only identity profile — unreleased source milestone
+# HMAC-only identity profile — 0.4.0
 
-This feature is not in published 0.3.0. Use the reviewed workspace source until a
-separately verified coordinated release advertises it. Do not add `jwt-hmac` to a
-0.3.0 crates.io manifest and expect it to exist.
+This capability begins in coordinated 0.4.0; published 0.3.0 has no `jwt-hmac`
+feature. The release approval record and signed assets bind registry bytes to the
+reviewed source.
 
 ```toml
-secure_identity = { path = "<checkout>/crates/secure_identity", default-features = false, features = ["jwt-hmac"] }
-jsonwebtoken = { version = "11.0.0", default-features = false }
+secure_identity = { version = "=0.4.0", default-features = false, features = ["jwt-hmac"] }
+jsonwebtoken = { version = "=11.0.0", default-features = false }
 ```
 
 Existing defaults retain asymmetric JWT/capability/JWKS helpers and SSH validation
 through named `asymmetric-jwt` and `ssh-public-keys` default groups. `jwks` and
 `oidc` imply their asymmetric requirements. The reduced profile gates those
 surfaces off; previous no-default-feature asymmetric callers must opt in to the
-appropriate group. Cargo features are additive: enabling SSH/asymmetric/OIDC or
+appropriate group. For example, preserve prior asymmetric JWT and SSH imports with
+`secure_identity = { version = "=0.4.0", default-features = false, features = ["asymmetric-jwt", "ssh-public-keys"] }`.
+The `jwt_hmac` module exists only when `asymmetric-jwt` is disabled. Cargo features are additive: enabling SSH/asymmetric/OIDC or
 another dependency's crypto feature can restore `rsa`. This profile's proof is
 for the actual isolated consumer normal/build graph, not arbitrary feature unions
 or complete absence of RSA code from ring. Legacy reachability exceptions remain.
