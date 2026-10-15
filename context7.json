@@ -29,5 +29,7 @@
   "rules": [
     "Use APIs from the documented published version; check versioned references before upgrading.",
     "Respect the consuming project's dependency-admission policy and explicit user authorization."
-  ]
+  ],
+  "url": "https://context7.com/kerberosmansour/sunlitsecuritylibraries",
+  "public_key": "pk_iqapWOzUZtJ20Kp5Z1hlG"
 }
