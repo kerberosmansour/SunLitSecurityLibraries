@@ -23,9 +23,21 @@ attestation, native feature/build guards, SAST and bounded Kani checks remain.
 Re-enable only with an admitted graph and a reviewed tool update.
 
 Semgrep 1.180.0 uses a fully resolved Python 3.11/Linux x86_64, hash-pinned,
-wheel-only requirements graph. Pip resolves/downloads metadata without package
-execution; installation uses --require-hashes --no-deps --only-binary. The
-requirements lock participates in admission before scanning source.
+wheel-only requirements graph. Pip installs it with `--require-hashes`,
+`--no-deps` and `--only-binary`; the lock participates in dependency admission
+before source scanning.
+
+Semgrep currently requires `mcp==1.29.0` exactly. That version is affected by
+GHSA-84m7-p3x7-pcfv in its stateful Streamable HTTP server, while this repository
+invokes only `semgrep scan` and never starts or exposes that server. The exact
+temporary disposition lives in `semgrep/exceptions.json` and expires on
+2026-10-29. The OSV gate keeps the advisory in its raw report, records the review
+separately, and rejects path/package/version/advisory drift, stale or expired
+records, and every `MAL-*` identity. Upgrade as soon as upstream Semgrep accepts
+MCP 1.30.0 or later.
+
+OSV covers known advisories and known malicious-package records; it does not
+prove absence of unknown malware.
 
 Library advisory exceptions are scoped only to the root Cargo.lock. They cannot
 suppress a vulnerability in these toolchains. All graphs are part of the scan

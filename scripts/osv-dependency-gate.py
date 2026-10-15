@@ -32,6 +32,12 @@ ROOT = Path(__file__).resolve().parents[1]
 MAX_BINARY = 64 * 1024 * 1024
 LOCK_NAMES = {"Cargo.lock", "pnpm-lock.yaml", "package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "bun.lock", "bun.lockb", "poetry.lock", "Pipfile.lock", "uv.lock", "go.sum", "composer.lock", "Gemfile.lock", "packages.lock.json", "requirements.txt"}
 FIXTURE_PARTS = {"fixtures", "testdata", "__fixtures__"}
+TOOLCHAIN_EXCEPTION_SCHEMA = "sunlit.toolchain-osv-exceptions/v1"
+TOOLCHAIN_EXCEPTION_KEYS = {
+    "lockfile", "ecosystem", "package", "version", "advisory",
+    "owner", "expires", "kind", "reason",
+}
+MAX_TOOLCHAIN_EXCEPTION_DAYS = 31
 
 class HttpsRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -140,6 +146,7 @@ def main():
     # known malware and incomplete/error results still block dependency execution.
     summary = findings_summary(packages)
     args.output.with_suffix(".summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    reviewed_toolchain = reviewed_toolchain_exceptions(packages)
     code = scan_exit_status(result.returncode, packages, [])
     if code == 0 and (ROOT / "Cargo.lock").is_file():
         guard = ROOT / "scripts/check-native-dependencies.py"
@@ -155,6 +162,7 @@ def main():
         "admissionPolicy": "malware-block-vulnerabilities-report-v1",
         "maliciousFindings": summary["maliciousFindings"],
         "vulnerabilityFindings": summary["vulnerabilityFindings"],
+        "reviewedToolchainExceptions": reviewed_toolchain,
     }
     args.output.with_suffix(".receipt.json").write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
     if summary["vulnerabilityFindings"]:
@@ -295,6 +303,124 @@ def reviewed_exceptions(packages):
         if str(entry.get("advisory", "")).startswith("MAL-"):
             raise ValueError("Known malicious packages cannot be excepted")
     return manifest["exceptions"]
+
+
+def reviewed_toolchain_exceptions(packages):
+    """Require exact, expiring review records for vulnerable CI toolchains.
+
+    The raw OSV report and summary remain unchanged. These records document a
+    bounded disposition; they never suppress an advisory or change malware
+    blocking.
+    """
+    findings_summary(packages)  # Validate every advisory identity and alias.
+    root = ROOT.resolve()
+    toolchain_root = ROOT / "tools/security-toolchains"
+    toolchain_packages = []
+    findings = []
+    for item in packages:
+        source = item.get("_admission_source")
+        if not isinstance(source, str):
+            continue
+        source_path = Path(source)
+        try:
+            relative = source_path.resolve().relative_to(root).as_posix()
+        except ValueError:
+            raise ValueError("Scanner toolchain source is outside the repository")
+        if not relative.startswith("tools/security-toolchains/"):
+            continue
+        package = item["package"]
+        package_identity = {
+            "lockfile": relative,
+            "ecosystem": package["ecosystem"],
+            "package": package["name"],
+            "version": package["version"],
+        }
+        toolchain_packages.append(package_identity)
+        for vuln in item.get("vulnerabilities", []):
+            identities = frozenset({vuln["id"], *vuln.get("aliases", [])})
+            if any(identity.upper().startswith("MAL-") for identity in identities):
+                raise ValueError("Known malicious packages cannot be excepted")
+            findings.append({**package_identity, "identities": identities})
+
+    manifests = [] if not toolchain_root.exists() else sorted(toolchain_root.glob("*/exceptions.json"))
+    records = []
+    for manifest_path in manifests:
+        if manifest_path.is_symlink() or not manifest_path.is_file():
+            raise ValueError("Toolchain exception manifest must be a real file, not a symlink")
+        parent = manifest_path.parent
+        while parent != root:
+            if parent.is_symlink():
+                raise ValueError("Toolchain exception manifest parent must not be a symlink")
+            parent = parent.parent
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if (not isinstance(manifest, dict) or set(manifest) != {"schema", "exceptions"}
+                or manifest.get("schema") != TOOLCHAIN_EXCEPTION_SCHEMA
+                or not isinstance(manifest.get("exceptions"), list)):
+            raise ValueError("Invalid toolchain exception manifest schema")
+        manifest_dir = manifest_path.parent.resolve().relative_to(root).as_posix()
+        for entry in manifest["exceptions"]:
+            if (not isinstance(entry, dict) or set(entry) != TOOLCHAIN_EXCEPTION_KEYS
+                    or not all(isinstance(entry.get(key), str) and entry[key].strip()
+                               for key in TOOLCHAIN_EXCEPTION_KEYS)):
+                raise ValueError("Invalid toolchain exception entry schema")
+            if entry["kind"] != "unreachable-code-path":
+                raise ValueError("Toolchain exception kind must be unreachable-code-path")
+            try:
+                expires = date.fromisoformat(entry["expires"])
+            except ValueError as error:
+                raise ValueError("Toolchain exception expiry must be a canonical ISO date") from error
+            if expires.isoformat() != entry["expires"]:
+                raise ValueError("Toolchain exception expiry must be a canonical ISO date")
+            if expires <= date.today():
+                raise ValueError("Toolchain exception expired")
+            if (expires - date.today()).days > MAX_TOOLCHAIN_EXCEPTION_DAYS:
+                raise ValueError("Toolchain exception expiry exceeds the maximum review window")
+            if len(entry["owner"].strip()) < 3 or len(entry["reason"].strip()) < 40:
+                raise ValueError("Toolchain exception requires a named owner and specific reachability reason")
+            relative = Path(entry["lockfile"])
+            if (relative.is_absolute() or ".." in relative.parts
+                    or relative.as_posix() != entry["lockfile"]
+                    or relative.parent.as_posix() != manifest_dir):
+                raise ValueError("Toolchain exception lockfile must be exact and local to its manifest")
+            lock = ROOT / relative
+            if lock.is_symlink() or not lock.is_file() or lock.resolve().parent != manifest_path.parent.resolve():
+                raise ValueError("Toolchain exception lockfile must be a real file")
+            if entry["advisory"].upper().startswith("MAL-"):
+                raise ValueError("Known malicious packages cannot be excepted")
+            identity_matches = [package for package in toolchain_packages if all(
+                package[key] == entry[key]
+                for key in ("lockfile", "ecosystem", "package", "version")
+            )]
+            if not identity_matches:
+                raise ValueError("Toolchain exception dependency identity changed or is absent")
+            advisory_matches = [finding for finding in findings if all(
+                finding[key] == entry[key]
+                for key in ("lockfile", "ecosystem", "package", "version")
+            ) and entry["advisory"] in finding["identities"]]
+            if not advisory_matches:
+                related_findings = [finding for finding in findings if all(
+                    finding[key] == entry[key]
+                    for key in ("lockfile", "ecosystem", "package", "version")
+                )]
+                if not related_findings:
+                    raise ValueError("Toolchain exception is stale because the advisory disappeared")
+                raise ValueError("Toolchain exception advisory does not match the scanner finding")
+            if len(advisory_matches) != 1:
+                raise ValueError("Toolchain exception advisory match is ambiguous")
+            records.append(dict(entry))
+
+    covered = set()
+    for index, finding in enumerate(findings):
+        matching = [entry for entry in records if all(
+            entry[key] == finding[key]
+            for key in ("lockfile", "ecosystem", "package", "version")
+        ) and entry["advisory"] in finding["identities"]]
+        if len(matching) != 1:
+            raise ValueError("Every toolchain vulnerability requires an exact reviewed exception")
+        covered.add(index)
+    if len(covered) != len(findings):
+        raise ValueError("Every toolchain vulnerability requires an exact reviewed exception")
+    return records
 
 
 def unaccepted_findings(packages, exceptions):
