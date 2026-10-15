@@ -1,6 +1,7 @@
 # Repository agent instructions
 
 <!-- dependency-admission-osv:v1 -->
+
 ## Dependency admission: OSV is required
 
 Before introducing or updating a direct or transitive dependency, resolve the
@@ -37,3 +38,8 @@ scan jobs remain read-only and do not remediate or merge automatically.
 
 - [`sunlit-rust-security`](skills/sunlit-rust-security/SKILL.md) — published package selection and integration.
   See [consumer installation](docs/agents/integration.md); this index does not install the skill in other projects.
+
+## Optional upstream feedback
+
+- [`sunlit-upstream-feedback`](skills/sunlit-upstream-feedback/SKILL.md) — local drafts, duplicate checks and operator-authorized feedback.
+- At ticket/runbook closeout, record lessons and check for upstream-dependency friction using [the feedback policy](docs/agents/feedback.md). This never authorizes cross-repository posting.
