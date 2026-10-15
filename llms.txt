@@ -1,0 +1,24 @@
+# SunLit Security Libraries
+
+> Select and integrate SunLit Rust security crates for deny-by-default authorization, envelope encryption, security events, and request validation.
+
+## Consumer documentation
+
+- [Integration guide](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/docs/agents/integration.md): skill installation, usage and optional feedback.
+- [Published 0.4.0 usage](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/skills/sunlit-rust-security/references/usage.md): package selection, exact API references and limitations.
+- [Security reporting](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/SECURITY.md): private disclosure route.
+
+## Packages
+
+- [secure_authz](https://crates.io/crates/secure_authz)
+- [secure_boundary](https://crates.io/crates/secure_boundary)
+- [secure_data](https://crates.io/crates/secure_data)
+- [secure_device_trust](https://crates.io/crates/secure_device_trust)
+- [secure_errors](https://crates.io/crates/secure_errors)
+- [secure_identity](https://crates.io/crates/secure_identity)
+- [secure_network](https://crates.io/crates/secure_network)
+- [secure_output](https://crates.io/crates/secure_output)
+- [secure_privacy](https://crates.io/crates/secure_privacy)
+- [secure_resilience](https://crates.io/crates/secure_resilience)
+- [security_core](https://crates.io/crates/security_core)
+- [security_events](https://crates.io/crates/security_events)
