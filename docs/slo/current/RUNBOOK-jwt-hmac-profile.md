@@ -6,7 +6,7 @@ stack: Rust
 ai_component: false
 baseline: cargo test -p secure_identity --all-features --locked
 ---
-# JWT HMAC-only profile — confirmed M1
+# JWT HMAC-only profile and coordinated publication
 
 Provide an explicit reduced `secure_identity` profile for applications that only
 need internal HMAC JWTs. Preserve existing default public APIs and behavior by
@@ -155,7 +155,7 @@ Status: user confirmed 2026-10-14; M1 done, 2026-10-14.
 | Milestone | Status | Started | Finished |
 |---|---|---|---|
 | M1 reduced profile / actual consumer proof | done | 2026-10-14 | 2026-10-14 |
-| M2 coordinated publication / consumer migration | in_progress; user confirmed | 2026-10-15 | — |
+| M2 coordinated publication / consumer migration | done | 2026-10-15 | 2026-10-15 |
 
 ## Sequential critique
 
@@ -173,7 +173,7 @@ Design: hold scope. Unreleased guide must distinguish legacy/default and minimal
 | Baseline runtime | Focused all-feature secure_identity baseline passed; current 1395-test workspace 0.3.0 evidence retained for identical source. |
 | Candidate admission | Official OSV v2.7.0 all seven locks/1643 package occurrences passed after explicit positive consumer admission. No fixture exception inheritance; root external dictionaries identical and consumer 195-package lock has no rsa. |
 | Real JWT/startup/race/bounds | Two selected real JWT/bounds tests, one private key utility test and six actual isolated consumer/startup scenarios pass. Cold-cache graph resolution failed before fix and passes with locked build-free fetching. |
-| Kani/workspace/static | Legacy all-feature workspace 1395 tests and workspace/selected-profile/consumer Clippy pass; formatter/workflow regressions pass. Actual CI38643646234 Linux 0.68 red/green kernels verified: both mutant assertions fail, both original kernels pass, all thirteen covers SATISFIED, automatic assertion reachability enabled and no stubs. Final hardened-classifier/platform revalidation passed on implementation78b3bc7 (CI38645105658). |
+| Kani/workspace/static | Legacy all-feature workspace 1395 tests and workspace/selected-profile/consumer Clippy pass; formatter/workflow regressions pass. Actual CI 38643646234 Linux 0.68 red/green kernels verified: both mutant assertions fail, both original kernels pass, all thirteen covers SATISFIED, automatic assertion reachability enabled and no stubs. Final hardened-classifier/platform revalidation passed on implementation78b3bc7 (CI 38645105658). |
 | Scope/docs/verify/retro | 17 changed paths within the confirmed 18; root lock unchanged. All required CI/security/package/doc gates pass on78b3bc7. Cold-cache, parser and ownership review findings reproduced/fixed; actual raw proofs pass the strict classifier. Guide, threat model, lessons and completion filled; no additional issue filing. |
 
 User AGENTS dependency admission takes precedence over a fixture-runtime red run: unrepaired standalone fixture cannot inherit root RSA exceptions. The real outcome graph assertion is red first; behavioral scenarios are authored before implementation and execute only after the reduced graph is admitted. No compile/setup error or unadmitted vulnerable fixture is presented as passing evidence.
@@ -200,7 +200,7 @@ complete token <=65536 bytes. Kernels compare independent expectations, not thei
 own byte helpers. Red test weakens key minimum and ignores separator/tag budget;
 require exactly two positively classified failures with expected harness names,
 restore source even on failure, then require exactly two SUCCESSFUL green results.
-Actual kernel verdict verified in CI38643646234; final hardened-classifier CI passed in CI38645105658. No assertion/property, counterexample or solver
+Actual kernel verdict verified in CI 38643646234; final hardened-classifier CI passed in CI 38645105658. No assertion/property, counterexample or solver
 failure is hidden. Crypto, entropy, process interleavings, I/O and memory erasure
 remain unproved; real runtime/subprocess evidence covers selected behaviors.
 
@@ -387,7 +387,7 @@ repository source allow-list. Issue/PR/release operations use existing authority
 - `docs/slo/lessons/jwt-hmac-profile-m2.md`
 - `docs/slo/completion/jwt-hmac-profile-m2.md`
 
-Status: user confirmed 2026-10-15; in progress. M1 readiness prerequisites verified.
+Status: user confirmed 2026-10-15; M2 done. M1 readiness prerequisites verified.
 
 
 ### M2 sequential critique and readiness
@@ -411,12 +411,37 @@ review is degraded for abuse-ID stability, with no invented canonical IDs.
 | Hygiene/readiness | Clean dedicated release/jwt-hmac-0.4.0 at main4c2e4da; M1 all platform/Kani checks passed and merged. No prior-retro issues returned. |
 | Baseline | Fresh seven-lock OSV: 1643 package occurrences, exit0; actual focused all-feature baseline passed. |
 | Scope/external graph | 34 paths within 37 confirmed; root/consumer external package dictionaries identical, only 12/6 local versions changed. No runtime/helper/workflow/audit edits. |
-| Admission/runtime | Fresh candidate seven-lock gate passed 1643 occurrences; separate generic six-lock gate passed 1448. Workspace/profile runtime checks in progress; candidate archive admission remains mandatory before each compile/upload. |
-| Registry/signatures/schema/assets | Pending actual publication and independent verification. |
-| Outcome/retro/closeout | Pending registry consumer proof and complete release evidence. |
+| Admission/runtime | Fresh candidate seven-lock gate passed 1643 occurrences; separate generic six-lock gate passed 1448. All 1,395 workspace tests, selected 2+1 profile/key tests, six real source consumer cases, formatter and Clippy passed. All 12 exact archive scans/reviews passed before compilation/upload. |
+| Registry/signatures/schema/assets | All 12 registry archives/checksums/VCS match source 49612e1. Actual approval PR #140 merged/tagged 318512a; signing 38687007436 succeeds. All 27 exact identity/issuer/commit/ref signatures, 12 official-schema SBOMs,54 server asset digests and downloaded bytes verify. |
+| Outcome/retro/closeout | Registry-only consumer 195 packages/zero rsa, exception-free OSV and all six real scenarios pass. Outcome/CUJ complete; lessons and completion files written, every finding disposed. Broad task remains open. |
 
 Surface map: no new request, parser, crypto or secret API. Reuse secure_identity's
 reviewed profile plus the existing package admission/producer/signing boundaries.
 Production release tokens remain restricted; build/scan environments omit them.
 No new capability gap. Rollback before publication is the branch; afterwards,
 versions are immutable and any repair needs a new release, never retag/repack.
+
+
+### M2 runtime verification / self-review closeout
+
+Pass 0: actual registry-only consumer outcome/CUJ passes; no source-path dependency
+substitutes for the published crates. Pass 1: real HS256 identity passes. Pass 2/3:
+real claim/signature/key/algorithm/boundary rejections and all six isolated
+provider/startup/race scenarios pass. Pass 4: seven-lock and package OSV/source/
+provenance checks, source PR's complete SAST/static/security suite and unchanged
+external dictionaries pass. Pass 5: exact registry/producer/signature/schema/asset
+bytes pass. Pass 6: all 37 confirmed paths maximum, no runtime/helper/workflow edits,
+legacy 1,395 tests and platform checks pass. UI/DAST/cloud/device gates are N/A for
+this package publication; existing mobile physical/consumer limits stay explicit.
+
+Fresh source CI 38685528995 raw Kani logs were independently reclassified: two
+actual mutant failures, two restored kernels, 13 satisfied covers, automatic
+assertion reachability. No crypto/concurrency/entropy/erasure proof claim.
+
+Detected ledger: historical mobile-version prose and triggered-job count were
+fix_now and corrected before affected commit/merge. No undisposed or newly
+accepted-risk row. Self-review all yes within the confirmed contract. M2 lessons:
+`docs/slo/lessons/jwt-hmac-profile-m2.md`; completion:
+`docs/slo/completion/jwt-hmac-profile-m2.md`.
+
+M2 explicit migration: no-default asymmetric-jwt+ssh-public-keys profile passed 15 SSH and 36 capability integration tests (51 total), preserving the actual public APIs under the documented explicit selection.
