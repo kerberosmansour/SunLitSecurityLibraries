@@ -2,13 +2,13 @@
   "$schema": "https://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "version": 6,
+  "version": 7,
   "metadata": {
-    "timestamp": "2026-10-14T00:00:00Z",
+    "timestamp": "2026-10-15T00:00:00Z",
     "component": {
       "type": "application",
       "name": "SunLitSecurityLibraries",
-      "version": "0.3.0"
+      "version": "0.4.0"
     }
   },
   "declarations": {
@@ -40,7 +40,7 @@
               "value": "variant-analysis-result-schema"
             }
           ],
-          "version": "0.3.0"
+          "version": "0.4.0"
         },
         {
           "bom-ref": "component:secure_errors",
@@ -64,7 +64,7 @@
               "value": "panic-boundary"
             }
           ],
-          "version": "0.3.0"
+          "version": "0.4.0"
         },
         {
           "bom-ref": "component:security_events",
@@ -96,7 +96,7 @@
               "value": "Hard-deny matching covers only consumer-configured exact target roots and their :: descendants. Near-prefix and unlisted targets remain enabled, so consumers must inventory dependency targets and maintain runtime canaries."
             }
           ],
-          "version": "0.3.0"
+          "version": "0.4.0"
         },
         {
           "bom-ref": "component:secure_boundary",
@@ -124,7 +124,7 @@
               "value": "agent-prompt-injection-boundary"
             }
           ],
-          "version": "0.3.0"
+          "version": "0.4.0"
         },
         {
           "bom-ref": "component:secure_output",
@@ -144,7 +144,7 @@
               "value": "uri-scheme-sanitization"
             }
           ],
-          "version": "0.3.0"
+          "version": "0.4.0"
         },
         {
           "bom-ref": "component:secure_identity",
@@ -198,9 +198,21 @@
             {
               "name": "cdx:sunlit:limit",
               "value": "OpenSSH public-key validation accepts only an algorithm and Base64 blob, not an authorized_keys options field or comment. The compatibility entry point permits 1024..16384-bit RSA; validate_openssh_public_key_with_rsa_minimum_bits enforces a caller-selected minimum in that range during validation."
+            },
+            {
+              "name": "cdx:sunlit:capability",
+              "value": "optional-jwt-hmac-profile"
+            },
+            {
+              "name": "cdx:sunlit:jwt-hmac:selection",
+              "value": "default-features=false; features=[jwt-hmac]; initialize checked provider at trusted startup before direct vendor use"
+            },
+            {
+              "name": "cdx:sunlit:jwt-hmac:limits",
+              "value": "TokenValidator HS256 only; complete JWT <=65536 bytes; provider HS256/384/512 keys min32/48/64 and max1024 bytes; fixed ProviderUnavailable on foreign/frozen provider. Exact reviewed isolated normal/build graph excludes rsa; additive feature unions/default package SBOMs can retain rsa, and ring code elimination is not claimed. Entropy, internal-copy erasure and arbitrary vendor parsing are caller boundaries."
             }
           ],
-          "version": "0.3.0"
+          "version": "0.4.0"
         },
         {
           "bom-ref": "component:secure_authz",
@@ -224,7 +236,7 @@
               "value": "tenant-isolation"
             }
           ],
-          "version": "0.3.0"
+          "version": "0.4.0"
         },
         {
           "bom-ref": "component:secure_data",
@@ -280,7 +292,7 @@
               "value": "hardware-required rejects supplied software references; custom operation-bound hardware metadata requires independent qualification"
             }
           ],
-          "version": "0.3.0"
+          "version": "0.4.0"
         },
         {
           "bom-ref": "component:secure_network",
@@ -304,7 +316,7 @@
               "value": "cleartext-traffic-detection"
             }
           ],
-          "version": "0.3.0"
+          "version": "0.4.0"
         },
         {
           "bom-ref": "component:secure_resilience",
@@ -324,7 +336,7 @@
               "value": "timeout-budgeting"
             }
           ],
-          "version": "0.3.0"
+          "version": "0.4.0"
         },
         {
           "bom-ref": "component:secure_privacy",
@@ -344,7 +356,7 @@
               "value": "data-classification-handling"
             }
           ],
-          "version": "0.3.0"
+          "version": "0.4.0"
         }
       ]
     },
@@ -438,6 +450,12 @@
         "target": "component:secure_identity",
         "predicate": "secure_identity::openssh decodes one algorithm+Base64 OpenSSH public-key blob into a fixed 16 KiB buffer and parses borrowed RFC 4251 fields for the exact closed set ssh-ed25519, ssh-rsa, and ECDSA nistp256/nistp384/nistp521; it requires canonical Base64 and wire encoding with no trailing bytes, byte-exact outer/embedded algorithm agreement, non-weak Ed25519 points, canonical positive RSA mpints with an in-call 1024..16384-bit minimum policy and audited parameter checks, and uncompressed NIST curve membership, while returning no key or comment data.",
         "reasoning": "Implemented in crates/secure_identity/src/openssh.rs with the already-vetted base64 decoder, a local allocation-free borrowed-slice field reader, and RustCrypto ed25519-dalek, rsa, p256, p384, and p521 primitives; evidenced by crates/secure_identity/tests/openssh_public_key.rs plus ssh-keygen-generated fixtures. Tests cover all five supported algorithms, the exact and above-limit decoded-size boundary, impossible length prefixes, canonical mpints, both directions of rsa-sha2-256/512 confusion, stronger RSA minimum policy, trailing wire data, undersized and above-limit RSA moduli, invalid RSA parameters, off-curve and compressed NIST points, weak Ed25519 points, redaction-safe diagnostics, and property-generated malformed/trailing inputs."
+      },
+      {
+        "bom-ref": "claim:secure_identity:optional-jwt-hmac-profile",
+        "target": "component:secure_identity",
+        "predicate": "Optional HMAC-only profile selected without default features reuses ring and vendor JWT validation, checks own provider installation, bounds token/key work and rejects unsupported algorithms/key families. The isolated reviewed normal/build consumer graph has no rsa package; default/additive graphs may contain rsa.",
+        "reasoning": "M1 merged 4c2e4da763d5baa65442ce0ae10cc2f516db6678; real JWT and six isolated startup/race cases pass on Linux/macOS/Windows. Actual Kani 0.68 bounds kernels have red/green results and thirteen satisfied covers. Cryptography, entropy, scheduling and internal-copy erasure are outside those proofs. Migration is documented in docs/dev-guide/jwt-hmac-profile.md."
       }
     ]
   }

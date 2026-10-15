@@ -811,7 +811,7 @@ checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 
 [[package]]
 name = "secure_device_trust"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "security_core",
  "serde",
@@ -820,7 +820,7 @@ dependencies = [
 
 [[package]]
 name = "secure_errors"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "axum-core",
  "http",
@@ -835,7 +835,7 @@ dependencies = [
 
 [[package]]
 name = "secure_identity"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "base64",
  "jsonwebtoken",
@@ -858,7 +858,7 @@ dependencies = [
 
 [[package]]
 name = "secure_network"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "security_core",
  "security_events",
@@ -870,7 +870,7 @@ dependencies = [
 
 [[package]]
 name = "security_core"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "derive_more",
  "serde",
@@ -880,7 +880,7 @@ dependencies = [
 
 [[package]]
 name = "security_events"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "hex",
  "hmac",

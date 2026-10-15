@@ -1,6 +1,6 @@
 # Release process
 
-The repository is public. Twelve independently installable libraries share version 0.3.0; secure_reference_service and secure_smoke_service have publish=false and are integration fixtures.
+The repository is public. Twelve independently installable libraries share version 0.4.0; secure_reference_service and secure_smoke_service have publish=false and are integration fixtures.
 
 ## Verification
 
@@ -59,3 +59,19 @@ Verified 0.2.0 recovery: [run 38570598294](https://github.com/kerberosmansour/Su
 The 0.3.0 mobile release preserves the external dependency graph. Its twelve family version changes are coordinated; the native SDK references introduce no Maven, SPM or Rust dependency. Consult [mobile migration](mobile-bridge-migration.md) for the typed native error handling and independent consumer/device gates. Registry checksum approval records are created only after downloading and verifying all published archives; never populate them from expected or fabricated checksums.
 
 Verified 0.3.0 release: [run 38627967780](https://github.com/kerberosmansour/SunLitSecurityLibraries/actions/runs/38627967780), tag/approval commit 8f77c4db26f3250386b3695a3339adb77bf75da3, immutable package source e1f45068bfa011e559a8702d1407d05f7ab4ff0a. Twelve registry archives/source/checksums, 27 exact-tag signatures, twelve official-schema SBOMs and 54 GitHub asset digests verify. No external dependency version/source/checksum changed.
+
+## 0.4.0 HMAC profile publication
+
+The coordinated 0.4.0 release preserves every external locked identity/checksum,
+audit and exact expiring exception. Only local family versions change. M1's
+actual platform and Kani checks passed before this publication milestone.
+Run `python3 scripts/check-jwt-hmac-profile.py --admit --output <profile-report>`
+to admit all seven locks, including the positive consumer, before compilation.
+Also retain the generic six-lock root report/receipt required by the unchanged
+candidate-archive admission helper; neither report substitutes for the other.
+Admit each exact packaged graph before compiling/uploading. Record only actual
+downloaded registry checksums, merge that record, then tag/sign and independently
+verify producer bytes, workflow identity, official schemas and release assets.
+See [HMAC migration](jwt-hmac-profile.md) for feature/provider startup boundaries.
+Default package SBOMs may contain rsa; the no-rsa claim is only the separately
+reviewed isolated normal/build profile, never an arbitrary additive feature union.

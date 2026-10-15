@@ -9,7 +9,9 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ## Unreleased
 
-### Identity (source milestone; not yet published)
+## [0.4.0] — 2026-10-15
+
+### Identity and migration
 
 - Add an explicit reduced HMAC-only profile with an isolated normal/build consumer
   graph that excludes the rsa Rust package; preserve legacy default/asymmetric/SSH
@@ -18,8 +20,14 @@ breaking API changes, but security fixes and migration notes should be explicit.
   initialization and fixed conflict errors. Bound new-profile tokens/keys and
   preserve signature, issuer/audience and expiry checks; add real consumer/startup
   scenarios and Kani acceptance-kernel obligations. No external identity/version/
-  checksum change. This capability is not available in the immutable 0.3.0 release;
-  publication and registry migration remain a separate milestone.
+  checksum change. The capability begins in 0.4.0 and is absent from immutable 0.3.0.
+- Default asymmetric/SSH behavior is preserved. Previous no-default-feature
+  asymmetric callers explicitly select `asymmetric-jwt` and/or `ssh-public-keys`;
+  reduced consumers select `jwt-hmac` and initialize the checked provider before
+  direct vendor JWT use. See [migration](docs/dev-guide/jwt-hmac-profile.md).
+- Coordinate all twelve crates at 0.4.0; the other eleven library APIs and all
+  external versions/sources/checksums, audits and exact advisory exceptions stay
+  unchanged. Mobile physical-device/consumer integration limits remain.
 
 
 ## [0.3.0] — 2026-10-14

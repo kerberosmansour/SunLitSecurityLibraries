@@ -22,19 +22,19 @@ Output is a `security_core::identity::AuthenticatedIdentity`, which `secure_auth
 
 ```toml
 [dependencies]
-secure_identity = "0.3.0"
+secure_identity = "0.4.0"
 
 # OIDC (PKCE) flows:
-# secure_identity = { version = "0.3.0", features = ["oidc"] }
+# secure_identity = { version = "0.4.0", features = ["oidc"] }
 
 # Projected Kubernetes workload JWTs over HTTPS or bounded inline public JWKS:
-# secure_identity = { version = "0.3.0", features = ["jwks"] }
+# secure_identity = { version = "0.4.0", features = ["jwks"] }
 
 # Redis-backed sessions:
-# secure_identity = { version = "0.3.0", features = ["session-redis"] }
+# secure_identity = { version = "0.4.0", features = ["session-redis"] }
 
 # Biometric / device-binding / step-up:
-# secure_identity = { version = "0.3.0", features = ["biometric"] }
+# secure_identity = { version = "0.4.0", features = ["biometric"] }
 ```
 
 ## Quick example — production boot check
@@ -161,6 +161,9 @@ assert_eq!(
 
 | Flag | Default | Enables |
 |---|---|---|
+| `asymmetric-jwt` | on | Existing asymmetric JWT/capability APIs and vendor RustCrypto provider. |
+| `ssh-public-keys` | on | OpenSSH validation and public-key dependencies. |
+| `jwt-hmac` | off | Explicit reduced HMAC profile; select with defaults disabled. |
 | `jwks` | off | HTTPS JWKS retrieval and projected Kubernetes workload JWT validation via `workload`. |
 | `oidc` | off | `oidc` module — OIDC discovery and PKCE-first authentication via `openidconnect` + `reqwest`. |
 | `session-redis` | off | `session_redis` — Redis-backed session storage. |
@@ -212,20 +215,27 @@ Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibra
 
 `JwksKeyStore::new` requires HTTPS for fetching keys. User information and fragments are rejected; redirects are disabled. Fetches have a ten-second timeout and a one-MiB response limit. Production HTTP now fails closed. With the `dev` feature, tests may explicitly call `new_insecure_loopback_for_testing` with a numeric loopback HTTP URL; this does not allow non-loopback HTTP endpoints. The HTTPS transport requires the `jwks` feature.
 
-## Unreleased HMAC-only profile
+## HMAC-only profile (0.4.0)
 
-The source milestone adds `default-features = false, features = ["jwt-hmac"]`
-for internal HS256 consumers; this feature is **not in published 0.3.0**. Existing
-default APIs keep asymmetric/SSH behavior through named default groups. Cargo
-feature unification can restore RSA; verify the actual consumer graph.
+```toml
+secure_identity = { version = "=0.4.0", default-features = false, features = ["jwt-hmac"] }
+jsonwebtoken = { version = "=11.0.0", default-features = false }
+```
 
-Initialize `jwt_hmac::install_default_provider()` at trusted startup before direct
-JWT encoding. Foreign/preexisting provider initialization fails closed with
-ProviderUnavailable; never ignore it. The reduced profile bounds tokens to 64 KiB
-and keys to 1024 bytes with HS256/384/512 minimum 32/48/64-byte keys. Legacy/default
-claim and key acceptance behavior is preserved. Vendor JWT validation and admitted
-ring HMAC are reused; no parser/crypto implementation or new dependency identity.
+At trusted startup, call `secure_identity::jwt_hmac::install_default_provider()?`
+before direct vendor JWT encoding. `TokenValidator` also installs before decoding;
+a foreign/frozen provider returns `IdentityError::ProviderUnavailable`. Restart
+with corrected startup ordering; never ignore the error or downgrade validation.
+The validator remains HS256-only; direct provider factories accept HS256/384/512.
+Tokens are bounded to 64 KiB; keys are 32/48/64 through 1024 bytes respectively.
+Length does not establish entropy, hardware custody or erasure of internal copies.
 
-Read [the source milestone guide](../../docs/dev-guide/jwt-hmac-profile.md) for
-startup order, feature/API migration, bounds, explicit seven-lock admission and
-real isolated consumer tests. Publication is a separate verified milestone.
+Defaults retain asymmetric/SSH APIs via `asymmetric-jwt` and `ssh-public-keys`.
+Previous no-default-feature asymmetric callers select those groups explicitly;
+`jwks`/`oidc` imply their asymmetric requirements. `jwt_hmac` is available only
+without `asymmetric-jwt`. Cargo features are additive: another crypto/SSH feature
+can restore rsa. The zero-rsa result applies to the exact isolated normal/build
+graph, not arbitrary unions, default SBOMs or absence of RSA code from ring.
+
+Read the [0.4.0 migration guide](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/v0.4.0/docs/dev-guide/jwt-hmac-profile.md)
+for full startup/error, bounds, admission, real consumer and proof limits.

@@ -19,7 +19,7 @@ Pure policy engine: storage and UI are yours; this crate provides the state mach
 
 ```toml
 [dependencies]
-secure_privacy = "0.3.0"
+secure_privacy = "0.4.0"
 ```
 
 ## Quick examples

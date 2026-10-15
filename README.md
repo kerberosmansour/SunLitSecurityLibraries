@@ -1,6 +1,6 @@
 # SunLit Security Libraries
 
-Current coordinated library release: **0.3.0**. Adds the sealed mobile native wrapping adapter and SDK reference sources. Retains role-sensitive authorization cache invalidation and rustls 0.23.46 advisory repairs. Review [migration and residual dependency limits](./CHANGELOG.md) and the [release process](./docs/dev-guide/release-process.md).
+Coordinated library release: **0.4.0**. Adds the optional HMAC-only identity profile with explicit feature/startup migration; see the [profile guide](./docs/dev-guide/jwt-hmac-profile.md). Includes the sealed mobile native wrapping adapter and SDK reference sources. Retains role-sensitive authorization cache invalidation and rustls 0.23.46 advisory repairs. Review [migration and residual dependency limits](./CHANGELOG.md) and the [release process](./docs/dev-guide/release-process.md).
 
 A production-grade Cargo workspace of Rust security crates and reference
 services implementing [OWASP Proactive Controls](https://owasp.org/www-project-proactive-controls/)

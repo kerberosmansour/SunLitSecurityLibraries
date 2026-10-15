@@ -19,3 +19,15 @@ ordering/race tests exercise actual registration calls. Kani required for pure
 acceptance kernels; vendor cryptography/scheduling and internal key-copy erasure
 are outside its proof. Owner maintainer; review at M1 closeout and before publication.
 No RSA code-elimination claim about ring or arbitrary Cargo feature unification.
+
+## M2 publication boundaries
+
+| Scenario | Control / required proof |
+|---|---|
+| Registry archive or source is substituted after review | Exact candidate archive/source and checksum-subset admission before compilation/upload; downloaded registry bytes and VCS identity must match |
+| Partial release or guessed checksum is advertised complete | Sequential verified siblings, actual registry approval record committed before tag, immutable version retry checks |
+| Different workflow/source signs substituted SBOMs or assets | Independent producer equality, exact tag workflow identity/issuer, manifest digests, twelve official-schema SBOMs and every GitHub asset digest |
+
+These supply-chain/integrity classes are mitigated by verification, not a claim
+that signing detects unknown malware. M2 changes version/docs/declarations only;
+all external identities, audits, exceptions, proof kernels and runtime code stay.

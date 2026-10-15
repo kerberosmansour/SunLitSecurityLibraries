@@ -1,6 +1,6 @@
 [package]
 name = "security_core"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Shared security types, identity traits, correlation context, and data classification primitives."
