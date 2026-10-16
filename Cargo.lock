@@ -3672,6 +3672,7 @@ dependencies = [
  "tower",
  "tower-http",
  "unicode-normalization",
+ "url",
  "uuid",
 ]
 

@@ -259,7 +259,7 @@ Detection counters use `std::sync::Mutex<HashMap>` for thread-safe per-actor tra
 | `SafePath` | Directory traversal | Rejects `../`, `..\`, absolute paths, null bytes, `%2e%2e` encoded traversal |
 | `SafeFilename` | Path traversal + command injection | Rejects `/`, `\`, `..`, null bytes, shell metacharacters (`;|\`$><`) |
 | `SafeCommandArg` | OS command injection | Rejects `;`, `|`, `&`, `` ` ``, `$`, `>`, `<`, `\r`, `\n` |
-| `SafeUrl` | SSRF | Only `http`/`https`; rejects private IPs (127/8, 10/8, 172.16/12, 192.168/16, 169.254/16, ::1, fc00::/7) |
+| `SafeUrl` | SSRF | WHATWG parse + canonical output; only `http`/`https`; rejects credentials, fragments, backslashes, alternate numeric protected hosts and the blocked IP set; exposes resolved-IP revalidation for pinning |
 | `SafeRedirectUrl` | Open redirect | Relative paths only (`/path`); rejects `//` and scheme colons |
 | `SqlIdentifier` | SQL injection | `[A-Za-z_][A-Za-z0-9_]*`, max 128 chars |
 | `LdapSafeString` | LDAP injection | Escapes `*`, `(`, `)`, `\`, NUL per RFC 4515; always succeeds, emits violation event if escaping was needed |
@@ -304,7 +304,11 @@ Detection counters use `std::sync::Mutex<HashMap>` for thread-safe per-actor tra
 
 **`XmlEncoder`** (M12): Encodes `<`, `>`, `&`, `"`, `'` to XML named entities (`&lt;`, `&gt;`, `&amp;`, `&quot;`, `&apos;`). Strips null bytes. Safe for both XML text content and attribute values.
 
-**`sanitize_uri_scheme()`** (M12): Validates URI scheme safety. Blocks `javascript:`, `data:`, `vbscript:`, `file:`, `blob:` (case-insensitive). Allows `https:`, `http:`, `mailto:`, and relative URIs. Returns `Err(DangerousUriScheme)` on rejection.
+**`sanitize_uri_scheme()`** (M12): Allowlists `https:`, `http:`, `mailto:` and
+well-formed relative references. Rejects browser-ignored controls/whitespace,
+attribute delimiters, backslashes, network-path references and every unapproved
+scheme. It is composed with `HtmlEncoder` at an HTML attribute sink; validation
+does not replace context encoding.
 
 **`LdapDnEncoder`** (M19): Escapes characters special in LDAP Distinguished Name attribute values per RFC 4514: `,`, `+`, `"`, `\`, `<`, `>`, `;`, `=`. Leading `#` and leading/trailing spaces are escaped. Null bytes are hex-escaped. Convenience free function: `ldap::encode_dn()`.
 

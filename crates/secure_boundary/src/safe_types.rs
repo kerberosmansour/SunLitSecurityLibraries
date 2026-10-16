@@ -242,8 +242,8 @@ impl fmt::Display for SafeCommandArg {
 
 // ── SafeUrl ───────────────────────────────────────────────────────────────────
 
-/// A validated URL that rejects dangerous schemes and URLs resolving to
-/// network ranges that enable server-side request forgery.
+/// A canonical URL that rejects dangerous schemes and protected literal hosts
+/// that enable server-side request forgery.
 ///
 /// # Allowed schemes
 /// Only `http` and `https`. Rejects `file://`, `gopher://`, `javascript:`,
@@ -251,8 +251,10 @@ impl fmt::Display for SafeCommandArg {
 ///
 /// # Blocked host ranges (SSRF prevention)
 ///
-/// Every URL whose host string parses as one of the following IP families
-/// is rejected with [`BoundaryRejection::SsrfAttempt`]:
+/// The input is parsed with the WHATWG `url` model and the same canonical value
+/// that was classified is retained. Credentials, fragments and backslashes are
+/// rejected. Every typed IP host in one of the following families is rejected
+/// with [`BoundaryRejection::SsrfAttempt`]:
 ///
 /// | CIDR | What it is | Why it's blocked |
 /// |---|---|---|
@@ -276,10 +278,9 @@ impl fmt::Display for SafeCommandArg {
 /// regression test in `sg_gate_a_safeurl_cidrs.rs`, so removing a single
 /// line from the internal classifier fails a specific, named test.
 ///
-/// DNS rebinding is **not** prevented by `SafeUrl` alone; validate only
-/// accepts a host *string*. If you resolve and connect, perform a fresh
-/// `is_private_ip` check on the resolved address, or pin to a specific
-/// resolver policy.
+/// DNS rebinding is **not** prevented by construction alone. Resolve with a
+/// bounded policy, pass every answer to [`SafeUrl::validate_resolved_ip`], and
+/// pin an approved address through connection establishment.
 ///
 /// # Examples
 ///
@@ -317,6 +318,22 @@ impl SafeUrl {
     pub fn into_inner(self) -> String {
         self.0
     }
+
+    /// Applies the same protected-address policy to an address returned by DNS.
+    ///
+    /// Callers that resolve hostnames must check every answer and pin an
+    /// approved address through connection establishment to prevent rebinding.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BoundaryRejection::SsrfAttempt`] for a protected address.
+    pub fn validate_resolved_ip(addr: std::net::IpAddr) -> Result<(), BoundaryRejection> {
+        if is_private_ip_addr(addr) {
+            emit_violation(ViolationKind::SyntaxViolation, "ssrf_attempt");
+            return Err(BoundaryRejection::SsrfAttempt);
+        }
+        Ok(())
+    }
 }
 
 impl TryFrom<&str> for SafeUrl {
@@ -328,54 +345,30 @@ impl TryFrom<&str> for SafeUrl {
             BoundaryRejection::SsrfAttempt
         };
 
-        let lower = s.to_lowercase();
-
-        let is_http = lower.starts_with("http://");
-        let is_https = lower.starts_with("https://");
-
-        if !is_http && !is_https {
+        if s.contains('\\') {
             return Err(reject());
         }
 
-        let prefix_len = if is_https {
-            "https://".len()
-        } else {
-            "http://".len()
-        };
-        let rest = &s[prefix_len..];
-        let host_end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
-        let authority = &rest[..host_end];
-        let host_with_port = authority
-            .rsplit_once('@')
-            .map_or(authority, |(_, host_port)| host_port);
-
-        // Strip IPv6 brackets or port suffix
-        let host = if host_with_port.starts_with('[') {
-            // IPv6: [::1] or [::1]:8080
-            let bracket_end = host_with_port
-                .find(']')
-                .map(|i| i + 1)
-                .unwrap_or(host_with_port.len());
-            &host_with_port[..bracket_end]
-        } else {
-            // IPv4 or hostname: strip port
-            match host_with_port.rfind(':') {
-                Some(pos)
-                    if host_with_port[pos + 1..]
-                        .chars()
-                        .all(|c| c.is_ascii_digit()) =>
-                {
-                    &host_with_port[..pos]
-                }
-                _ => host_with_port,
-            }
-        };
-
-        if is_private_ip(host) {
+        let parsed = url::Url::parse(s).map_err(|_| reject())?;
+        if !matches!(parsed.scheme(), "http" | "https")
+            || parsed.host().is_none()
+            || !parsed.username().is_empty()
+            || parsed.password().is_some()
+            || parsed.fragment().is_some()
+        {
             return Err(reject());
         }
 
-        Ok(Self(s.to_owned()))
+        let protected = match parsed.host().expect("host checked above") {
+            url::Host::Ipv4(addr) => is_private_ipv4(addr),
+            url::Host::Ipv6(addr) => is_private_ipv6(addr),
+            url::Host::Domain(_) => false,
+        };
+        if protected {
+            return Err(reject());
+        }
+
+        Ok(Self(parsed.to_string()))
     }
 }
 
@@ -392,17 +385,11 @@ impl fmt::Display for SafeUrl {
     }
 }
 
-fn is_private_ip(host: &str) -> bool {
-    // Strip IPv6 brackets for parsing
-    let host = host.trim_matches(|c| c == '[' || c == ']');
-
-    if let Ok(addr) = host.parse::<std::net::Ipv4Addr>() {
-        return is_private_ipv4(addr);
+fn is_private_ip_addr(addr: std::net::IpAddr) -> bool {
+    match addr {
+        std::net::IpAddr::V4(addr) => is_private_ipv4(addr),
+        std::net::IpAddr::V6(addr) => is_private_ipv6(addr),
     }
-    if let Ok(addr) = host.parse::<std::net::Ipv6Addr>() {
-        return is_private_ipv6(addr);
-    }
-    false
 }
 
 fn is_private_ipv4(addr: std::net::Ipv4Addr) -> bool {

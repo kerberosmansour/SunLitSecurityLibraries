@@ -15,13 +15,23 @@ impl std::fmt::Display for DangerousUriScheme {
 
 impl std::error::Error for DangerousUriScheme {}
 
-/// Blocked URI schemes (case-insensitive).
-const BLOCKED_SCHEMES: &[&str] = &["javascript", "data", "vbscript", "file", "blob"];
+/// Schemes approved for browser `href`/`src` use by this validator.
+const ALLOWED_SCHEMES: &[&str] = &["http", "https", "mailto"];
+
+fn rejected(scheme: &str) -> DangerousUriScheme {
+    DangerousUriScheme {
+        scheme: scheme.to_owned(),
+    }
+}
 
 /// Validates that `uri` does not use a dangerous scheme.
 ///
-/// Allowed: `https`, `http`, `mailto`, relative URIs (no scheme), and empty strings.
-/// Blocked: `javascript:`, `data:`, `vbscript:`, `file:`, `blob:` (and case variants).
+/// Allowed: `https`, `http`, `mailto`, well-formed relative references, and empty
+/// strings. Every other explicit scheme and ambiguous browser syntax is rejected.
+///
+/// This validates URI syntax only. Encode the accepted value for its output
+/// context (for example with `HtmlEncoder` before placing it in an HTML
+/// attribute).
 ///
 /// # Errors
 ///
@@ -36,8 +46,26 @@ const BLOCKED_SCHEMES: &[&str] = &["javascript", "data", "vbscript", "file", "bl
 /// assert!(sanitize_uri_scheme("javascript:alert(1)").is_err());
 /// ```
 pub fn sanitize_uri_scheme(uri: &str) -> Result<(), DangerousUriScheme> {
-    // Relative URIs and empty strings have no scheme — always safe.
-    if uri.is_empty() || uri.starts_with('/') || uri.starts_with('#') || uri.starts_with('?') {
+    // Browsers discard or reinterpret these characters during URL and HTML
+    // parsing. Reject them before scheme inspection so the validated bytes are
+    // the bytes a downstream parser receives.
+    if uri.chars().any(|c| {
+        c.is_control() || c.is_whitespace() || matches!(c, '\\' | '"' | '\'' | '`' | '<' | '>')
+    }) {
+        return Err(rejected("invalid"));
+    }
+
+    if uri.is_empty() {
+        return Ok(());
+    }
+
+    // Network-path references inherit the document's scheme and can cross
+    // origins. Root-relative, query-only and fragment-only references remain
+    // valid after the syntax checks above.
+    if uri.starts_with("//") {
+        return Err(rejected("network-path"));
+    }
+    if uri.starts_with('/') || uri.starts_with('#') || uri.starts_with('?') {
         return Ok(());
     }
 
@@ -49,11 +77,15 @@ pub fn sanitize_uri_scheme(uri: &str) -> Result<(), DangerousUriScheme> {
         if scheme.contains('/') {
             return Ok(());
         }
+        let valid_scheme = scheme.chars().enumerate().all(|(index, c)| {
+            c.is_ascii_alphabetic() || (index > 0 && matches!(c, '0'..='9' | '+' | '-' | '.'))
+        });
+        if !valid_scheme {
+            return Err(rejected("invalid"));
+        }
         let scheme_lower = scheme.to_ascii_lowercase();
-        if BLOCKED_SCHEMES.contains(&scheme_lower.as_str()) {
-            return Err(DangerousUriScheme {
-                scheme: scheme_lower,
-            });
+        if !ALLOWED_SCHEMES.contains(&scheme_lower.as_str()) {
+            return Err(rejected(&scheme_lower));
         }
     }
 
