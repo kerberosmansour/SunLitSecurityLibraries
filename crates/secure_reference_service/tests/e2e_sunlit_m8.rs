@@ -352,6 +352,129 @@ async fn test_cross_tenant_blocked() {
     );
 }
 
+/// Cross-tenant update is denied and preserves the stored item.
+#[tokio::test]
+async fn test_cross_tenant_update_blocked_and_preserves_item() {
+    let state = AppState::new().await;
+    let resilience = ResilienceConfig::new(std::time::Duration::from_secs(5), 10);
+    let app = build_router(state, &resilience);
+
+    let tenant_a = Uuid::new_v4().to_string();
+    let tenant_b = Uuid::new_v4().to_string();
+    let actor_a = Uuid::new_v4().to_string();
+    let actor_b = Uuid::new_v4().to_string();
+
+    let create_req = Request::builder()
+        .method("POST")
+        .uri("/items")
+        .header("content-type", "application/json")
+        .header("x-dev-subject", &actor_a)
+        .header("x-dev-tenant", &tenant_a)
+        .header("x-dev-roles", "admin")
+        .body(Body::from(r#"{"name":"tenant-a-original"}"#))
+        .unwrap();
+    let create_resp = app.clone().oneshot(create_req).await.unwrap();
+    assert_eq!(create_resp.status(), StatusCode::CREATED);
+    let body = body_string(create_resp.into_body()).await;
+    let item_id = serde_json::from_str::<serde_json::Value>(&body).unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let update_req = Request::builder()
+        .method("PUT")
+        .uri(format!("/items/{item_id}"))
+        .header("content-type", "application/json")
+        .header("x-dev-subject", &actor_b)
+        .header("x-dev-tenant", &tenant_b)
+        .header("x-dev-roles", "admin")
+        .body(Body::from(r#"{"name":"tenant-b-overwrite"}"#))
+        .unwrap();
+    let update_resp = app.clone().oneshot(update_req).await.unwrap();
+    assert_eq!(
+        update_resp.status(),
+        StatusCode::FORBIDDEN,
+        "cross-tenant update must be blocked"
+    );
+
+    let get_req = Request::builder()
+        .method("GET")
+        .uri(format!("/items/{item_id}"))
+        .header("x-dev-subject", &actor_a)
+        .header("x-dev-tenant", &tenant_a)
+        .header("x-dev-roles", "admin")
+        .body(Body::empty())
+        .unwrap();
+    let get_resp = app.oneshot(get_req).await.unwrap();
+    assert_eq!(get_resp.status(), StatusCode::OK);
+    let body = body_string(get_resp.into_body()).await;
+    let item: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(item["name"], "tenant-a-original");
+    assert_eq!(item["tenant_id"], tenant_a);
+    assert_eq!(item["owner_id"], actor_a);
+}
+
+/// Cross-tenant delete is denied and preserves the stored item.
+#[tokio::test]
+async fn test_cross_tenant_delete_blocked_and_preserves_item() {
+    let state = AppState::new().await;
+    let resilience = ResilienceConfig::new(std::time::Duration::from_secs(5), 10);
+    let app = build_router(state, &resilience);
+
+    let tenant_a = Uuid::new_v4().to_string();
+    let tenant_b = Uuid::new_v4().to_string();
+    let actor_a = Uuid::new_v4().to_string();
+    let actor_b = Uuid::new_v4().to_string();
+
+    let create_req = Request::builder()
+        .method("POST")
+        .uri("/items")
+        .header("content-type", "application/json")
+        .header("x-dev-subject", &actor_a)
+        .header("x-dev-tenant", &tenant_a)
+        .header("x-dev-roles", "admin")
+        .body(Body::from(r#"{"name":"tenant-a-original"}"#))
+        .unwrap();
+    let create_resp = app.clone().oneshot(create_req).await.unwrap();
+    assert_eq!(create_resp.status(), StatusCode::CREATED);
+    let body = body_string(create_resp.into_body()).await;
+    let item_id = serde_json::from_str::<serde_json::Value>(&body).unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let delete_req = Request::builder()
+        .method("DELETE")
+        .uri(format!("/items/{item_id}"))
+        .header("x-dev-subject", &actor_b)
+        .header("x-dev-tenant", &tenant_b)
+        .header("x-dev-roles", "admin")
+        .body(Body::empty())
+        .unwrap();
+    let delete_resp = app.clone().oneshot(delete_req).await.unwrap();
+    assert_eq!(
+        delete_resp.status(),
+        StatusCode::FORBIDDEN,
+        "cross-tenant delete must be blocked"
+    );
+
+    let get_req = Request::builder()
+        .method("GET")
+        .uri(format!("/items/{item_id}"))
+        .header("x-dev-subject", &actor_a)
+        .header("x-dev-tenant", &tenant_a)
+        .header("x-dev-roles", "admin")
+        .body(Body::empty())
+        .unwrap();
+    let get_resp = app.oneshot(get_req).await.unwrap();
+    assert_eq!(get_resp.status(), StatusCode::OK);
+    let body = body_string(get_resp.into_body()).await;
+    let item: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(item["name"], "tenant-a-original");
+    assert_eq!(item["tenant_id"], tenant_a);
+    assert_eq!(item["owner_id"], actor_a);
+}
+
 // ─── Feature: Input validation / boundary enforcement ─────────────────────────
 
 /// Unknown JSON fields are rejected at the boundary.

@@ -11,6 +11,10 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ### Security
 
+- Bind reference-service item GET, PUT and DELETE authorization to the stored
+  tenant and owner under one locked snapshot. Cross-tenant administrators can no
+  longer overwrite or delete another tenant's item, and denied mutations leave
+  the stored record intact.
 - Add a dedicated `InlineScriptStringEncoder` that preserves JavaScript lexical
   escaping while neutralizing the HTML script raw-text boundary. Clarify that
   `JsStringEncoder` is for non-HTML JavaScript and that `JsonEncoder` transforms

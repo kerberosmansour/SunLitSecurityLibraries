@@ -42,6 +42,16 @@ fn json_response(status: StatusCode, body: String) -> Response<Body> {
         })
 }
 
+fn resource_for_item(id: Uuid, item: &ItemResponse) -> ResourceRef {
+    let resource = ResourceRef::new("items")
+        .with_id(id.to_string())
+        .with_owner(item.owner_id.clone());
+    match &item.tenant_id {
+        Some(tenant_id) => resource.with_tenant(tenant_id.clone()),
+        None => resource,
+    }
+}
+
 /// `POST /items` — create a new item.
 pub async fn create_item(
     State(state): State<AppState>,
@@ -81,7 +91,12 @@ pub async fn get_item(
     Path(id): Path<Uuid>,
 ) -> Response<Body> {
     let subject = DefaultSubjectResolver::resolve(&identity);
-    let resource = ResourceRef::new("items").with_id(id.to_string());
+    let items = state.items.read().await;
+    let item = match items.get(&id) {
+        Some(item) => item,
+        None => return not_found_response(),
+    };
+    let resource = resource_for_item(id, item);
     let decision = state
         .authorizer
         .authorize(&subject, &Action::Read, &resource)
@@ -90,20 +105,8 @@ pub async fn get_item(
         return forbidden_json();
     }
 
-    let items = state.items.read().await;
-    match items.get(&id) {
-        Some(item) => {
-            // Tenant isolation: subject tenant must match item tenant (if set)
-            if let Some(item_tenant) = &item.tenant_id {
-                if subject.tenant_id.as_deref() != Some(item_tenant.as_str()) {
-                    return forbidden_json();
-                }
-            }
-            let body = serde_json::to_string(item).unwrap_or_default();
-            json_response(StatusCode::OK, body)
-        }
-        None => not_found_response(),
-    }
+    let body = serde_json::to_string(item).unwrap_or_default();
+    json_response(StatusCode::OK, body)
 }
 
 /// `PUT /items/:id` — update an existing item.
@@ -115,7 +118,11 @@ pub async fn update_item(
 ) -> Response<Body> {
     let req = payload.into_inner();
     let subject = DefaultSubjectResolver::resolve(&identity);
-    let resource = ResourceRef::new("items").with_id(id.to_string());
+    let mut items = state.items.write().await;
+    let resource = match items.get(&id) {
+        Some(item) => resource_for_item(id, item),
+        None => return not_found_response(),
+    };
     let decision = state
         .authorizer
         .authorize(&subject, &Action::Write, &resource)
@@ -124,7 +131,6 @@ pub async fn update_item(
         return forbidden_json();
     }
 
-    let mut items = state.items.write().await;
     match items.get_mut(&id) {
         Some(item) => {
             item.name = req.name;
@@ -143,7 +149,11 @@ pub async fn delete_item(
     Path(id): Path<Uuid>,
 ) -> Response<Body> {
     let subject = DefaultSubjectResolver::resolve(&identity);
-    let resource = ResourceRef::new("items").with_id(id.to_string());
+    let mut items = state.items.write().await;
+    let resource = match items.get(&id) {
+        Some(item) => resource_for_item(id, item),
+        None => return not_found_response(),
+    };
     let decision = state
         .authorizer
         .authorize(&subject, &Action::Delete, &resource)
@@ -152,7 +162,6 @@ pub async fn delete_item(
         return forbidden_json();
     }
 
-    let mut items = state.items.write().await;
     if items.remove(&id).is_some() {
         json_response(StatusCode::OK, r#"{"deleted":true}"#.to_string())
     } else {
