@@ -118,14 +118,14 @@ scope widening, or claiming DNS rebinding is solved.
 | Candidate exact lock/provenance/OSV | Script-disabled offline resolution retained 514 package identities. Existing locked `url` 2.5.8 archive matched checksum and declared `build = false`; crates.io owners/source/license reviewed. Official OSV 2.7.0 scanned 6 locks/1,448 package occurrences: 4 existing reviewed advisories, 0 `MAL-*`, exit 0. JSON SHA-256 `6cea97a78ce4454665abdde3ede39bbd5f76050c30914613c59f1de2a4053ed0`. |
 | Focused production and variant tests | URI 3/3 and input boundaries 6/6 passed; secure_output and secure_boundary package/doc suites passed; secure_boundary none/axum/actix/both feature matrix passed. |
 | Workspace/static/docs/scope | Default and all-feature locked workspace suites, all-feature Clippy, zero-warning rustdoc and fmt passed. Cargo audit found 0 unaccepted vulnerabilities; deny and vet passed. Semgrep production/secrets found 0 findings/errors. Diff check and exact allow-list passed. |
-| Exact-head CI and merged-main Codex Security | Pending |
-| Verify/retro/closure | Local evidence complete; immutable source head, CI and merged-main scan pending. |
+| Exact-head CI and merged-main Codex Security | Pending at signed source commit `f9ed2bf10b4cc8143e511fc33ac99952f61547b9`. |
+| Verify/retro/closure | Local verification, lessons and completion handoff recorded; exact-head CI and merged-main scan remain shipping gates. |
 
 ## Milestone tracker
 
 | Milestone | Status | Started | Finished |
 |---|---|---|---|
-| M1 three high-severity input-boundary repairs | implemented; local gates green | 2026-10-16 | — |
+| M1 three high-severity input-boundary repairs | verified locally; shipping gates pending | 2026-10-16 | — |
 
 The user's standing instruction to continue autonomously and publish when needed
 is the confirmation basis for this concrete milestone and allow-list.
