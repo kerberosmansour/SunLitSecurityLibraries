@@ -144,6 +144,59 @@ async fn hardware_route_allows_hardware_backed_context() {
 }
 
 #[tokio::test]
+async fn hardware_route_denies_expired_mtls_certificate() {
+    let now = OffsetDateTime::now_utc();
+    let decision = hardware_decision();
+    let mtls = MtlsClientIdentity::new(
+        "serial-expired",
+        "fp-expired",
+        now - Duration::days(30),
+        now,
+        true,
+    );
+    let expired_context = DeviceTrustContext::new(decision.clone(), mtls.clone())
+        .with_bound_user_session(bound_session(&mtls, decision.tier()))
+        .with_profile(DeviceTrustProfile::Production);
+    let app = router_with_context(Some(expired_context)).await;
+
+    let response = app
+        .oneshot(request("/device-trust/hardware"))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn hardware_route_denies_expired_bound_user_session() {
+    let now = OffsetDateTime::now_utc();
+    let decision = hardware_decision();
+    let mtls = mtls_identity("serial-a", "fp-a", true);
+    let expired_session = BoundUserSession::new(
+        "bus_reference_expired_session",
+        &identity(),
+        DeviceSessionBinding::new(
+            mtls.serial.clone(),
+            mtls.fingerprint.clone(),
+            decision.tier(),
+        ),
+        now - Duration::hours(2),
+        now,
+    );
+    let expired_context = DeviceTrustContext::new(decision, mtls)
+        .with_bound_user_session(expired_session)
+        .with_profile(DeviceTrustProfile::Production);
+    let app = router_with_context(Some(expired_context)).await;
+
+    let response = app
+        .oneshot(request("/device-trust/hardware"))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
 async fn hardware_route_denies_software_bound_context() {
     let app = router_with_context(Some(context(
         software_decision(),

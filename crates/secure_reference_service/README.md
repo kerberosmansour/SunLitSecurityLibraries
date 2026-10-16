@@ -34,6 +34,13 @@ tenant or owner metadata. This pattern is the reference behavior; production
 services must obtain identity from trusted authentication and perform the same
 check in a datastore transaction or equivalent versioned write.
 
+The device-trust demonstration routes validate certificate and bound-session
+time at each authorization decision. Because this loopback fixture has no
+certificate authority or revocation database, it passes the explicit
+`NoMtlsRevocations` provider. Production adapters must replace that provider
+with their authoritative certificate-revocation lookup; copying the fixture's
+provider would leave retained revoked certificates active.
+
 ## Run locally
 
 ```bash

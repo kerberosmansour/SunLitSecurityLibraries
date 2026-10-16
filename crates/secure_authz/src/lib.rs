@@ -31,7 +31,8 @@
 //! - Decision logging to `security_events`
 //! - Framework adapters (axum and actix-web 4) that share the same
 //!   enforcement pipeline ([`crate::enforce::run_check`]).
-//! - Device-trust route predicates for native clients.
+//! - Device-trust route predicates for native clients, with authorization-time
+//!   certificate/session freshness and revocation checks.
 
 pub mod abac;
 pub mod action;

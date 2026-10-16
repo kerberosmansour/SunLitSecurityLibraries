@@ -14,7 +14,7 @@ use secure_device_trust::{
     EvidenceFreshness, Platform, ReleaseChannel, TrustTier,
 };
 use secure_identity::{BoundUserSession, DeviceSessionBinding};
-use secure_network::MtlsClientIdentity;
+use secure_network::{MtlsClientIdentity, MtlsRevocationLookup, NoMtlsRevocations};
 use security_core::{identity::AuthenticatedIdentity, types::ActorId};
 use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
@@ -110,6 +110,18 @@ fn policy(requirement: DeviceTrustRequirement) -> DeviceTrustRoutePolicy {
     )
 }
 
+fn evaluate_now(policy: DeviceTrustRoutePolicy, context: &DeviceTrustContext) -> Decision {
+    policy.evaluate(Some(context), OffsetDateTime::now_utc(), &NoMtlsRevocations)
+}
+
+struct RevokedSerial<'a>(&'a str);
+
+impl MtlsRevocationLookup for RevokedSerial<'_> {
+    fn is_revoked(&self, serial: &str, _fingerprint: &str) -> bool {
+        serial == self.0
+    }
+}
+
 #[test]
 fn high_trust_route_denies_software_bound_device() {
     let decision = software_decision();
@@ -117,7 +129,7 @@ fn high_trust_route_denies_software_bound_device() {
     let context = DeviceTrustContext::new(decision.clone(), mtls.clone())
         .with_bound_user_session(bound_session(&mtls, decision.tier()));
 
-    let actual = policy(DeviceTrustRequirement::hardware_backed()).evaluate(Some(&context));
+    let actual = evaluate_now(policy(DeviceTrustRequirement::hardware_backed()), &context);
 
     assert_eq!(
         actual,
@@ -134,12 +146,187 @@ fn high_trust_route_allows_hardware_bound_session() {
     let context = DeviceTrustContext::new(decision.clone(), mtls.clone())
         .with_bound_user_session(bound_session(&mtls, decision.tier()));
 
-    let actual = policy(DeviceTrustRequirement::hardware_backed()).evaluate(Some(&context));
+    let actual = evaluate_now(policy(DeviceTrustRequirement::hardware_backed()), &context);
 
     assert_eq!(
         actual,
         Decision::Allow {
             obligations: vec!["device-trust:hardware-backed".to_owned()]
+        }
+    );
+}
+
+#[test]
+fn high_trust_route_rejects_expired_mtls_certificate() {
+    let now = OffsetDateTime::now_utc();
+    let decision = hardware_decision();
+    let mtls = MtlsClientIdentity::new(
+        "serial-expired",
+        "fp-expired",
+        now - Duration::days(30),
+        now,
+        true,
+    );
+    let context = DeviceTrustContext::new(decision.clone(), mtls.clone())
+        .with_bound_user_session(bound_session(&mtls, decision.tier()));
+
+    let actual = policy(DeviceTrustRequirement::hardware_backed()).evaluate(
+        Some(&context),
+        now,
+        &NoMtlsRevocations,
+    );
+
+    assert_eq!(
+        actual,
+        Decision::Deny {
+            reason: DenyReason::DeviceTrustExpired
+        }
+    );
+}
+
+#[test]
+fn high_trust_route_rejects_expired_bound_user_session() {
+    let now = OffsetDateTime::now_utc();
+    let decision = hardware_decision();
+    let mtls = mtls_identity("serial-a", "fp-a", true);
+    let expired_session = BoundUserSession::new(
+        "bus_expired_session",
+        &identity(),
+        DeviceSessionBinding::new(
+            mtls.serial.clone(),
+            mtls.fingerprint.clone(),
+            decision.tier(),
+        ),
+        now - Duration::hours(2),
+        now,
+    );
+    let context = DeviceTrustContext::new(decision, mtls).with_bound_user_session(expired_session);
+
+    let actual = policy(DeviceTrustRequirement::hardware_backed()).evaluate(
+        Some(&context),
+        now,
+        &NoMtlsRevocations,
+    );
+
+    assert_eq!(
+        actual,
+        Decision::Deny {
+            reason: DenyReason::DeviceTrustExpired
+        }
+    );
+}
+
+#[test]
+fn high_trust_route_rejects_not_yet_valid_mtls_certificate() {
+    let now = OffsetDateTime::now_utc();
+    let decision = hardware_decision();
+    let mtls = MtlsClientIdentity::new(
+        "serial-future",
+        "fp-future",
+        now + Duration::seconds(1),
+        now + Duration::days(30),
+        true,
+    );
+    let context = DeviceTrustContext::new(decision.clone(), mtls.clone())
+        .with_bound_user_session(bound_session(&mtls, decision.tier()));
+
+    let actual = policy(DeviceTrustRequirement::hardware_backed()).evaluate(
+        Some(&context),
+        now,
+        &NoMtlsRevocations,
+    );
+
+    assert_eq!(
+        actual,
+        Decision::Deny {
+            reason: DenyReason::DeviceTrustNotYetValid
+        }
+    );
+}
+
+#[test]
+fn high_trust_route_rejects_lookup_revoked_mtls_certificate() {
+    let now = OffsetDateTime::now_utc();
+    let decision = hardware_decision();
+    let mtls = mtls_identity("serial-revoked", "fp-revoked", true);
+    let context = DeviceTrustContext::new(decision.clone(), mtls.clone())
+        .with_bound_user_session(bound_session(&mtls, decision.tier()));
+
+    let actual = policy(DeviceTrustRequirement::hardware_backed()).evaluate(
+        Some(&context),
+        now,
+        &RevokedSerial("serial-revoked"),
+    );
+
+    assert_eq!(
+        actual,
+        Decision::Deny {
+            reason: DenyReason::DeviceTrustRevoked
+        }
+    );
+}
+
+#[test]
+fn high_trust_route_rejects_future_bound_user_session() {
+    let now = OffsetDateTime::now_utc();
+    let decision = hardware_decision();
+    let mtls = mtls_identity("serial-a", "fp-a", true);
+    let future_session = BoundUserSession::new(
+        "bus_future_session",
+        &identity(),
+        DeviceSessionBinding::new(
+            mtls.serial.clone(),
+            mtls.fingerprint.clone(),
+            decision.tier(),
+        ),
+        now + Duration::seconds(1),
+        now + Duration::hours(1),
+    );
+    let context = DeviceTrustContext::new(decision, mtls).with_bound_user_session(future_session);
+
+    let actual = policy(DeviceTrustRequirement::hardware_backed()).evaluate(
+        Some(&context),
+        now,
+        &NoMtlsRevocations,
+    );
+
+    assert_eq!(
+        actual,
+        Decision::Deny {
+            reason: DenyReason::DeviceTrustNotYetValid
+        }
+    );
+}
+
+#[test]
+fn high_trust_route_rejects_malformed_bound_user_session_lifetime() {
+    let now = OffsetDateTime::now_utc();
+    let decision = hardware_decision();
+    let mtls = mtls_identity("serial-a", "fp-a", true);
+    let malformed_session = BoundUserSession::new(
+        "bus_malformed_session",
+        &identity(),
+        DeviceSessionBinding::new(
+            mtls.serial.clone(),
+            mtls.fingerprint.clone(),
+            decision.tier(),
+        ),
+        now - Duration::minutes(1),
+        now - Duration::minutes(1),
+    );
+    let context =
+        DeviceTrustContext::new(decision, mtls).with_bound_user_session(malformed_session);
+
+    let actual = policy(DeviceTrustRequirement::hardware_backed()).evaluate(
+        Some(&context),
+        now,
+        &NoMtlsRevocations,
+    );
+
+    assert_eq!(
+        actual,
+        Decision::Deny {
+            reason: DenyReason::DeviceTrustExpired
         }
     );
 }
@@ -152,8 +339,10 @@ fn low_trust_route_allows_ci_only_in_test_profile() {
         .with_bound_user_session(bound_session(&mtls, decision.tier()))
         .with_profile(DeviceTrustProfile::Test);
 
-    let actual =
-        policy(DeviceTrustRequirement::software_bound_test_only()).evaluate(Some(&context));
+    let actual = evaluate_now(
+        policy(DeviceTrustRequirement::software_bound_test_only()),
+        &context,
+    );
 
     assert_eq!(
         actual,
@@ -171,8 +360,10 @@ fn low_trust_route_denies_ci_identity_in_production_profile() {
         .with_bound_user_session(bound_session(&mtls, decision.tier()))
         .with_profile(DeviceTrustProfile::Production);
 
-    let actual =
-        policy(DeviceTrustRequirement::software_bound_test_only()).evaluate(Some(&context));
+    let actual = evaluate_now(
+        policy(DeviceTrustRequirement::software_bound_test_only()),
+        &context,
+    );
 
     assert_eq!(
         actual,
@@ -190,7 +381,7 @@ fn revoked_device_trust_context_denies_before_route_policy() {
         .with_bound_user_session(bound_session(&mtls, decision.tier()))
         .with_revoked_session(true);
 
-    let actual = policy(DeviceTrustRequirement::hardware_backed()).evaluate(Some(&context));
+    let actual = evaluate_now(policy(DeviceTrustRequirement::hardware_backed()), &context);
 
     assert_eq!(
         actual,
@@ -207,7 +398,7 @@ fn untrusted_edge_metadata_is_rejected_as_header_spoofing() {
     let context = DeviceTrustContext::new(decision.clone(), mtls.clone())
         .with_bound_user_session(bound_session(&mtls, decision.tier()));
 
-    let actual = policy(DeviceTrustRequirement::hardware_backed()).evaluate(Some(&context));
+    let actual = evaluate_now(policy(DeviceTrustRequirement::hardware_backed()), &context);
 
     assert_eq!(
         actual,
@@ -225,7 +416,7 @@ fn mismatched_bound_user_session_is_rejected() {
     let context = DeviceTrustContext::new(decision.clone(), mtls)
         .with_bound_user_session(bound_session(&other_mtls, decision.tier()));
 
-    let actual = policy(DeviceTrustRequirement::hardware_backed()).evaluate(Some(&context));
+    let actual = evaluate_now(policy(DeviceTrustRequirement::hardware_backed()), &context);
 
     assert_eq!(
         actual,
@@ -243,6 +434,7 @@ mod actix_adapter {
     use secure_authz::actix::DeviceTrustTransform;
     use std::future::{ready, Future, Ready};
     use std::pin::Pin;
+    use std::sync::Arc;
 
     #[derive(Clone, Default)]
     struct Context {
@@ -309,9 +501,10 @@ mod actix_adapter {
     async fn actix_device_trust_transform_allows_trusted_context() {
         let srv = test::init_service(
             App::new()
-                .wrap(DeviceTrustTransform::new(policy(
-                    DeviceTrustRequirement::hardware_backed(),
-                )))
+                .wrap(DeviceTrustTransform::new(
+                    policy(DeviceTrustRequirement::hardware_backed()),
+                    Arc::new(NoMtlsRevocations),
+                ))
                 .wrap(Context {
                     device_trust: Some(hardware_context(true)),
                 })
@@ -328,9 +521,10 @@ mod actix_adapter {
     async fn actix_device_trust_transform_denies_missing_context() {
         let srv = test::init_service(
             App::new()
-                .wrap(DeviceTrustTransform::new(policy(
-                    DeviceTrustRequirement::hardware_backed(),
-                )))
+                .wrap(DeviceTrustTransform::new(
+                    policy(DeviceTrustRequirement::hardware_backed()),
+                    Arc::new(NoMtlsRevocations),
+                ))
                 .wrap(Context::default())
                 .route("/", web::get().to(inner)),
         )
@@ -345,11 +539,32 @@ mod actix_adapter {
     async fn actix_device_trust_transform_denies_untrusted_edge_context() {
         let srv = test::init_service(
             App::new()
-                .wrap(DeviceTrustTransform::new(policy(
-                    DeviceTrustRequirement::hardware_backed(),
-                )))
+                .wrap(DeviceTrustTransform::new(
+                    policy(DeviceTrustRequirement::hardware_backed()),
+                    Arc::new(NoMtlsRevocations),
+                ))
                 .wrap(Context {
                     device_trust: Some(hardware_context(false)),
+                })
+                .route("/", web::get().to(inner)),
+        )
+        .await;
+
+        let resp = test::call_service(&srv, test::TestRequest::get().uri("/").to_request()).await;
+
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[actix_web::test]
+    async fn actix_device_trust_transform_denies_revoked_certificate() {
+        let srv = test::init_service(
+            App::new()
+                .wrap(DeviceTrustTransform::new(
+                    policy(DeviceTrustRequirement::hardware_backed()),
+                    Arc::new(RevokedSerial("serial-a")),
+                ))
+                .wrap(Context {
+                    device_trust: Some(hardware_context(true)),
                 })
                 .route("/", web::get().to(inner)),
         )

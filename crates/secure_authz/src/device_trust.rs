@@ -2,7 +2,10 @@
 
 use secure_device_trust::{DeviceTrustDecision, DeviceTrustOutcome, TrustTier};
 use secure_identity::BoundUserSession;
-use secure_network::MtlsClientIdentity;
+use secure_network::{MtlsClientIdentity, MtlsClientIdentityStatus, MtlsRevocationLookup};
+use time::OffsetDateTime;
+
+pub use secure_network::NoMtlsRevocations;
 
 use crate::action::Action;
 use crate::decision::{Decision, DenyReason};
@@ -202,22 +205,45 @@ impl DeviceTrustRoutePolicy {
         &self.requirement
     }
 
-    /// Evaluates the route policy against optional device-trust context.
-    pub fn evaluate(&self, context: Option<&DeviceTrustContext>) -> Decision {
-        evaluate_requirement(context, &self.requirement)
+    /// Evaluates the route policy at `now` using the authoritative certificate
+    /// revocation lookup.
+    ///
+    /// The lookup is required on every decision so a cloned device-trust
+    /// context cannot preserve authority after certificate revocation.
+    pub fn evaluate(
+        &self,
+        context: Option<&DeviceTrustContext>,
+        now: OffsetDateTime,
+        revocation: &dyn MtlsRevocationLookup,
+    ) -> Decision {
+        evaluate_requirement(context, &self.requirement, now, revocation)
     }
 }
 
 fn evaluate_requirement(
     context: Option<&DeviceTrustContext>,
     requirement: &DeviceTrustRequirement,
+    now: OffsetDateTime,
+    revocation: &dyn MtlsRevocationLookup,
 ) -> Decision {
     let Some(context) = context else {
         return deny(DenyReason::DeviceTrustRequired);
     };
 
-    if !context.mtls.trusted_edge {
-        return deny(DenyReason::UntrustedDeviceMetadata);
+    match context.mtls.validate_at(now, revocation) {
+        MtlsClientIdentityStatus::Valid => {}
+        MtlsClientIdentityStatus::UntrustedEdge => {
+            return deny(DenyReason::UntrustedDeviceMetadata);
+        }
+        MtlsClientIdentityStatus::Revoked => {
+            return deny(DenyReason::DeviceTrustRevoked);
+        }
+        MtlsClientIdentityStatus::NotYetValid => {
+            return deny(DenyReason::DeviceTrustNotYetValid);
+        }
+        MtlsClientIdentityStatus::Expired => {
+            return deny(DenyReason::DeviceTrustExpired);
+        }
     }
 
     if context.revoked_session || context.decision.outcome() == DeviceTrustOutcome::Denied {
@@ -228,6 +254,12 @@ fn evaluate_requirement(
         let Some(session) = &context.bound_user_session else {
             return deny(DenyReason::DeviceTrustRequired);
         };
+        if session.expires_at() <= session.created_at() || now >= session.expires_at() {
+            return deny(DenyReason::DeviceTrustExpired);
+        }
+        if now < session.created_at() {
+            return deny(DenyReason::DeviceTrustNotYetValid);
+        }
         if !session.is_bound_to(&context.mtls) {
             return deny(DenyReason::DeviceSessionBindingMismatch);
         }

@@ -9,6 +9,8 @@ client/server flow before Sunlit Guardian relies on them.
 1. Run the library contract tests:
    - `cargo test -p secure_authz --test e2e_sunlit_ndt_m4 --all-features`
    - `cargo test -p secure_identity -p secure_authz -p secure_network --all-features`
+   - confirm authorization rejects expired/not-yet-valid/revoked mTLS,
+     expired/future bound sessions, and malformed session lifetimes
 2. Call the reusable ZeroTrustAuth workflow:
    - `kerberosmansour/ZeroTrustAuth/.github/workflows/zero-trust-auth-external.yml@5a24e4115074f30e2372835fea30806a897704c3`
    - pass `ci_bootstrap_issuer_url`, `enrollment_url`, and `api_url` for real
@@ -36,6 +38,11 @@ GitHub Actions
 No production client private key belongs in GitHub secrets. The CI bootstrap
 issuer must validate the GitHub OIDC token and return short-lived CI-scoped
 bootstrap material that can only enroll test session certificates.
+
+The origin authorization adapter must call `DeviceTrustRoutePolicy::evaluate`
+with one current UTC value and its authoritative `MtlsRevocationLookup` for each
+request. `DeviceTrustTransform::new` requires that lookup. Do not use the
+reference service's `NoMtlsRevocations` fixture in this external path.
 
 ## Guardian Handoff
 

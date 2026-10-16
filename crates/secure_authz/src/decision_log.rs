@@ -74,6 +74,8 @@ fn deny_reason_code(reason: &DenyReason) -> &'static str {
         DenyReason::DeviceTrustRequired => "DEVICE_TRUST_REQUIRED",
         DenyReason::DeviceTrustTierTooLow => "DEVICE_TRUST_TIER_TOO_LOW",
         DenyReason::DeviceTrustRevoked => "DEVICE_TRUST_REVOKED",
+        DenyReason::DeviceTrustExpired => "DEVICE_TRUST_EXPIRED",
+        DenyReason::DeviceTrustNotYetValid => "DEVICE_TRUST_NOT_YET_VALID",
         DenyReason::UntrustedDeviceMetadata => "UNTRUSTED_DEVICE_METADATA",
         DenyReason::DeviceSessionBindingMismatch => "DEVICE_SESSION_BINDING_MISMATCH",
         DenyReason::TestTrustProfileRequired => "TEST_TRUST_PROFILE_REQUIRED",
