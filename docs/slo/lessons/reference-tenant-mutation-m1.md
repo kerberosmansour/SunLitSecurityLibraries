@@ -21,6 +21,9 @@ transaction boundary for this in-memory reference service.
 - A single `resource_for_item` helper keeps GET and both mutations aligned on the
   same resource identity and future owner-aware policy inputs.
 - Verifying the stored representation after denial prevented a status-only fix.
+- Exact-head CI, merge-tree comparison and an exact merged-main Codex Security
+  scan connected the local regression evidence to the immutable deployed source
+  without treating unrelated findings as evidence against this scoped repair.
 
 ## Reusable rule
 
@@ -32,5 +35,6 @@ and mutation in one transaction or versioned state transition.
 
 The reference service deliberately uses loopback development authentication and
 an in-memory store. Production examples should demonstrate the same invariant
-with trusted identity and datastore transactions. Other findings from the
-whole-repository scan remain separate bounded milestones.
+with trusted identity and datastore transactions. The exact merged-main scan
+retained 37 unrelated findings; each remains separate bounded work, including
+the reference router's caller-supplied development identity boundary.

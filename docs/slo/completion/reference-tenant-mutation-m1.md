@@ -24,10 +24,17 @@
 - Supplementary Semgrep Rust/OWASP and secrets scans: zero findings/errors over
   792 tracked files.
 - No dependency, manifest, lockfile, version, release or workflow change.
+- Implementation PR #154 passed 33 exact-head checks and merged as the verified
+  commit `1beb2fe7915378ee9f7640909528ee6ef8657357`; its tree exactly matches the
+  signed reviewed head.
+- Exact merged-main Codex Security run
+  `wfr_c456201e84a7e0aa5a30c6dc00a51653ea5717b5bc87ec15c0c80517da8c85b2`
+  completed without a validation warning. Its complete, no-exclusion report
+  omits the frozen tenant-mutation finding and affected route path.
 
 ## Shipping handoff
 
-Local M1 verification is complete. Exact-head CI, verified merge inspection and
-an exact merged-main Codex Security rescan remain mandatory before final closure.
+M1 is complete. The full merged-main scan retained 37 unrelated findings (2
+high, 34 medium and 1 low); they remain separate bounded defensive milestones.
 This in-tree reference service is not published to crates.io, so the milestone
 does not change a package version or publish an artifact.

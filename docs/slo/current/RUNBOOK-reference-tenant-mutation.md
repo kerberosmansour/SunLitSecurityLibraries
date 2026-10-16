@@ -74,7 +74,7 @@ changing item tenant/owner during update, or editing outside the exact list.
 
 | Milestone | Status | Started | Finished |
 |---|---|---|---|
-| M1 authoritative tenant-bound item mutations | locally verified; exact-head CI and merged-main scan pending | 2026-10-16 | — |
+| M1 authoritative tenant-bound item mutations | complete | 2026-10-16 | 2026-10-16 |
 
 The user's standing instruction to continue autonomously with the SLO skills and
 publish when needed is the confirmation basis for this milestone and allow-list.
@@ -88,4 +88,4 @@ publish when needed is the confirmation basis for this milestone and allow-list.
 | Compatibility | locked all-feature workspace tests and doctests | pass |
 | Static/docs | workspace all-target/all-feature Clippy, zero-warning rustdoc, rustfmt and `git diff --check`; Semgrep Rust/OWASP and secrets | pass; 0 findings/errors |
 | Supply chain | cargo audit, locked cargo-deny, locked cargo-vet and official pinned OSV 2.7.0 gate | pass; 6 locks/1,448 packages, 0 malicious, four unchanged vulnerability records, dependency graph byte-unchanged |
-| Shipping | exact-head CI, verified merge inspection and exact merged-main Codex Security rescan | pending |
+| Shipping | PR #154; 33 exact-head checks; signed reviewed head `f6d019ed5dc7966f3a4af3b258ffed10440f8ba4`; verified squash merge `1beb2fe7915378ee9f7640909528ee6ef8657357`; exact merged-main scan `wfr_c456201e84a7e0aa5a30c6dc00a51653ea5717b5bc87ec15c0c80517da8c85b2` | pass: frozen title and route path absent; complete repository coverage, no exclusions |
