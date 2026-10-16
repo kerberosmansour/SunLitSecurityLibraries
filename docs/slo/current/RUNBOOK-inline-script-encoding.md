@@ -81,7 +81,7 @@ implemented, or editing outside the exact allow-list.
 
 | Milestone | Status | Started | Finished |
 |---|---|---|---|
-| M1 inline-script string and JSON guidance repair | locally verified; exact-head CI and merged-main scan pending | 2026-10-16 | — |
+| M1 inline-script string and JSON guidance repair | complete | 2026-10-16 | 2026-10-16 |
 
 The user's standing instruction to continue autonomously with the SLO skills and
 publish when needed is the confirmation basis for this milestone and allow-list.
@@ -98,4 +98,5 @@ publish when needed is the confirmation basis for this milestone and allow-list.
 | OSV | official pinned OSV-Scanner 2.7.0; 6 locks, 1,448 package occurrences; JSON SHA-256 `6cea97a78ce4454665abdde3ede39bbd5f76050c30914613c59f1de2a4053ed0` | 0 malicious findings; four unchanged tracked vulnerability findings |
 | SAST/secrets | Semgrep Rust/OWASP SHA-256 `d7abc8addd7de8e578da7c2bc43f65bc19717852870f37fdb05a852d4b483837`; secrets SHA-256 `99f0b65f231acfeb2fe21270e58d0706ca1408bcc81f58eaabedea29bf80c73f` | 0 findings/errors |
 | Dependency graph | manifests and lockfiles byte-unchanged | pass |
-| Shipping | exact-head CI, merge verification and exact merged-main Codex Security rescan | pending |
+| Shipping | PR #152: 33 exact-head checks; GitHub-verified merge `6f1da2a1604b64586d8b453d03297329ecb92a32`, parent `1df3aef70ea240d5b5d14401baa5ac7a4dfb1af3`, tree equal to reviewed head | pass |
+| Codex Security | exact-merge run `wfr_7372fe361857e9d66b8faddc5128ebbb58cf0c13f95bae504b0b9e72c5637836`; report SHA-256 `8c148350b6a38a212f28194ca22dd74bdf41418ee5bbe3533148dd1851043f12`; findings SHA-256 `89dc929a5f94135d17890a6b628748afa0c263c2a35e0ad8d112f3b7af4c4cf2` | both frozen titles absent; no target-path finding; 27 unrelated findings queued |

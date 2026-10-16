@@ -41,5 +41,10 @@ The smoke service's older `JsStringEncoder` plus `JsonEncoder` composition is
 safe because it changes every `</` prefix before HTML parsing, but the new
 single-purpose type would express that route more clearly. Its route and tests
 were outside this confirmed allow-list, so the cleanup remains visible for a
-later bounded milestone. The exact merged-main scan will determine whether the
-two report findings are fully closed or need a corrective iteration.
+later bounded milestone.
+
+The exact merged-main scan closed both contracted findings and also produced a
+larger unrelated queue. Treat a successful targeted rescan and whole-repository
+security health as separate claims: this milestone can close, while the 27 new
+findings and the scan's explicitly partial inventory coverage still require
+their own bounded defensive work.
