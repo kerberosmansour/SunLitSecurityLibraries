@@ -1,10 +1,10 @@
 # Inline-script encoding M1 verification
 
-## Initial result
+## Final result
 
-M1 passes local verification. The result is provisional until the implementation
-PR passes exact-head CI and an exact merged-main Codex Security scan confirms
-that both frozen findings are absent.
+M1 passes local verification, exact-head CI, verified merge inspection and the
+exact merged-main Codex Security rescan. Both frozen findings are absent from
+the complete report and findings artifact.
 
 ## Acceptance evidence
 
@@ -48,6 +48,43 @@ absence of unknown malware.
 Both Semgrep scans completed with zero findings and zero parse errors over the
 changed Rust surfaces and documentation. Repository CI remains authoritative
 for its separately admitted Semgrep toolchain.
+
+## Shipping and independent rescan evidence
+
+Implementation PR #152 reviewed head
+`38beb10d1f1a7992b3925fba35e2fe568e264168` and passed all 33 reported checks.
+GitHub squash-merged it as verified commit
+`6f1da2a1604b64586d8b453d03297329ecb92a32`, with sole parent
+`1df3aef70ea240d5b5d14401baa5ac7a4dfb1af3` and tree
+`31012826b1ca5c2c0a3d1933b9f45f9b1ad634d3`. That tree is identical to the
+reviewed head tree, and the commit retains the DCO sign-off.
+
+Codex Security run
+`wfr_7372fe361857e9d66b8faddc5128ebbb58cf0c13f95bae504b0b9e72c5637836`
+completed without a validation warning against that exact merge. Its complete,
+paginated artifacts establish:
+
+- report SHA-256
+  `8c148350b6a38a212f28194ca22dd74bdf41418ee5bbe3533148dd1851043f12`;
+- findings SHA-256
+  `89dc929a5f94135d17890a6b628748afa0c263c2a35e0ad8d112f3b7af4c4cf2`;
+- scan-manifest SHA-256
+  `0ffc25406474f601cc4a83818828d39e2fd3d14712df0ea2f87c60a133ec9732`;
+- coverage SHA-256
+  `e578799fe2096016b7b56a5ac6871b2885f58861665bda604754c02d7fc41437`.
+
+Neither `JsStringEncoder leaves script-closing tags intact despite inline-script
+guidance` nor `Integration example inserts raw user-derived text as executable
+JavaScript` appears in the report or findings artifact. The report also names
+none of `crates/secure_output/src/js.rs`, `crates/secure_output/src/json.rs` or
+`docs/dev-guide/integration-guide.md` as a finding path. The scan reported 27
+unrelated defensive findings (20 medium and seven low); they remain in the
+separately sequenced remediation queue rather than altering this frozen scope.
+
+The scan's repository coverage is explicitly partial: 246 of 810 inventory
+files received full review receipts. This closure therefore establishes the two
+contracted findings at the exact merge, not a claim that the entire repository
+is free of vulnerabilities.
 
 ## Residual limits
 

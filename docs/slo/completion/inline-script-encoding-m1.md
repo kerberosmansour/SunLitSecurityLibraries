@@ -24,10 +24,19 @@
   advisories, four unchanged tracked vulnerability records, admission exit 0.
 - Supplementary Semgrep Rust/OWASP and secrets scans: zero findings/errors.
 - No dependency, manifest, lockfile, version, release or workflow change.
+- Implementation PR #152 passed 33 exact-head checks and merged as GitHub-
+  verified commit `6f1da2a1604b64586d8b453d03297329ecb92a32`; its tree exactly matches the
+  reviewed head tree.
+- The exact-merge Codex Security rescan completed without a validation warning.
+  Its full report and findings artifact contain neither frozen XSS title and no
+  finding path in the three repaired source/guide files.
 
-## Shipping handoff
+## Shipping result
 
-Local M1 verification is complete. Exact-head CI, verified merge inspection and
-an exact merged-main Codex Security rescan remain mandatory before final closure.
+M1 is complete. The rescan identified 27 unrelated defensive findings (20
+medium and seven low), which are inputs to the next bounded remediation
+milestones. Its coverage was partial, with full review receipts for 246 of 810
+inventory files, so the closure is limited to the two contracted findings.
+
 This milestone does not publish crates or change the coordinated release
 version; publication remains governed by its separately confirmed runbook.
