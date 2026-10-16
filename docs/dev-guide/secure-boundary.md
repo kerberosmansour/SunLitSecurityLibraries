@@ -368,8 +368,15 @@ SafeUrl::try_from("http://127.0.0.1/admin").unwrap_err();   // ✗ loopback
 SafeUrl::try_from("http://169.254.169.254/").unwrap_err();   // ✗ link-local (AWS metadata)
 SafeUrl::try_from("http://10.0.0.1/internal").unwrap_err();  // ✗ private IP
 SafeUrl::try_from("http://192.168.1.1/").unwrap_err();       // ✗ private IP
+SafeUrl::try_from("http://2130706433/").unwrap_err();        // ✗ decimal loopback
+SafeUrl::try_from("http://127.1/").unwrap_err();             // ✗ shortened loopback
+SafeUrl::try_from("https://user@example.com/").unwrap_err(); // ✗ credentials
 SafeUrl::try_from("ftp://files.example.com").unwrap_err();   // ✗ non-http(s) scheme
 ```
+
+`SafeUrl` stores the canonical value it classified. Before connecting to a
+hostname, validate every resolver answer with `SafeUrl::validate_resolved_ip` and
+pin the approved address in the client connector to prevent DNS rebinding.
 
 ### `SafeCommandArg` — OS Command Injection Prevention
 

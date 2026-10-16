@@ -19,6 +19,9 @@
 #[cfg(any(feature = "axum", feature = "actix-web"))]
 use serde::de::DeserializeOwned;
 
+#[cfg(feature = "axum")]
+use bytes::Bytes;
+
 #[cfg(any(feature = "axum", feature = "actix-web"))]
 use crate::{
     attack_signal::{BoundaryViolation, ViolationKind},
@@ -194,6 +197,32 @@ where
     Ok(value)
 }
 
+/// Collects an Axum request body while enforcing `max_body_bytes` during frame
+/// consumption. This must remain the shared collector for custom Axum body
+/// extractors so a post-allocation length check cannot be mistaken for a
+/// transport bound.
+#[cfg(feature = "axum")]
+pub(crate) async fn collect_limited_body(
+    body: axum::body::Body,
+    max_body_bytes: usize,
+) -> Result<Bytes, BoundaryRejection> {
+    use std::error::Error as _;
+
+    axum::body::to_bytes(body, max_body_bytes)
+        .await
+        .map_err(|error| {
+            if error
+                .source()
+                .is_some_and(|source| source.is::<http_body_util::LengthLimitError>())
+            {
+                BoundaryViolation::new(ViolationKind::BodyTooLarge, "body_too_large").emit();
+                BoundaryRejection::BodyTooLarge
+            } else {
+                BoundaryRejection::MalformedBody
+            }
+        })
+}
+
 /// Runs the syntactic+semantic `SecureValidate` pipeline against a value
 /// that is already parsed (e.g. via axum's `Query` or `Path` extractor).
 ///
@@ -220,16 +249,15 @@ where
 #[cfg(feature = "axum")]
 mod axum_impl {
     use super::{
-        validate_json_bytes, validate_parsed, BoundaryRejection, BoundaryViolation,
-        DeserializeOwned, RequestLimits, SecurePath, SecureQuery, SecureValidate,
-        ValidationContext, ViolationKind,
+        collect_limited_body, validate_json_bytes, validate_parsed, BoundaryRejection,
+        BoundaryViolation, DeserializeOwned, RequestLimits, SecurePath, SecureQuery,
+        SecureValidate, ValidationContext, ViolationKind,
     };
     use crate::attack_signal;
     use axum::{
         extract::{FromRequest, FromRequestParts, Path, Query, Request},
         http::request::Parts,
     };
-    use http_body_util::BodyExt;
 
     impl<T, S> FromRequest<S> for super::SecureJson<T>
     where
@@ -263,13 +291,7 @@ mod axum_impl {
                 return Err(BoundaryRejection::InvalidContentType);
             }
 
-            // Collect body bytes
-            let bytes = req
-                .into_body()
-                .collect()
-                .await
-                .map_err(|_| BoundaryRejection::MalformedBody)?
-                .to_bytes();
+            let bytes = collect_limited_body(req.into_body(), limits.max_body_bytes).await?;
 
             let value = validate_json_bytes::<T>(&bytes, &limits, &ctx)?;
             Ok(super::SecureJson::from_validated(value))

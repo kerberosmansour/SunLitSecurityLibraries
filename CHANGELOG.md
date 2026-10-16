@@ -9,6 +9,17 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ## Unreleased
 
+### Security
+
+- Harden URI output validation against browser control normalization and HTML
+  attribute breakout; copyable examples now compose URI validation with HTML
+  attribute encoding.
+- Enforce Axum JSON/XML request limits while streaming the body and honor
+  request-specific XML limits, preventing full over-limit allocation.
+- Parse and retain `SafeUrl` values with the locked WHATWG URL implementation,
+  rejecting credentials, fragments, backslashes and alternate numeric protected
+  hosts; add a resolved-address policy helper for DNS pinning integrations.
+
 ### Dependency assurance
 
 - Keep Semgrep's resolver-consistent MCP 1.29.0 graph while enforcing a bounded

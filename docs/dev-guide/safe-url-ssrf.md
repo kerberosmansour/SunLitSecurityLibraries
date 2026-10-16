@@ -15,7 +15,9 @@ Server-Side Request Forgery happens when an attacker persuades your service to f
 
 ## The 12-CIDR blocked set
 
-`SafeUrl::try_from(&str)` rejects any URL whose host string parses as an IP inside any of these ranges:
+`SafeUrl::try_from(&str)` parses with the same WHATWG URL model used by common
+Rust HTTP clients, canonicalizes the result, and rejects any typed IP host inside
+these ranges:
 
 | CIDR | What it is | Why it's blocked |
 |---|---|---|
@@ -34,7 +36,9 @@ Server-Side Request Forgery happens when an attacker persuades your service to f
 
 These are all on Sunlit Guardian's v3-K2 required blocked list, derived from Google / OWASP / CVE landscape data. Each CIDR has a named regression test in [`sg_gate_a_safeurl_cidrs.rs`](../../crates/secure_boundary/tests/sg_gate_a_safeurl_cidrs.rs); any future edit that removes one branch fails a specific named test.
 
-Allowed schemes: `http` and `https` only. Anything else (`javascript:`, `file://`, `data:`, `gopher://`, …) is rejected.
+Allowed schemes: `http` and `https` only. Credentials, fragments, backslashes,
+missing hosts, alternate numeric forms that normalize to protected IPs, and
+anything else (`javascript:`, `file://`, `data:`, `gopher://`, …) are rejected.
 
 ## How to use `SafeUrl` (copy-paste)
 
@@ -50,8 +54,13 @@ let safe = match SafeUrl::try_from(input) {
     }
 };
 
-let client = reqwest::Client::new();
-let resp = client.get(safe.as_inner()).send().await?;
+// Resolve with your bounded resolver, reject every protected answer, then pin
+// one approved address in the connector so a second lookup cannot rebind it.
+let addresses = bounded_resolve(safe.as_inner()).await?;
+for address in &addresses {
+    SafeUrl::validate_resolved_ip(*address)?;
+}
+let resp = send_with_pinned_address(&safe, addresses[0]).await?;
 ```
 
 Always validate at the **entry point** (deserializer or DTO `SecureValidate`) rather than immediately before the fetch. That way every code path that touches the URL has already been vetted.
@@ -75,13 +84,19 @@ A POST body containing `{"callback":"http://169.254.169.254/"}` now fails at the
 
 ## What `SafeUrl` does NOT do
 
-- **DNS rebinding.** `SafeUrl` only validates the host *string*. If the host is `evil.example.com` and the resolver returns `169.254.169.254` at connect time, `SafeUrl` doesn't catch it. Defense: use a DNS resolver that enforces a public-IP policy, or re-check the resolved `IpAddr` at connect time with the same predicate used here.
+- **DNS rebinding.** `SafeUrl` canonicalizes and validates URL text, but it does
+  not resolve names. Check every resolver answer with
+  `SafeUrl::validate_resolved_ip` and pin an approved address through connection
+  establishment. Checking and then allowing the HTTP client to perform a second
+  lookup is still vulnerable.
 - **SNI/TLS-layer attacks.** `SafeUrl` is a string check. Use `secure_network` for TLS-layer controls (cert pinning, cleartext rejection).
 - **Open redirect.** See [`SafeRedirectUrl`](../../crates/secure_boundary/src/safe_types.rs) — a distinct type that enforces path-only URLs for HTTP redirects.
 
 ## How to extend if you need stricter rules
 
-The classifier (`is_private_ipv4` / `is_private_ipv6`) is private to `secure_boundary`. If you need additional blocked ranges beyond Gate A:
+The classifier is shared by construction-time URL checks and the public
+`validate_resolved_ip` connect-time helper. If you need additional blocked ranges
+beyond Gate A:
 
 1. Add a `#[test]` per new CIDR in `sg_gate_a_safeurl_cidrs.rs` — variant analysis first.
 2. Extend the private functions with the new branch.

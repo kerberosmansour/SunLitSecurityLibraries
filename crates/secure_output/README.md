@@ -41,9 +41,13 @@ assert!(!json.contains("</script>"));
 let url: Cow<str> = UrlEncoder.encode("hello world & friends");
 assert_eq!(url, "hello%20world%20%26%20friends");
 
-// Block dangerous URI schemes before emitting an href/src.
+// Validate the URI, then encode it for the HTML attribute sink.
 let safe = sanitize_uri_scheme("javascript:alert(1)");
 assert!(safe.is_err()); // returns DangerousUriScheme
+
+let href = "https://example.com/path?q=1";
+sanitize_uri_scheme(href)?;
+let encoded_href = HtmlEncoder.encode(href);
 ```
 
 ## What's inside
@@ -59,7 +63,7 @@ assert!(safe.is_err()); // returns DangerousUriScheme
 | `ldap::LdapDnEncoder`     | LDAP Distinguished Name (RFC 4514).                                     |
 | `ldap::LdapFilterEncoder` | LDAP search filter (RFC 4515).                                          |
 | `shell::ShellEncoder`     | POSIX shell argument quoting.                                           |
-| `sanitize_uri_scheme`     | Returns `DangerousUriScheme` for `javascript:`, `data:`, etc.           |
+| `sanitize_uri_scheme`     | Allowlists browser-safe schemes/relative syntax; still requires sink encoding. |
 
 ## Compatibility
 

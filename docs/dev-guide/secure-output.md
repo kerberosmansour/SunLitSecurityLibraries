@@ -184,7 +184,7 @@ sanitize_uri_scheme("/relative/path").unwrap();       // ✓ Ok
 sanitize_uri_scheme("#anchor").unwrap();              // ✓ Ok
 sanitize_uri_scheme("?query=value").unwrap();         // ✓ Ok
 
-// Dangerous schemes — blocked
+// Every unapproved or ambiguous scheme is blocked
 sanitize_uri_scheme("javascript:alert(1)").unwrap_err();  // ✗ XSS
 sanitize_uri_scheme("data:text/html,<script>").unwrap_err(); // ✗ data URI
 sanitize_uri_scheme("vbscript:MsgBox").unwrap_err();    // ✗ vbscript
@@ -194,17 +194,27 @@ sanitize_uri_scheme("blob:http://evil.com").unwrap_err(); // ✗ blob
 // Case-insensitive
 sanitize_uri_scheme("JAVASCRIPT:alert(1)").unwrap_err(); // ✗ still blocked
 sanitize_uri_scheme("JaVaScRiPt:void(0)").unwrap_err();  // ✗ still blocked
+sanitize_uri_scheme("\tjavascript:alert(1)").unwrap_err(); // ✗ browser whitespace
+sanitize_uri_scheme(r#"relative\" onmouseover=\"alert(1)"#).unwrap_err(); // ✗ attribute breakout
 ```
+
+The validator also rejects controls, whitespace, backslashes, quotes, backticks,
+angle brackets, network-path references (`//host`) and unapproved custom schemes.
+It does **not** encode HTML. Encode the validated value for the exact output
+context before rendering it.
 
 ### Using in Templates
 
 ```rust
-use secure_output::sanitize_uri_scheme;
+use secure_output::{HtmlEncoder, OutputEncoder, sanitize_uri_scheme};
 
 fn render_link(user_url: &str) -> String {
     match sanitize_uri_scheme(user_url) {
-        Ok(()) => format!(r#"<a href="{}">Link</a>"#, user_url),
-        Err(e) => format!("<span>Invalid link: blocked scheme '{}'</span>", e.scheme),
+        Ok(()) => {
+            let encoded = HtmlEncoder.encode(user_url);
+            format!(r#"<a href="{encoded}">Link</a>"#)
+        }
+        Err(_) => "<span>Invalid link</span>".to_owned(),
     }
 }
 ```
@@ -222,7 +232,7 @@ fn render_link(user_url: &str) -> String {
 | URL query parameter | `UrlEncoder` | `?search={encoded}` |
 | XML text/attribute | `XmlEncoder` | `<name>{encoded}</name>` |
 | JSON inside `<script>` | `JsonEncoder` | `<script>var d = {encoded};</script>` |
-| `href`/`src` attribute | `sanitize_uri_scheme()` | `<a href="{validated}">` |
+| `href`/`src` attribute | `sanitize_uri_scheme()` then `HtmlEncoder` | `<a href="{encoded}">` |
 | LDAP DN component | `LdapDnEncoder` / `ldap::encode_dn()` | `cn={encoded},dc=example` |
 | LDAP filter value | `LdapFilterEncoder` / `ldap::encode_filter()` | `(uid={encoded})` |
 | OS shell argument | `ShellEncoder` / `shell::encode()` | `command {encoded}` |

@@ -412,9 +412,10 @@ use secure_boundary::safe_types::{
 let path = SafePath::try_from("uploads/image.png")?;          // Ok
 let bad  = SafePath::try_from("../../etc/passwd");             // Err (path_traversal)
 
-// SafeUrl — rejects SSRF targets (private IPs, dangerous schemes)
+// SafeUrl — canonicalizes with a WHATWG parser and rejects SSRF targets
 let url  = SafeUrl::try_from("https://api.example.com")?;     // Ok
 let bad  = SafeUrl::try_from("http://169.254.169.254/");       // Err (ssrf_attempt)
+let alt  = SafeUrl::try_from("http://2130706433/");            // Err (canonical loopback)
 
 // SqlIdentifier — alphanumeric + underscore, max 128 chars
 let col  = SqlIdentifier::try_from("user_name")?;             // Ok
@@ -573,8 +574,10 @@ use secure_output::shell;
 let safe_arg = shell::encode("file; rm -rf /");
 // safe_arg == "'file; rm -rf /'" — single-quoted, semicolon neutralized
 
-// Validate a URI scheme before using it in a redirect or href.
-sanitize_uri_scheme("https://example.com").expect("safe");
+// Validate a URI and separately encode it before using it in an href.
+let href = "https://example.com";
+sanitize_uri_scheme(href).expect("safe");
+let encoded_href = HtmlEncoder.encode(href);
 sanitize_uri_scheme("javascript:alert(1)").expect_err("blocked"); // returns Err
 ```
 

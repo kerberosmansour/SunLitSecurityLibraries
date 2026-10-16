@@ -11,12 +11,12 @@
 #![cfg(feature = "axum")]
 
 use axum::extract::{FromRequest, Request};
-use http_body_util::BodyExt;
 use serde::de::DeserializeOwned;
 
 use crate::{
     attack_signal::{BoundaryViolation, ViolationKind},
     error::BoundaryRejection,
+    extract::collect_limited_body,
     limits::RequestLimits,
     validate::{SecureValidate, ValidationContext},
 };
@@ -43,7 +43,11 @@ where
     type Rejection = BoundaryRejection;
 
     async fn from_request(req: Request, _state: &S) -> Result<Self, Self::Rejection> {
-        let limits = RequestLimits::default();
+        let limits = req
+            .extensions()
+            .get::<RequestLimits>()
+            .cloned()
+            .unwrap_or_default();
         let ctx = ValidationContext::new();
 
         // Stage 1: Content-Type check (application/xml or text/xml)
@@ -59,19 +63,7 @@ where
             return Err(BoundaryRejection::InvalidContentType);
         }
 
-        // Collect body bytes
-        let bytes = req
-            .into_body()
-            .collect()
-            .await
-            .map_err(|_| BoundaryRejection::MalformedBody)?
-            .to_bytes();
-
-        // Stage 1 (cont): Body size limit
-        if bytes.len() > limits.max_body_bytes {
-            BoundaryViolation::new(ViolationKind::BodyTooLarge, "body_too_large").emit();
-            return Err(BoundaryRejection::BodyTooLarge);
-        }
+        let bytes = collect_limited_body(req.into_body(), limits.max_body_bytes).await?;
 
         // Convert to UTF-8 string for processing
         let text = std::str::from_utf8(&bytes).map_err(|_| {
