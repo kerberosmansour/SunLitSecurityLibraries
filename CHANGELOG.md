@@ -11,6 +11,10 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ### Security
 
+- Add a dedicated `InlineScriptStringEncoder` that preserves JavaScript lexical
+  escaping while neutralizing the HTML script raw-text boundary. Clarify that
+  `JsStringEncoder` is for non-HTML JavaScript and that `JsonEncoder` transforms
+  an already serialized JSON document; remove the raw-expression guide example.
 - Harden URI output validation against browser control normalization and HTML
   attribute breakout; copyable examples now compose URI validation with HTML
   attribute encoding.

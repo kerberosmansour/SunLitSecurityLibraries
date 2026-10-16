@@ -4,10 +4,14 @@ use std::borrow::Cow;
 
 use crate::encode::OutputEncoder;
 
-/// Encodes strings for safe inclusion in JSON values embedded in HTML.
+/// Encodes an already serialized JSON document for embedding in HTML.
 ///
 /// Replaces `</` with `<\/` to prevent `</script>` injection when JSON is
 /// embedded directly in HTML `<script>` blocks. Strips null bytes (`\0`).
+///
+/// This encoder does not serialize an arbitrary string or validate JSON grammar.
+/// Establish one complete JSON document with a serializer before applying this
+/// HTML-boundary transformation.
 ///
 /// Returns [`Cow::Borrowed`] when the input needs no encoding.
 ///
@@ -16,8 +20,9 @@ use crate::encode::OutputEncoder;
 /// ```
 /// use secure_output::json;
 ///
-/// let safe = json::encode("</script>");
-/// assert_eq!(safe, "<\\/script>");
+/// let serialized = r#"{"name":"</script>"}"#;
+/// let safe = json::encode(serialized);
+/// assert_eq!(safe, r#"{"name":"<\/script>"}"#);
 ///
 /// let safe = json::encode("safe value");
 /// assert_eq!(safe, "safe value");
@@ -36,7 +41,7 @@ impl OutputEncoder for JsonEncoder {
     }
 }
 
-/// Convenience free function for JSON-in-HTML encoding.
+/// Convenience function for already serialized JSON embedded in HTML.
 ///
 /// Equivalent to `JsonEncoder.encode(input)`.
 ///
@@ -45,7 +50,8 @@ impl OutputEncoder for JsonEncoder {
 /// ```
 /// use secure_output::json;
 ///
-/// assert_eq!(json::encode("</script>"), "<\\/script>");
+/// let serialized = r#"{"name":"</script>"}"#;
+/// assert_eq!(json::encode(serialized), r#"{"name":"<\/script>"}"#);
 /// ```
 #[must_use]
 pub fn encode(input: &str) -> Cow<'_, str> {

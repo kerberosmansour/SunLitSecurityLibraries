@@ -25,7 +25,10 @@ secure_output = "0.4.0"
 ## Quick example
 
 ```rust
-use secure_output::{HtmlEncoder, JsonEncoder, UrlEncoder, sanitize_uri_scheme};
+use secure_output::{
+    HtmlEncoder, InlineScriptStringEncoder, JsonEncoder, UrlEncoder,
+    sanitize_uri_scheme,
+};
 use secure_output::encode::OutputEncoder;
 use std::borrow::Cow;
 
@@ -33,9 +36,14 @@ use std::borrow::Cow;
 let html: Cow<str> = HtmlEncoder.encode("<b>hi</b>");
 assert_eq!(html, "&lt;b&gt;hi&lt;/b&gt;");
 
-// JSON encoding that also escapes </script> for inline-script embedding.
-let json: Cow<str> = JsonEncoder.encode(r#"</script><script>alert(1)</script>"#);
+// Start with one serialized JSON document, then protect the HTML boundary.
+let serialized = r#"{"name":"</script><script>alert(1)</script>"}"#;
+let json: Cow<str> = JsonEncoder.encode(serialized);
 assert!(!json.contains("</script>"));
+
+// A JavaScript string inside an HTML script element has its own context type.
+let inline = InlineScriptStringEncoder.encode("</script><script>alert(1)</script>");
+assert!(!inline.contains('<'));
 
 // URL percent-encoding per RFC 3986.
 let url: Cow<str> = UrlEncoder.encode("hello world & friends");
@@ -55,9 +63,10 @@ let encoded_href = HtmlEncoder.encode(href);
 | Type                      | Encodes for                                                             |
 | ------------------------- | ----------------------------------------------------------------------- |
 | `HtmlEncoder`             | HTML body and attribute context (zero-copy when safe).                  |
-| `JsonEncoder`             | JSON output, including `</script>` defense for inline-script embedding. |
+| `JsonEncoder`             | Already serialized JSON, with `</script>` defense for HTML embedding.  |
 | `UrlEncoder`              | RFC 3986 percent-encoding.                                              |
-| `JsStringEncoder`         | JavaScript string-literal context.                                      |
+| `JsStringEncoder`         | JavaScript string-literal context outside HTML raw-text.                |
+| `InlineScriptStringEncoder` | JavaScript strings inside an HTML `<script>` element.                 |
 | `CssEncoder`              | CSS context via Unicode escape.                                         |
 | `XmlEncoder`              | XML text and attribute context.                                         |
 | `ldap::LdapDnEncoder`     | LDAP Distinguished Name (RFC 4514).                                     |

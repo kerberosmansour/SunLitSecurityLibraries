@@ -222,7 +222,7 @@ fn validate_config() {
 When returning user-derived data in HTML, JSON-in-HTML, or other contexts:
 
 ```rust
-use secure_output::{HtmlEncoder, JsStringEncoder, OutputEncoder, sanitize_uri_scheme};
+use secure_output::{HtmlEncoder, JsonEncoder, OutputEncoder, sanitize_uri_scheme};
 
 // HTML response
 async fn render_profile(username: &str) -> String {
@@ -232,10 +232,13 @@ async fn render_profile(username: &str) -> String {
 }
 
 // JSON embedded in HTML
-async fn render_page_with_data(data: &str) -> String {
-    let enc = secure_output::JsonEncoder;
-    let safe_data = enc.encode(data);
-    format!(r#"<script>var config = {safe_data};</script>"#)
+fn render_page_with_data(
+    data: &impl serde::Serialize,
+) -> Result<String, serde_json::Error> {
+    // Establish JSON grammar first; JsonEncoder is not a serializer.
+    let serialized = serde_json::to_string(data)?;
+    let safe_data = JsonEncoder.encode(&serialized);
+    Ok(format!(r#"<script>var config = {safe_data};</script>"#))
 }
 
 // Validate user-provided URLs before redirect
