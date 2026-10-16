@@ -49,6 +49,7 @@ body:
         - secure_boundary
         - secure_output
         - secure_identity
+        - secure_device_trust
         - secure_authz
         - secure_data
         - secure_network

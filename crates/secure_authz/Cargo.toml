@@ -9,6 +9,8 @@ repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/secure_authz"
 keywords = ["security", "authz", "rbac", "abac", "tenant"]
 
+categories = ["authentication", "web-programming"]
+
 [lib]
 name = "secure_authz"
 

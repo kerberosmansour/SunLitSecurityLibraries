@@ -9,6 +9,8 @@ repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/secure_resilience"
 keywords = ["security", "resilience", "integrity", "runtime"]
 
+categories = ["development-tools"]
+
 [lib]
 name = "secure_resilience"
 

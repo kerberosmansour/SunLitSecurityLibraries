@@ -21,15 +21,15 @@ security_core = "0.4.0"
 
 ## What's inside
 
-| Module | Use it for |
-|---|---|
-| `identity` | `AuthenticatedIdentity` — the canonical "who is making this request" type, consumed by `secure_authz`, `secure_identity`, audit logs. |
-| `classification` | `DataClassification` (Public, Internal, Confidential, PII, Secret) — tag every data flow so logs and serializers can redact. |
-| `severity` | `SecuritySeverity` — standardized event severity for `security_events`, RASP, and SIEM forwarding. |
-| `context` | Correlation context propagated across crates and threads. |
-| `redact` | Redaction primitives so secrets never escape into logs. |
-| `time` | Test-friendly clock abstraction. Inject your own clock in unit tests; production gets `OffsetDateTime::now_utc()`. |
-| `types` | Shared `RequestId`, `TenantId`, `TraceId`, `ActorId` newtypes. |
+| Module           | Use it for                                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `identity`       | `AuthenticatedIdentity` — the canonical "who is making this request" type, consumed by `secure_authz`, `secure_identity`, audit logs. |
+| `classification` | `DataClassification` (Public, Internal, Confidential, PII, Secret) — tag every data flow so logs and serializers can redact.          |
+| `severity`       | `SecuritySeverity` — standardized event severity for `security_events`, RASP, and SIEM forwarding.                                    |
+| `context`        | Correlation context propagated across crates and threads.                                                                             |
+| `redact`         | Redaction primitives so secrets never escape into logs.                                                                               |
+| `time`           | Test-friendly clock abstraction. Inject your own clock in unit tests; production gets `OffsetDateTime::now_utc()`.                    |
+| `types`          | Shared `RequestId`, `TenantId`, `TraceId`, `ActorId` newtypes.                                                                        |
 
 ## Quick example
 
@@ -74,19 +74,19 @@ Alpha. APIs may change before 1.0; pinning to `version = "0.4.0"` is recommended
 
 Part of the [SunLit Security Libraries](https://github.com/kerberosmansour/SunLitSecurityLibraries) workspace:
 
-| Crate | Purpose |
-|---|---|
-| [`security_events`](https://crates.io/crates/security_events) | Security logging and tamper-evident audit chain. |
-| [`secure_errors`](https://crates.io/crates/secure_errors) | Three-layer error model with redaction-safe public errors. |
-| [`secure_output`](https://crates.io/crates/secure_output) | Context-aware output encoders (HTML, JSON, URL, JS, CSS, XML, LDAP, shell). |
-| [`secure_data`](https://crates.io/crates/secure_data) | Secrets, envelope encryption, Argon2id, FIPS, mobile storage. |
-| [`secure_network`](https://crates.io/crates/secure_network) | TLS policy, SPKI pinning, mTLS, cleartext detection. |
-| [`secure_device_trust`](https://crates.io/crates/secure_device_trust) | Native-client device trust and session certificates. |
-| [`secure_resilience`](https://crates.io/crates/secure_resilience) | RASP and environment-detection policy. |
-| [`secure_privacy`](https://crates.io/crates/secure_privacy) | PII classification, consent, retention, pseudonymization. |
-| [`secure_boundary`](https://crates.io/crates/secure_boundary) | Input validation, security headers, boundary protections. |
-| [`secure_identity`](https://crates.io/crates/secure_identity) | JWT/OIDC, MFA, sessions, biometric step-up. |
-| [`secure_authz`](https://crates.io/crates/secure_authz) | Typed deny-by-default authorization with device-trust predicates. |
+| Crate                                                                 | Purpose                                                                     |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [`security_events`](https://crates.io/crates/security_events)         | Security logging and tamper-evident audit chain.                            |
+| [`secure_errors`](https://crates.io/crates/secure_errors)             | Three-layer error model with redaction-safe public errors.                  |
+| [`secure_output`](https://crates.io/crates/secure_output)             | Context-aware output encoders (HTML, JSON, URL, JS, CSS, XML, LDAP, shell). |
+| [`secure_data`](https://crates.io/crates/secure_data)                 | Secrets, envelope encryption, Argon2id, FIPS, mobile storage.               |
+| [`secure_network`](https://crates.io/crates/secure_network)           | TLS policy, SPKI pinning, mTLS, cleartext detection.                        |
+| [`secure_device_trust`](https://crates.io/crates/secure_device_trust) | Native-client device trust and session certificates.                        |
+| [`secure_resilience`](https://crates.io/crates/secure_resilience)     | RASP and environment-detection policy.                                      |
+| [`secure_privacy`](https://crates.io/crates/secure_privacy)           | PII classification, consent, retention, pseudonymization.                   |
+| [`secure_boundary`](https://crates.io/crates/secure_boundary)         | Input validation, security headers, boundary protections.                   |
+| [`secure_identity`](https://crates.io/crates/secure_identity)         | JWT/OIDC, MFA, sessions, biometric step-up.                                 |
+| [`secure_authz`](https://crates.io/crates/secure_authz)               | Typed deny-by-default authorization with device-trust predicates.           |
 
 ## Getting help
 
@@ -101,3 +101,14 @@ Contributions are welcome. Please read [CONTRIBUTING.md](https://github.com/kerb
 ## License
 
 Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-MIT) or [Apache-2.0](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-APACHE) at your option.
+
+## Using this with a coding agent
+
+Use the [consumer integration guide](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/docs/agents/integration.md)
+and its published-version skill reference. Check prerequisites, dependency admission
+and the relevant success and failure-path tests before adopting this package.
+Feedback is optional: share general usage in [Discussions](https://github.com/kerberosmansour/SunLitSecurityLibraries/discussions),
+and use the [integration report](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/new?template=integration_feedback.yml)
+for a concrete blocker or documentation gap. An agent must obtain operator permission
+before posting. Use [private security reporting](https://github.com/kerberosmansour/SunLitSecurityLibraries/security/advisories/new)
+for suspected vulnerabilities. Never share secrets, private code or transcripts.

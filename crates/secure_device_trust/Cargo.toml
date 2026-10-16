@@ -9,6 +9,8 @@ repository = "https://github.com/kerberosmansour/SunLitSecurityLibraries"
 documentation = "https://docs.rs/secure_device_trust"
 keywords = ["security", "device", "trust", "attestation"]
 
+categories = ["development-tools"]
+
 [lib]
 name = "secure_device_trust"
 

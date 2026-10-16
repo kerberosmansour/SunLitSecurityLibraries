@@ -27,21 +27,21 @@ security_events = "0.4.0"
 
 ## What's inside
 
-| Module | Use it for |
-|---|---|
-| `event::SecurityEvent` | The strongly-typed event record (kind, outcome, severity, classification). |
-| `kind::EventKind` | Standardized event categories (auth, authz, data access, network, etc.). |
-| `event::EventOutcome` | `Success`, `Failure`, `Blocked`, `Unknown`. |
-| `event::EventValue::Classified` | Label values carrying their `DataClassification` for explicit RedactionEngine processing. |
-| `audit_chain::AuditChain` | Hash-chained, tamper-evident audit log. Each event commits to its predecessor. |
-| `hmac::HmacEventSigner` | HMAC-seal events for integrity-verified shipping to a remote collector. |
-| `correlation` | Parent/child correlation IDs (`with_parent`, `attach_parent`, `filter_by_parent`). |
-| `redact::RedactionEngine` | Programmatic redaction policy for PII fields. |
-| `hard_deny::HardDenyTargetsLayer` | Whole-subscriber fail-closed boundary for dependency tracing targets. |
-| `mobile_redaction::MobileRedactionEngine` | Stricter mobile-OS log-level enforcement. |
-| `rate_limit` | Drop or aggregate noisy event sources without losing high-severity signals. |
-| `sink` | Pluggable event sinks (stdout, JSON, OTel, HTTP). |
-| `layer` | `tracing` `Layer` so events flow alongside spans. |
+| Module                                    | Use it for                                                                                |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `event::SecurityEvent`                    | The strongly-typed event record (kind, outcome, severity, classification).                |
+| `kind::EventKind`                         | Standardized event categories (auth, authz, data access, network, etc.).                  |
+| `event::EventOutcome`                     | `Success`, `Failure`, `Blocked`, `Unknown`.                                               |
+| `event::EventValue::Classified`           | Label values carrying their `DataClassification` for explicit RedactionEngine processing. |
+| `audit_chain::AuditChain`                 | Hash-chained, tamper-evident audit log. Each event commits to its predecessor.            |
+| `hmac::HmacEventSigner`                   | HMAC-seal events for integrity-verified shipping to a remote collector.                   |
+| `correlation`                             | Parent/child correlation IDs (`with_parent`, `attach_parent`, `filter_by_parent`).        |
+| `redact::RedactionEngine`                 | Programmatic redaction policy for PII fields.                                             |
+| `hard_deny::HardDenyTargetsLayer`         | Whole-subscriber fail-closed boundary for dependency tracing targets.                     |
+| `mobile_redaction::MobileRedactionEngine` | Stricter mobile-OS log-level enforcement.                                                 |
+| `rate_limit`                              | Drop or aggregate noisy event sources without losing high-severity signals.               |
+| `sink`                                    | Pluggable event sinks (stdout, JSON, OTel, HTTP).                                         |
+| `layer`                                   | `tracing` `Layer` so events flow alongside spans.                                         |
 
 ## Quick example
 
@@ -96,10 +96,10 @@ duration, byte counts, failure class, and correlation ID.
 
 ## Feature flags
 
-| Flag | Default | Purpose |
-|---|---|---|
-| `otel` | off | OpenTelemetry-tracing integration via `tracing-opentelemetry` and `opentelemetry`. |
-| `http-sink` | off | Ship events to an HTTP collector via `reqwest`. |
+| Flag        | Default | Purpose                                                                            |
+| ----------- | ------- | ---------------------------------------------------------------------------------- |
+| `otel`      | off     | OpenTelemetry-tracing integration via `tracing-opentelemetry` and `opentelemetry`. |
+| `http-sink` | off     | Ship events to an HTTP collector via `reqwest`.                                    |
 
 ## Compatibility
 
@@ -115,19 +115,19 @@ Alpha.
 
 Part of the [SunLit Security Libraries](https://github.com/kerberosmansour/SunLitSecurityLibraries) workspace:
 
-| Crate | Purpose |
-|---|---|
-| [`security_core`](https://crates.io/crates/security_core) | Shared types, identity, classification, severity, redaction. |
-| [`secure_errors`](https://crates.io/crates/secure_errors) | Three-layer error model with redaction-safe public errors. |
-| [`secure_output`](https://crates.io/crates/secure_output) | Context-aware output encoders (HTML, JSON, URL, JS, CSS, XML, LDAP, shell). |
-| [`secure_data`](https://crates.io/crates/secure_data) | Secrets, envelope encryption, Argon2id, FIPS, mobile storage. |
-| [`secure_network`](https://crates.io/crates/secure_network) | TLS policy, SPKI pinning, mTLS, cleartext detection. |
-| [`secure_device_trust`](https://crates.io/crates/secure_device_trust) | Native-client device trust and session certificates. |
-| [`secure_resilience`](https://crates.io/crates/secure_resilience) | RASP and environment-detection policy. |
-| [`secure_privacy`](https://crates.io/crates/secure_privacy) | PII classification, consent, retention, pseudonymization. |
-| [`secure_boundary`](https://crates.io/crates/secure_boundary) | Input validation, security headers, boundary protections. |
-| [`secure_identity`](https://crates.io/crates/secure_identity) | JWT/OIDC, MFA, sessions, biometric step-up. |
-| [`secure_authz`](https://crates.io/crates/secure_authz) | Typed deny-by-default authorization with device-trust predicates. |
+| Crate                                                                 | Purpose                                                                     |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [`security_core`](https://crates.io/crates/security_core)             | Shared types, identity, classification, severity, redaction.                |
+| [`secure_errors`](https://crates.io/crates/secure_errors)             | Three-layer error model with redaction-safe public errors.                  |
+| [`secure_output`](https://crates.io/crates/secure_output)             | Context-aware output encoders (HTML, JSON, URL, JS, CSS, XML, LDAP, shell). |
+| [`secure_data`](https://crates.io/crates/secure_data)                 | Secrets, envelope encryption, Argon2id, FIPS, mobile storage.               |
+| [`secure_network`](https://crates.io/crates/secure_network)           | TLS policy, SPKI pinning, mTLS, cleartext detection.                        |
+| [`secure_device_trust`](https://crates.io/crates/secure_device_trust) | Native-client device trust and session certificates.                        |
+| [`secure_resilience`](https://crates.io/crates/secure_resilience)     | RASP and environment-detection policy.                                      |
+| [`secure_privacy`](https://crates.io/crates/secure_privacy)           | PII classification, consent, retention, pseudonymization.                   |
+| [`secure_boundary`](https://crates.io/crates/secure_boundary)         | Input validation, security headers, boundary protections.                   |
+| [`secure_identity`](https://crates.io/crates/secure_identity)         | JWT/OIDC, MFA, sessions, biometric step-up.                                 |
+| [`secure_authz`](https://crates.io/crates/secure_authz)               | Typed deny-by-default authorization with device-trust predicates.           |
 
 ## Getting help
 
@@ -146,3 +146,14 @@ Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibra
 ## Redaction boundary
 
 Run `RedactionEngine::process_event` before forwarding an event to a sink. Generic sinks do not automatically redact. The engine processes classified labels; ordinary fields such as actor, source_ip, session_id, resource and reason_code are outside that label policy. Sanitize or omit those fields at the producer. Never treat the resulting event as universally PII-free.
+
+## Using this with a coding agent
+
+Use the [consumer integration guide](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/docs/agents/integration.md)
+and its published-version skill reference. Check prerequisites, dependency admission
+and the relevant success and failure-path tests before adopting this package.
+Feedback is optional: share general usage in [Discussions](https://github.com/kerberosmansour/SunLitSecurityLibraries/discussions),
+and use the [integration report](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/new?template=integration_feedback.yml)
+for a concrete blocker or documentation gap. An agent must obtain operator permission
+before posting. Use [private security reporting](https://github.com/kerberosmansour/SunLitSecurityLibraries/security/advisories/new)
+for suspected vulnerabilities. Never share secrets, private code or transcripts.

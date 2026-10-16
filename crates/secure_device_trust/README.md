@@ -51,18 +51,18 @@ match issuer.issue(&req) {
 
 ## What's inside
 
-| Type | Use it for |
-|---|---|
-| `ClientType` | `Desktop`, `Mobile`, `Ci`. |
-| `Platform` | `MacOs`, `Ios`, `Android`, `Windows`, `Linux`, `Ci`, `Unsupported`. |
-| `AttestationMode` | `Off` / `Monitor` / `Enforce` — backend-owned attestation rollout. |
-| `BootstrapStatus` / `BootstrapBinding` | Authorised vs. revoked, per-install vs. shared-app credential. |
-| `SessionCertificateIssuer` / `SessionCertificateSigner` | Short-lived session cert issuance pipeline. |
-| `SessionCertificateRequest` / `SessionCertificateBundle` / `SignedSessionCertificate` | Issuance I/O types. |
-| `SessionCsrProfile` / `CsrExtensionRequest` / `CsrRejectionReason` | Strict CSR policy with named rejection reasons. |
-| `SessionExtendedKeyUsage` / `SessionSubjectAltName` | Profile-aware EKU/SAN validation. |
-| `SessionCertificatePolicy` | Refresh windows and revocation-policy hooks. |
-| `RevocationChecker` / `RevocationHandle` / `NoRevocations` | Pluggable revocation lookup. |
+| Type                                                                                  | Use it for                                                          |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `ClientType`                                                                          | `Desktop`, `Mobile`, `Ci`.                                          |
+| `Platform`                                                                            | `MacOs`, `Ios`, `Android`, `Windows`, `Linux`, `Ci`, `Unsupported`. |
+| `AttestationMode`                                                                     | `Off` / `Monitor` / `Enforce` — backend-owned attestation rollout.  |
+| `BootstrapStatus` / `BootstrapBinding`                                                | Authorised vs. revoked, per-install vs. shared-app credential.      |
+| `SessionCertificateIssuer` / `SessionCertificateSigner`                               | Short-lived session cert issuance pipeline.                         |
+| `SessionCertificateRequest` / `SessionCertificateBundle` / `SignedSessionCertificate` | Issuance I/O types.                                                 |
+| `SessionCsrProfile` / `CsrExtensionRequest` / `CsrRejectionReason`                    | Strict CSR policy with named rejection reasons.                     |
+| `SessionExtendedKeyUsage` / `SessionSubjectAltName`                                   | Profile-aware EKU/SAN validation.                                   |
+| `SessionCertificatePolicy`                                                            | Refresh windows and revocation-policy hooks.                        |
+| `RevocationChecker` / `RevocationHandle` / `NoRevocations`                            | Pluggable revocation lookup.                                        |
 
 ## Compatibility
 
@@ -78,19 +78,19 @@ Alpha. Native-client device-trust is the active milestone driving this crate; ex
 
 Part of the [SunLit Security Libraries](https://github.com/kerberosmansour/SunLitSecurityLibraries) workspace:
 
-| Crate | Purpose |
-|---|---|
-| [`security_core`](https://crates.io/crates/security_core) | Shared types, identity, classification, severity, redaction. |
-| [`security_events`](https://crates.io/crates/security_events) | Security logging and tamper-evident audit chain. |
-| [`secure_errors`](https://crates.io/crates/secure_errors) | Three-layer error model with redaction-safe public errors. |
-| [`secure_output`](https://crates.io/crates/secure_output) | Context-aware output encoders (HTML, JSON, URL, JS, CSS, XML, LDAP, shell). |
-| [`secure_data`](https://crates.io/crates/secure_data) | Secrets, envelope encryption, Argon2id, FIPS, mobile storage. |
-| [`secure_network`](https://crates.io/crates/secure_network) | TLS policy, SPKI pinning, mTLS, cleartext detection. |
-| [`secure_resilience`](https://crates.io/crates/secure_resilience) | RASP and environment-detection policy. |
-| [`secure_privacy`](https://crates.io/crates/secure_privacy) | PII classification, consent, retention, pseudonymization. |
-| [`secure_boundary`](https://crates.io/crates/secure_boundary) | Input validation, security headers, boundary protections. |
-| [`secure_identity`](https://crates.io/crates/secure_identity) | JWT/OIDC, MFA, sessions, biometric step-up. |
-| [`secure_authz`](https://crates.io/crates/secure_authz) | Typed deny-by-default authorization with device-trust predicates. |
+| Crate                                                             | Purpose                                                                     |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [`security_core`](https://crates.io/crates/security_core)         | Shared types, identity, classification, severity, redaction.                |
+| [`security_events`](https://crates.io/crates/security_events)     | Security logging and tamper-evident audit chain.                            |
+| [`secure_errors`](https://crates.io/crates/secure_errors)         | Three-layer error model with redaction-safe public errors.                  |
+| [`secure_output`](https://crates.io/crates/secure_output)         | Context-aware output encoders (HTML, JSON, URL, JS, CSS, XML, LDAP, shell). |
+| [`secure_data`](https://crates.io/crates/secure_data)             | Secrets, envelope encryption, Argon2id, FIPS, mobile storage.               |
+| [`secure_network`](https://crates.io/crates/secure_network)       | TLS policy, SPKI pinning, mTLS, cleartext detection.                        |
+| [`secure_resilience`](https://crates.io/crates/secure_resilience) | RASP and environment-detection policy.                                      |
+| [`secure_privacy`](https://crates.io/crates/secure_privacy)       | PII classification, consent, retention, pseudonymization.                   |
+| [`secure_boundary`](https://crates.io/crates/secure_boundary)     | Input validation, security headers, boundary protections.                   |
+| [`secure_identity`](https://crates.io/crates/secure_identity)     | JWT/OIDC, MFA, sessions, biometric step-up.                                 |
+| [`secure_authz`](https://crates.io/crates/secure_authz)           | Typed deny-by-default authorization with device-trust predicates.           |
 
 ## Getting help
 
@@ -105,3 +105,14 @@ Contributions are welcome. Please read [CONTRIBUTING.md](https://github.com/kerb
 ## License
 
 Dual-licensed under [MIT](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-MIT) or [Apache-2.0](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/LICENSE-APACHE) at your option.
+
+## Using this with a coding agent
+
+Use the [consumer integration guide](https://github.com/kerberosmansour/SunLitSecurityLibraries/blob/main/docs/agents/integration.md)
+and its published-version skill reference. Check prerequisites, dependency admission
+and the relevant success and failure-path tests before adopting this package.
+Feedback is optional: share general usage in [Discussions](https://github.com/kerberosmansour/SunLitSecurityLibraries/discussions),
+and use the [integration report](https://github.com/kerberosmansour/SunLitSecurityLibraries/issues/new?template=integration_feedback.yml)
+for a concrete blocker or documentation gap. An agent must obtain operator permission
+before posting. Use [private security reporting](https://github.com/kerberosmansour/SunLitSecurityLibraries/security/advisories/new)
+for suspected vulnerabilities. Never share secrets, private code or transcripts.

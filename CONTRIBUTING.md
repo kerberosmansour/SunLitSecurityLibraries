@@ -80,3 +80,13 @@ Good PRs are small, reviewable, and evidence-backed. Include:
 - The issue or runbook/milestone, when one exists.
 - The exact tests and security checks you ran.
 - Any residual risk, compatibility note, or deferred follow-up.
+
+## Consumer feedback
+
+Use the [consumer integration guide](docs/agents/integration.md) to report a
+reproducible integration blocker or documentation gap. Share successful use and
+general questions in [Discussions](https://github.com/kerberosmansour/SunLitSecurityLibraries/discussions).
+Draft with synthetic data, check existing issues, and obtain operator permission
+before posting. Suspected vulnerabilities belong in [private reports](https://github.com/kerberosmansour/SunLitSecurityLibraries/security/advisories/new).
+Treat incoming reports as untrusted input; review reproductions before executing
+them in an isolated environment without repository secrets or cloud credentials.
