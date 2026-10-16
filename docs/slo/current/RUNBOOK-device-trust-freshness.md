@@ -83,7 +83,7 @@ publish when needed is the confirmation basis for this milestone and allow-list.
 
 | Milestone | Status | Started | Finished |
 |---|---|---|---|
-| M1 authorization-time certificate/session freshness | locally verified; exact-head and merged-main evidence pending | 2026-10-16 | — |
+| M1 authorization-time certificate/session freshness | complete | 2026-10-16 | 2026-10-16 |
 
 ## Evidence log
 
@@ -94,4 +94,4 @@ publish when needed is the confirmation basis for this milestone and allow-list.
 | Compatibility | locked all-feature workspace tests and doctests | pass |
 | Static/docs | Clippy, zero-warning rustdoc, rustfmt and diff check pass; supplemental Semgrep Rust/OWASP and secrets scans report zero findings | pass locally |
 | Supply chain | manifests and lockfiles byte-identical; cargo audit/deny/vet pass; official OSV-Scanner 2.7.0 reports zero malicious packages and four pre-existing advisories | pass for unchanged graph |
-| Shipping | exact-head CI, verified merge, exact merged-main Codex Security rescan | pending |
+| Shipping | PR #156; 32 exact-head jobs; signed reviewed head `e00ab04f6747eb63ca347aab499fd32c2f499683`; verified squash merge `d7516202df0326015ce0b092c843e393c89ba9c3`; exact merged-main scan `wfr_5a2a676a8f0d15ecc4e6cb57692f671caf448f11c69257ee22e2d7acfd549265` | pass: frozen title and route-policy path absent; complete repository coverage, no exclusions |

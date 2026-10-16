@@ -1,10 +1,10 @@
 # Device-trust freshness M1 verification
 
-## Local result
+## Result
 
-The implementation satisfies the locally observable M1 contract. Shipping
-remains open until exact-head CI, merge-integrity checks and an exact
-merged-main Codex Security rescan pass.
+M1 passes local, exact-head CI, merge-integrity and exact merged-main security
+verification. The frozen device-trust freshness finding is absent from the
+complete Codex Security report and structured findings at the verified merge.
 
 | Outcome | Evidence | Result |
 |---|---|---|
@@ -53,10 +53,43 @@ records are included. No `Cargo.toml`, `Cargo.lock`, nested toolchain lock,
 requirements file, workflow, version or publication metadata differs from the
 merged baseline.
 
-## Pending immutable evidence
+## Shipping evidence
 
-- exact reviewed-head GitHub Actions jobs;
-- squash-merge parent/tree/signature and `origin/main` identity;
-- exact merged-main Codex Security coverage and absence of the frozen finding
-  `Device-trust authorization accepts expired certificate and user-session state`;
-- immutable source and verification artifacts recorded on AgentBus.
+Implementation PR #156 reviewed signed head
+`e00ab04f6747eb63ca347aab499fd32c2f499683` and passed all 32 reported
+exact-head jobs across CI, CodeQL, Semgrep, Kani, dependency admission and scope
+guards. It had no review threads or submitted reviews.
+
+The verified squash merge is
+`d7516202df0326015ce0b092c843e393c89ba9c3`, with sole parent
+`7f1fd2378b00d3411892539da1c2a508c5e05f5f`. The reviewed head and merge
+share tree `146bcbb64a66a839d878f62e34298b17182707d6`; GitHub reports a valid
+signature, and `origin/main` resolved to the merge during inspection.
+
+Codex Security run
+`wfr_5a2a676a8f0d15ecc4e6cb57692f671caf448f11c69257ee22e2d7acfd549265`
+completed against that exact merge without a validation warning. Coverage is
+`complete`, repository-wide, with no excluded or deferred paths and no open
+questions. Neither the frozen title `Device-trust authorization accepts expired
+certificate and user-session state` nor
+`crates/secure_authz/src/device_trust.rs` appears in the report, findings or
+manifest artifacts. The structured scan occurrence API likewise returns 28
+different findings and no frozen occurrence.
+
+- Report SHA-256:
+  `fbe28f68797fe0e0a09b48218bfec194e081156ffbcd5ddd7085ccde5be94c5c`.
+- Findings SHA-256:
+  `b255f2b8896b3230788e5131d265825fed9c2cc6ebf01dd1678980ef418235d4`.
+- Manifest SHA-256:
+  `e6c6eda52915325cbc13775b268db6062f2ddea40699937ce9a427746682a804`.
+- Coverage SHA-256:
+  `c231b1b93ff09e0915ce690ab3f5be7adadc219699f170bf5294cc6d2c1fd5bb`.
+
+## Residual limits
+
+The loopback reference service still uses the explicitly named
+`NoMtlsRevocations` test provider and is not a production deployment example.
+The merged-main scan retained 28 unrelated findings: 2 high, 23 medium and 3
+low. One reports passwordless completion certificate revalidation in
+`secure_identity`; it is a distinct authorization path and requires its own
+bounded milestone. None weakens this route-policy finding closure.
