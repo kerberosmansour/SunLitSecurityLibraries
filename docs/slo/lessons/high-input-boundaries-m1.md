@@ -54,3 +54,11 @@ The adjacent redirect finding reinforced the parser-authority rule. A leading
 slash check is not an origin check when backslashes or encoded separators can be
 normalized later. Resolve with the same URL model, verify the fixed origin, and
 carry only its canonical relative serialization forward.
+
+## Final scan closure
+
+The second exact merged-main scan removed both corrective findings and reported
+0 critical/high issues at the frozen merge. Saving the complete report and
+structured findings and matching their service-provided SHA-256 digests kept the
+closure claim tied to immutable evidence rather than a summary count. The scan's
+remaining medium/low findings stay visible and belong to later bounded contracts.
