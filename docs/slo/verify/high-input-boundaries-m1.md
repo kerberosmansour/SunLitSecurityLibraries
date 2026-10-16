@@ -1,5 +1,32 @@
 # High input boundaries M1 verification
 
+## Final result
+
+M1 passes. Corrective PR #150 passed all 33 exact-head checks and merged as
+`6b99e38528ceba765a341ee54a6e2687e7607d4e`. GitHub reports a valid verified
+signature; the commit includes DCO sign-off, has parent
+`f76711797c37799e4d0d3b1883d758e90711175d`, and its tree
+`9594a5537eaf49b1debf9861a4ff24ee26d905c9` is byte-identical to reviewed
+signed head `b6ebb3b62e9ba0611355ea463cb661bc00dffdc4`.
+
+Exact merged-main Codex Security run
+`wfr_ba7e824e52f38743230cf3f9760ae39f61250e26e08e52cf854358c2cb7e3e51`
+targeted that merge and completed without a validation warning. Its complete
+report and structured findings contain 27 reportable findings: 10 medium and 17
+low, with 0 critical/high. The prior SafeUrl carrier-grade/provider-metadata
+finding and SafeRedirectUrl backslash/canonical network-path finding are absent.
+The source artifact digests match the saved evidence byte-for-byte:
+
+- report SHA-256:
+  `edcde530a644cc2408bd22276e873afca9c4a07d3c935b8184f722778885e50d`;
+- findings SHA-256:
+  `393ca23228b7f880faeb5cb6d88bd370a87ce8b8ee53420ffc6d8241c417e121`;
+- API findings-list evidence SHA-256:
+  `107754b673f816ef4353cb9760e99461dd7e461ec8464d0998467e04f6a88892`.
+
+The remaining medium/low repository findings are outside this milestone and
+remain visible for separate severity-ordered repair contracts.
+
 ## Initial result
 
 M1 passed local verification at signed implementation commit
@@ -8,7 +35,9 @@ dataflows now fail closed: browser-ambiguous URI text is rejected and the guide
 encodes accepted attributes, Axum JSON/XML bodies stop at the configured byte
 cap, and SafeUrl classifies and retains one canonical parser result.
 
-Exact-head CI and the merged-main Codex Security scan remain shipping gates.
+This result was provisional until exact-head CI and the merged-main Codex
+Security scan completed; the final result above supersedes that provisional
+gate state.
 
 ## Merged-main scan amendment
 
@@ -30,9 +59,9 @@ suite pass after implementation. The previously green locked all-feature
 workspace suite was repeated before the final canonical-path guard; the focused
 suite, package all-feature suite, package Clippy and package rustdoc were then
 repeated against the final diff. Full-workspace Clippy/rustdoc, fmt/diff, cargo
-audit/deny/vet, official OSV and Semgrep production/secrets gates pass. Exact-head
-CI and a new exact merged-main scan remain required before the final result
-changes to pass.
+audit/deny/vet, official OSV and Semgrep production/secrets gates pass. The
+corrective PR's exact-head CI and new exact merged-main scan subsequently
+passed as recorded in the final result.
 
 Follow-up evidence digests:
 

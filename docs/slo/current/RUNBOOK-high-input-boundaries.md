@@ -124,14 +124,14 @@ scope widening, or claiming DNS rebinding is solved.
 | Candidate exact lock/provenance/OSV | Script-disabled offline resolution retained 514 package identities. Existing locked `url` 2.5.8 archive matched checksum and declared `build = false`; crates.io owners/source/license reviewed. Official OSV 2.7.0 scanned 6 locks/1,448 package occurrences: 4 existing reviewed advisories, 0 `MAL-*`, exit 0. JSON SHA-256 `6cea97a78ce4454665abdde3ede39bbd5f76050c30914613c59f1de2a4053ed0`. |
 | Focused production and variant tests | URI 3/3 and corrective input boundaries 10/10 passed; secure_output and secure_boundary package/doc suites passed; secure_boundary none/axum/actix/both feature matrix passed. |
 | Workspace/static/docs/scope | Default and all-feature locked workspace suites, all-feature Clippy, zero-warning rustdoc and fmt passed. Cargo audit found 0 unaccepted vulnerabilities; deny and vet passed. Semgrep production/secrets found 0 findings/errors. Diff check and exact allow-list passed. |
-| Exact-head CI and merged-main Codex Security | PR #149 passed and merged as `f76711797c37799e4d0d3b1883d758e90711175d`. Merged-main run `wfr_ea5805d2c2e414d826f50549be5e9e3501fe358e81f6dd18f5eb501c59519c03` removed the URI and allocation findings but found carrier-grade/provider-metadata acceptance and a redirect normalization gap; corrective follow-up is required before closure. |
-| Verify/retro/closure | Initial local verification, lessons and handoff recorded. Follow-up red tests reproduce the merged-main findings; final exact-head CI and merged-main rescan remain shipping gates. |
+| Exact-head CI and merged-main Codex Security | PR #149 passed and merged as `f76711797c37799e4d0d3b1883d758e90711175d`. Its scan found carrier-grade/provider-metadata acceptance and a redirect normalization gap. Corrective PR #150 then passed all 33 exact-head checks and merged as GitHub-verified, DCO-signed `6b99e38528ceba765a341ee54a6e2687e7607d4e`; parent `f76711797c37799e4d0d3b1883d758e90711175d`, tree `9594a5537eaf49b1debf9861a4ff24ee26d905c9`, byte-identical to reviewed head `b6ebb3b62e9ba0611355ea463cb661bc00dffdc4`. Exact merged-main run `wfr_ba7e824e52f38743230cf3f9760ae39f61250e26e08e52cf854358c2cb7e3e51` completed with 27 findings (10 medium, 17 low), 0 critical/high, and neither corrective finding class. Report SHA-256 `edcde530a644cc2408bd22276e873afca9c4a07d3c935b8184f722778885e50d`. |
+| Verify/retro/closure | Verification, lessons and completion handoff record the initial implementation, corrective red/green cycle, exact-head CI, immutable merge identity and complete merged-main report. M1 is complete; remaining repository findings are separate severity-ordered milestones. |
 
 ## Milestone tracker
 
 | Milestone | Status | Started | Finished |
 |---|---|---|---|
-| M1 high-severity input-boundary repairs and scan follow-up | corrective implementation in progress | 2026-10-16 | — |
+| M1 high-severity input-boundary repairs and scan follow-up | done | 2026-10-16 | 2026-10-16 |
 
 The user's standing instruction to continue autonomously and publish when needed
 is the confirmation basis for this concrete milestone and allow-list.
