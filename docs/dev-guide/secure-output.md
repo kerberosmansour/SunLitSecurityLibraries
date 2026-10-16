@@ -59,9 +59,10 @@ let html = format!("<p>Welcome, {user_name}</p>");
 
 **Characters encoded:** `<` `>` `&` `"` `'` `/`
 
-### JavaScript String Context — `JsStringEncoder`
+### Standalone JavaScript String Context — `JsStringEncoder`
 
-Use when embedding user data inside a JavaScript string literal:
+Use when embedding user data inside a JavaScript string literal in a standalone
+JavaScript resource or another non-HTML context:
 
 ```rust
 use secure_output::{JsStringEncoder, OutputEncoder};
@@ -76,12 +77,32 @@ assert_eq!(safe, r#"user\'s \"name\"\nwith newline"#);
 let safe = enc.encode("text\u{2028}more\u{2029}data");
 // U+2028 and U+2029 are escaped
 
-// In a script tag:
+// In a generated standalone .js response:
 let user_value = enc.encode(&user_input);
 let js = format!("var name = '{user_value}';");
 ```
 
 **Characters encoded:** `\` `'` `"` `\n` `\r` U+2028 U+2029
+
+`JsStringEncoder` does not protect the outer HTML raw-text parser. Use the
+dedicated encoder below inside an HTML `<script>` element.
+
+### JavaScript String Inside HTML — `InlineScriptStringEncoder`
+
+Use when an application must place a string literal in an inline HTML script:
+
+```rust
+use secure_output::{InlineScriptStringEncoder, OutputEncoder};
+
+let user_value = InlineScriptStringEncoder.encode(&user_input);
+let html = format!("<script>var name = '{user_value}';</script>");
+
+assert!(!user_value.contains('<'));
+```
+
+This retains JavaScript string escaping and emits `<`, `>` and `&` as
+JavaScript Unicode escapes so the HTML tokenizer cannot form a raw-text end tag.
+Prefer an external script plus a non-executable data channel when practical.
 
 ### CSS Context — `CssEncoder`
 
@@ -149,23 +170,25 @@ let xml = format!("<name>{user_value}</name>");
 
 ### JSON-in-HTML Context — `JsonEncoder`
 
-Use when embedding JSON inside an HTML `<script>` tag:
+Use only after a JSON serializer has produced one complete JSON document, when
+that document must be embedded inside an HTML `<script>` tag:
 
 ```rust
 use secure_output::{JsonEncoder, OutputEncoder};
 
-let enc = JsonEncoder;
-
-// Prevents closing the script tag
-let safe = enc.encode("</script>");
-assert_eq!(safe, "<\\/script>");
+let typed_value = ["</script>", "safe"];
+let serialized_json = serde_json::to_string(&typed_value)
+    .expect("serializing a typed value should succeed");
+let safe = JsonEncoder.encode(&serialized_json);
+assert!(!safe.to_ascii_lowercase().contains("</script"));
 
 // In an HTML template:
-let json_data = enc.encode(&serialized_json);
-let html = format!(r#"<script>var data = {json_data};</script>"#);
+let html = format!(r#"<script>var data = {safe};</script>"#);
 ```
 
-**This prevents the specific attack** where a JSON string containing `</script>` would prematurely close the `<script>` tag.
+`JsonEncoder` is an HTML-boundary transform, not a JSON serializer or validator.
+Calling it on arbitrary text does not make that text safe as a JavaScript
+expression.
 
 ---
 
@@ -227,7 +250,8 @@ fn render_link(user_url: &str) -> String {
 |---|---|---|
 | HTML text content | `HtmlEncoder` | `<p>{encoded}</p>` |
 | HTML attribute value | `HtmlEncoder` | `<input value="{encoded}">` |
-| JavaScript string | `JsStringEncoder` | `var x = '{encoded}';` |
+| JavaScript string in standalone `.js` | `JsStringEncoder` | `var x = '{encoded}';` |
+| JavaScript string inside HTML `<script>` | `InlineScriptStringEncoder` | `<script>var x = '{encoded}';</script>` |
 | CSS value | `CssEncoder` | `content: '{encoded}';` |
 | URL query parameter | `UrlEncoder` | `?search={encoded}` |
 | XML text/attribute | `XmlEncoder` | `<name>{encoded}</name>` |
@@ -336,6 +360,7 @@ For safe inputs (no special characters), the encoder returns `Cow::Borrowed` —
 | `JsonEncoder` | `json` | JSON-in-HTML `</script>` prevention |
 | `UrlEncoder` | `url` | RFC 3986 percent-encoding |
 | `JsStringEncoder` | `js` | JavaScript string literal encoding |
+| `InlineScriptStringEncoder` | `js` | JavaScript string encoding for HTML `<script>` raw-text |
 | `CssEncoder` | `css` | CSS unicode-escape encoding |
 | `XmlEncoder` | `xml` | XML entity encoding |
 | `LdapDnEncoder` | `ldap` | LDAP DN encoding (RFC 4514) |

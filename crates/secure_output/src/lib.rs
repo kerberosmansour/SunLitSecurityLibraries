@@ -6,7 +6,8 @@
 //! - [`HtmlEncoder`] — HTML context encoding with zero-copy for safe strings
 //! - [`JsonEncoder`] — JSON context encoding preventing `</script>` injection
 //! - [`UrlEncoder`] — URL percent-encoding per RFC 3986
-//! - [`JsStringEncoder`] — JavaScript string literal encoding
+//! - [`JsStringEncoder`] — standalone JavaScript string literal encoding
+//! - [`InlineScriptStringEncoder`] — JavaScript string encoding for HTML `<script>` raw-text
 //! - [`CssEncoder`] — CSS context encoding via unicode-escape
 //! - [`XmlEncoder`] — XML text/attribute encoding
 //! - [`ldap::LdapDnEncoder`] — LDAP Distinguished Name encoding (RFC 4514)
@@ -30,7 +31,7 @@ pub mod xml;
 pub use css::CssEncoder;
 pub use encode::OutputEncoder;
 pub use html::HtmlEncoder;
-pub use js::JsStringEncoder;
+pub use js::{InlineScriptStringEncoder, JsStringEncoder};
 pub use json::JsonEncoder;
 pub use ldap::{LdapDnEncoder, LdapFilterEncoder};
 pub use shell::ShellEncoder;
