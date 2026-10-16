@@ -40,3 +40,17 @@ connection policy. A later bounded integration may expose a resolver/connector
 that classifies every answer and pins the selected address. The remaining Codex
 Security findings proceed in separate severity-ordered milestones so this fix
 can be reviewed and rolled back independently.
+
+## Merged-main scan lesson
+
+A named blocklist can pass every original witness and still miss a newly relevant
+special-purpose range. The merged-main scan caught exactly that with
+`100.100.100.200`. For an outbound network boundary, the stronger invariant is
+positive: accept ordinary public-unicast addresses and fail closed on shared,
+local, documentation, benchmarking, reserved and transition ranges. The same
+classifier must govern both typed URL hosts and every DNS answer.
+
+The adjacent redirect finding reinforced the parser-authority rule. A leading
+slash check is not an origin check when backslashes or encoded separators can be
+normalized later. Resolve with the same URL model, verify the fixed origin, and
+carry only its canonical relative serialization forward.

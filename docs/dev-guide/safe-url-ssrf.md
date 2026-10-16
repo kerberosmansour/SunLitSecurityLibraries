@@ -13,28 +13,37 @@ Server-Side Request Forgery happens when an attacker persuades your service to f
 
 `SafeUrl` is a type that rejects these at the validation boundary — a [`BoundaryRejection::SsrfAttempt`](../../crates/secure_boundary/src/error.rs) result before your outbound fetch ever runs.
 
-## The 12-CIDR blocked set
+## The public-unicast policy
 
 `SafeUrl::try_from(&str)` parses with the same WHATWG URL model used by common
-Rust HTTP clients, canonicalizes the result, and rejects any typed IP host inside
-these ranges:
+Rust HTTP clients, canonicalizes the result, and accepts typed IP hosts only when
+they are public unicast addresses. It rejects these non-global or special-purpose
+families:
 
 | CIDR | What it is | Why it's blocked |
 |---|---|---|
 | `10.0.0.0/8` | RFC 1918 private | Classic LAN SSRF |
+| `100.64.0.0/10` | Shared address space | Carrier-grade NAT and provider metadata, including `100.100.100.200` |
 | `172.16.0.0/12` | RFC 1918 private | Classic LAN SSRF |
 | `192.168.0.0/16` | RFC 1918 private | Classic LAN SSRF |
 | `169.254.0.0/16` | IPv4 link-local | AWS IMDS + credential exfiltration |
 | `127.0.0.0/8` | IPv4 loopback | Localhost services |
+| `0.0.0.0/8` | Current network / unspecified | Stack-internal behavior |
+| `192.0.0.0/24` | IETF protocol assignments | Special-purpose endpoints |
+| `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24` | Documentation | Non-routable examples |
+| `192.31.196.0/24`, `192.52.193.0/24`, `192.88.99.0/24`, `192.175.48.0/24` | IANA special-purpose | Anycast and transition infrastructure |
+| `198.18.0.0/15` | Benchmarking | Non-public test networks |
 | `224.0.0.0/4` | IPv4 multicast | Lateral-movement response surface |
-| `0.0.0.0/32` | IPv4 unspecified | Stack-internal vulnerabilities |
-| `fc00::/7` | IPv6 ULA | Analogue of RFC 1918 on IPv6 |
-| `fe80::/10` | IPv6 link-local | IPv6 analogue of IMDS |
-| `::1/128` | IPv6 loopback | Localhost on IPv6 |
-| `ff00::/8` | IPv6 multicast | Same as IPv4 multicast |
-| `::/128` | IPv6 unspecified | Stack-internal |
+| `240.0.0.0/4` | Reserved / broadcast | Non-public destinations |
+| outside IPv6 `2000::/3` | Non-global-unicast IPv6 | Loopback, local, multicast and reserved space |
+| IPv6 `2001::/23`, `2001:db8::/32`, `2002::/16`, `3fff::/20` | Special-purpose, documentation and 6to4 | Ambiguous or non-public destinations |
 
-These are all on Sunlit Guardian's v3-K2 required blocked list, derived from Google / OWASP / CVE landscape data. Each CIDR has a named regression test in [`sg_gate_a_safeurl_cidrs.rs`](../../crates/secure_boundary/tests/sg_gate_a_safeurl_cidrs.rs); any future edit that removes one branch fails a specific named test.
+The original Gate A ranges retain named regression tests in
+[`sg_gate_a_safeurl_cidrs.rs`](../../crates/secure_boundary/tests/sg_gate_a_safeurl_cidrs.rs).
+The Codex Security regressions additionally exercise shared, metadata,
+documentation, benchmarking, reserved and IPv6 special-purpose addresses through
+both URL-literal and resolver-answer paths. The policy deliberately fails closed
+when an address is not ordinary public unicast.
 
 Allowed schemes: `http` and `https` only. Credentials, fragments, backslashes,
 missing hosts, alternate numeric forms that normalize to protected IPs, and
@@ -90,7 +99,7 @@ A POST body containing `{"callback":"http://169.254.169.254/"}` now fails at the
   establishment. Checking and then allowing the HTTP client to perform a second
   lookup is still vulnerable.
 - **SNI/TLS-layer attacks.** `SafeUrl` is a string check. Use `secure_network` for TLS-layer controls (cert pinning, cleartext rejection).
-- **Open redirect.** See [`SafeRedirectUrl`](../../crates/secure_boundary/src/safe_types.rs) — a distinct type that enforces path-only URLs for HTTP redirects.
+- **Open redirect.** See [`SafeRedirectUrl`](../../crates/secure_boundary/src/safe_types.rs) — a distinct type that parses and canonicalizes same-origin path redirects. It rejects network paths, backslashes, controls, malformed escapes and encoded path separators.
 
 ## How to extend if you need stricter rules
 
@@ -98,7 +107,7 @@ The classifier is shared by construction-time URL checks and the public
 `validate_resolved_ip` connect-time helper. If you need additional blocked ranges
 beyond Gate A:
 
-1. Add a `#[test]` per new CIDR in `sg_gate_a_safeurl_cidrs.rs` — variant analysis first.
+1. Add literal-host and resolved-address regressions for the new range — variant analysis first.
 2. Extend the private functions with the new branch.
 3. Update the rustdoc CIDR table and this dev-guide.
 
