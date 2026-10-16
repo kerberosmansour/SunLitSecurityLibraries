@@ -249,34 +249,38 @@ impl fmt::Display for SafeCommandArg {
 /// Only `http` and `https`. Rejects `file://`, `gopher://`, `javascript:`,
 /// `data:`, and any other non-http(s) scheme.
 ///
-/// # Blocked host ranges (SSRF prevention)
+/// # Public-address policy (SSRF prevention)
 ///
 /// The input is parsed with the WHATWG `url` model and the same canonical value
 /// that was classified is retained. Credentials, fragments and backslashes are
-/// rejected. Every typed IP host in one of the following families is rejected
+/// rejected. Typed IP hosts are accepted only when they are public unicast
+/// addresses. The following non-global and special-purpose families are rejected
 /// with [`BoundaryRejection::SsrfAttempt`]:
 ///
 /// | CIDR | What it is | Why it's blocked |
 /// |---|---|---|
 /// | `10.0.0.0/8` | RFC 1918 private | Classic LAN SSRF |
+/// | `100.64.0.0/10` | Shared address space | Carrier-grade NAT and provider metadata |
 /// | `172.16.0.0/12` | RFC 1918 private | Classic LAN SSRF |
 /// | `192.168.0.0/16` | RFC 1918 private | Classic LAN SSRF |
 /// | `169.254.0.0/16` | IPv4 link-local | AWS IMDS (`169.254.169.254`) — credential exfiltration |
 /// | `127.0.0.0/8` | IPv4 loopback | Bypass to localhost services |
+/// | `0.0.0.0/8` | Current network / unspecified | Stack-internal behavior |
+/// | `192.0.0.0/24` | IETF protocol assignments | Special-purpose endpoints |
+/// | `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24` | Documentation | Non-routable examples |
+/// | `192.31.196.0/24`, `192.52.193.0/24`, `192.88.99.0/24`, `192.175.48.0/24` | IANA special-purpose | Anycast and transition infrastructure |
+/// | `198.18.0.0/15` | Benchmarking | Non-public test networks |
 /// | `224.0.0.0/4` | IPv4 multicast | Lateral-movement response surface |
-/// | `0.0.0.0/32` | IPv4 unspecified | Stack-internal vulnerabilities |
-/// | `fc00::/7` | IPv6 Unique Local Address | Analogue of RFC 1918 on IPv6 |
-/// | `fe80::/10` | IPv6 link-local | IPv6 analogue of IMDS attack vector |
-/// | `::1/128` | IPv6 loopback | Bypass to localhost services on IPv6 |
-/// | `ff00::/8` | IPv6 multicast | Same as IPv4 multicast, on IPv6 |
-/// | `::/128` | IPv6 unspecified | Stack-internal vulnerabilities |
+/// | `240.0.0.0/4` | Reserved / broadcast | Non-public destinations |
+/// | outside IPv6 `2000::/3` | Non-global-unicast IPv6 | Loopback, local, multicast and reserved space |
+/// | IPv6 `2001::/23`, `2001:db8::/32`, `2002::/16`, `3fff::/20` | Special-purpose, documentation and 6to4 | Ambiguous or non-public destinations |
 ///
 /// IPv4-mapped IPv6 literals such as `[::ffff:127.0.0.1]` are classified
 /// against the embedded IPv4 address before the IPv6 ranges are checked.
 ///
-/// The blocked set is variant-analysis-tested — each CIDR has a named
-/// regression test in `sg_gate_a_safeurl_cidrs.rs`, so removing a single
-/// line from the internal classifier fails a specific, named test.
+/// The original Gate A ranges retain named regression tests. Additional tests
+/// exercise shared, documentation, benchmarking, reserved, IPv6 special-purpose
+/// and provider-metadata addresses through both literal and resolved-IP paths.
 ///
 /// DNS rebinding is **not** prevented by construction alone. Resolve with a
 /// bounded policy, pass every answer to [`SafeUrl::validate_resolved_ip`], and
@@ -328,7 +332,7 @@ impl SafeUrl {
     ///
     /// Returns [`BoundaryRejection::SsrfAttempt`] for a protected address.
     pub fn validate_resolved_ip(addr: std::net::IpAddr) -> Result<(), BoundaryRejection> {
-        if is_private_ip_addr(addr) {
+        if is_non_global_ip_addr(addr) {
             emit_violation(ViolationKind::SyntaxViolation, "ssrf_attempt");
             return Err(BoundaryRejection::SsrfAttempt);
         }
@@ -360,8 +364,8 @@ impl TryFrom<&str> for SafeUrl {
         }
 
         let protected = match parsed.host().expect("host checked above") {
-            url::Host::Ipv4(addr) => is_private_ipv4(addr),
-            url::Host::Ipv6(addr) => is_private_ipv6(addr),
+            url::Host::Ipv4(addr) => is_non_global_ipv4(addr),
+            url::Host::Ipv6(addr) => is_non_global_ipv6(addr),
             url::Host::Domain(_) => false,
         };
         if protected {
@@ -385,53 +389,77 @@ impl fmt::Display for SafeUrl {
     }
 }
 
-fn is_private_ip_addr(addr: std::net::IpAddr) -> bool {
+fn is_non_global_ip_addr(addr: std::net::IpAddr) -> bool {
     match addr {
-        std::net::IpAddr::V4(addr) => is_private_ipv4(addr),
-        std::net::IpAddr::V6(addr) => is_private_ipv6(addr),
+        std::net::IpAddr::V4(addr) => is_non_global_ipv4(addr),
+        std::net::IpAddr::V6(addr) => is_non_global_ipv6(addr),
     }
 }
 
-fn is_private_ipv4(addr: std::net::Ipv4Addr) -> bool {
+fn is_non_global_ipv4(addr: std::net::Ipv4Addr) -> bool {
     let o = addr.octets();
-    // 127.0.0.0/8  loopback
-    o[0] == 127
+    // 0.0.0.0/8  current network and unspecified addresses
+    o[0] == 0
     // 10.0.0.0/8
     || o[0] == 10
+    // 100.64.0.0/10  shared address space, including provider metadata endpoints
+    || (o[0] == 100 && (64..=127).contains(&o[1]))
+    // 127.0.0.0/8  loopback
+    || o[0] == 127
     // 172.16.0.0/12
     || (o[0] == 172 && o[1] >= 16 && o[1] <= 31)
-    // 192.168.0.0/16
-    || (o[0] == 192 && o[1] == 168)
     // 169.254.0.0/16  link-local (AWS IMDS 169.254.169.254 and neighbours)
     || (o[0] == 169 && o[1] == 254)
+    // 192.0.0.0/24  IETF protocol assignments
+    || (o[0] == 192 && o[1] == 0 && o[2] == 0)
+    // 192.0.2.0/24  documentation
+    || (o[0] == 192 && o[1] == 0 && o[2] == 2)
+    // Additional IANA special-purpose anycast and transition ranges.
+    || (o[0] == 192
+        && matches!((o[1], o[2]), (31, 196) | (52, 193) | (88, 99) | (175, 48)))
+    // 192.168.0.0/16
+    || (o[0] == 192 && o[1] == 168)
+    // 198.18.0.0/15  benchmarking
+    || (o[0] == 198 && (o[1] == 18 || o[1] == 19))
+    // 198.51.100.0/24  documentation
+    || (o[0] == 198 && o[1] == 51 && o[2] == 100)
+    // 203.0.113.0/24  documentation
+    || (o[0] == 203 && o[1] == 0 && o[2] == 113)
     // 224.0.0.0/4  IPv4 multicast (lateral-movement response surface)
     || (o[0] >= 224 && o[0] <= 239)
-    // 0.0.0.0/32  unspecified
-    || (o[0] == 0 && o[1] == 0 && o[2] == 0 && o[3] == 0)
+    // 240.0.0.0/4  reserved, including the limited broadcast address
+    || o[0] >= 240
 }
 
-fn is_private_ipv6(addr: std::net::Ipv6Addr) -> bool {
+fn is_non_global_ipv6(addr: std::net::Ipv6Addr) -> bool {
     if let Some(v4) = addr.to_ipv4_mapped() {
-        return is_private_ipv4(v4);
+        return is_non_global_ipv4(v4);
     }
 
-    // ::1/128 loopback
-    addr.is_loopback()
-    // ::/128 unspecified
-    || addr.is_unspecified()
-    // fc00::/7 unique local
-    || (addr.segments()[0] & 0xfe00) == 0xfc00
-    // fe80::/10 link-local (IPv6 analogue of the IMDS attack vector)
-    || (addr.segments()[0] & 0xffc0) == 0xfe80
-    // ff00::/8 multicast
-    || (addr.segments()[0] & 0xff00) == 0xff00
+    let segments = addr.segments();
+
+    // Accept only the global-unicast allocation 2000::/3, then exclude the
+    // special-purpose allocations inside it. This deliberately fails closed
+    // as IANA assigns new ranges; updating the policy requires regression
+    // evidence rather than silently permitting a newly meaningful address.
+    (segments[0] & 0xe000) != 0x2000
+    // 2001::/23  protocol assignments and special-purpose ranges.
+    || (segments[0] == 0x2001 && segments[1] <= 0x01ff)
+    // 2001:db8::/32  documentation (also covered above, kept explicit).
+    || (segments[0] == 0x2001 && segments[1] == 0x0db8)
+    // 2002::/16  6to4 embeds an IPv4 destination and is not accepted here.
+    || segments[0] == 0x2002
+    // 3fff::/20  documentation.
+    || (segments[0] == 0x3fff && (segments[1] & 0xf000) == 0)
 }
 
 // ── SafeRedirectUrl ───────────────────────────────────────────────────────────
 
 /// A validated redirect URL that only allows relative paths (no open redirect).
 ///
-/// Must start with `/` but not `//`, and must not contain a scheme colon.
+/// Must resolve as a canonical same-origin path under a fixed HTTPS base.
+/// Network paths, backslashes, raw control/whitespace characters, malformed
+/// percent escapes and encoded path separators are rejected.
 ///
 /// # Examples
 ///
@@ -471,15 +499,82 @@ impl TryFrom<&str> for SafeRedirectUrl {
                 code: "invalid_redirect",
             }
         };
-        // Must be a relative path starting with /
-        if !s.starts_with('/') || s.starts_with("//") {
+        // Reject parser differentials before URL normalization. Encoded path
+        // separators and controls are rejected as well because downstream
+        // frameworks may decode them before applying redirect semantics.
+        if !s.starts_with('/')
+            || s.starts_with("//")
+            || s.contains('\\')
+            || s.bytes()
+                .any(|byte| byte.is_ascii_control() || byte.is_ascii_whitespace())
+            || has_unsafe_percent_escape(s)
+        {
             return Err(reject());
         }
-        // No scheme separator allowed
+
+        // Preserve the existing no-colon contract so callers cannot smuggle a
+        // scheme-like value through a framework with different parsing rules.
         if s.contains(':') {
             return Err(reject());
         }
-        Ok(Self(s.to_owned()))
+
+        let base = url::Url::parse("https://safe.invalid/").map_err(|_| reject())?;
+        let parsed = base.join(s).map_err(|_| reject())?;
+        if parsed.scheme() != "https"
+            || parsed.host_str() != Some("safe.invalid")
+            || parsed.port().is_some()
+            || !parsed.username().is_empty()
+            || parsed.password().is_some()
+            || parsed.path().starts_with("//")
+        {
+            return Err(reject());
+        }
+
+        let mut canonical = parsed.path().to_owned();
+        if let Some(query) = parsed.query() {
+            canonical.push('?');
+            canonical.push_str(query);
+        }
+        if let Some(fragment) = parsed.fragment() {
+            canonical.push('#');
+            canonical.push_str(fragment);
+        }
+        Ok(Self(canonical))
+    }
+}
+
+fn has_unsafe_percent_escape(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] != b'%' {
+            index += 1;
+            continue;
+        }
+        if index + 2 >= bytes.len() {
+            return true;
+        }
+        let Some(high) = hex_value(bytes[index + 1]) else {
+            return true;
+        };
+        let Some(low) = hex_value(bytes[index + 2]) else {
+            return true;
+        };
+        let decoded = (high << 4) | low;
+        if decoded.is_ascii_control() || matches!(decoded, b'/' | b'\\' | 0x7f) {
+            return true;
+        }
+        index += 3;
+    }
+    false
+}
+
+const fn hex_value(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
     }
 }
 

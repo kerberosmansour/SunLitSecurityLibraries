@@ -19,6 +19,10 @@ breaking API changes, but security fixes and migration notes should be explicit.
 - Parse and retain `SafeUrl` values with the locked WHATWG URL implementation,
   rejecting credentials, fragments, backslashes and alternate numeric protected
   hosts; add a resolved-address policy helper for DNS pinning integrations.
+- Extend `SafeUrl` literal and resolver checks to fail closed for carrier-grade,
+  provider-metadata, documentation, benchmarking, reserved and non-global IPv6
+  destinations. Canonicalize same-origin `SafeRedirectUrl` paths and reject raw
+  or encoded separator/control parser differentials.
 
 ### Dependency assurance
 

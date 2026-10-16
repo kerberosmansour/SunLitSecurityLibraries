@@ -1,6 +1,6 @@
 # High input boundaries M1 verification
 
-## Result
+## Initial result
 
 M1 passed local verification at signed implementation commit
 `f9ed2bf10b4cc8143e511fc33ac99952f61547b9`. The three frozen high-severity
@@ -9,6 +9,39 @@ encodes accepted attributes, Axum JSON/XML bodies stop at the configured byte
 cap, and SafeUrl classifies and retains one canonical parser result.
 
 Exact-head CI and the merged-main Codex Security scan remain shipping gates.
+
+## Merged-main scan amendment
+
+PR #149 passed exact-head CI and merged as
+`f76711797c37799e4d0d3b1883d758e90711175d`. The exact merged-main Codex
+Security run
+`wfr_ea5805d2c2e414d826f50549be5e9e3501fe358e81f6dd18f5eb501c59519c03`
+verified removal of the browser URI/XSS and post-allocation body-limit findings.
+It rejected final M1 closure because the SafeUrl list omitted `100.64.0.0/10`,
+including provider metadata `100.100.100.200`, and identified the related
+`SafeRedirectUrl` backslash normalization gap.
+
+Corrective red tests reproduce both classes through public APIs. They require
+the same rejection for URL literals and resolver answers, include IPv4/IPv6
+range variants and public negative controls, reject raw/encoded redirect
+separators and controls, and require canonical same-origin dot-segment removal.
+The focused 10-test input-boundary suite and full `secure_boundary --all-features`
+suite pass after implementation. The previously green locked all-feature
+workspace suite was repeated before the final canonical-path guard; the focused
+suite, package all-feature suite, package Clippy and package rustdoc were then
+repeated against the final diff. Full-workspace Clippy/rustdoc, fmt/diff, cargo
+audit/deny/vet, official OSV and Semgrep production/secrets gates pass. Exact-head
+CI and a new exact merged-main scan remain required before the final result
+changes to pass.
+
+Follow-up evidence digests:
+
+- Official OSV JSON (identical graph):
+  `6cea97a78ce4454665abdde3ede39bbd5f76050c30914613c59f1de2a4053ed0`.
+- Semgrep Rust/OWASP JSON:
+  `b1a5afdb0fa12cab7a4220041dd7aeff81bafe99320d63ad436d8834ee48faac`.
+- Semgrep secrets JSON:
+  `097c24705575df4dd18cbc6c2241377a64a38450ef4aec1413f9534e79337591`.
 
 ## Acceptance evidence
 

@@ -13,6 +13,8 @@ IDs are frozen in this milestone.
 | HIB-SEC-1 | security | auto-fix | URI outcome | **High (CWE-79):** URI allowlisting does not perform HTML attribute encoding. | A consumer interpolates an accepted relative value containing a quote and creates an event-handler attribute. | Reject delimiters defensively and make `HtmlEncoder.encode` mandatory in the copyable example; class mitigated at both validation and sink. Variant: every C0/space/quote/backtick/angle-bracket class. |
 | HIB-SEC-2 | security | auto-fix | Body outcome | **High (CWE-770):** a post-allocation check is not a transport bound. | One unauthenticated chunked request allocates far beyond `max_body_bytes` before returning 413. | Use Axum's limited collector and prove JSON/XML per-request limits with over-limit witnesses; class eliminated in these extractors. Variant: both content types and absent/misleading Content-Length. |
 | HIB-SEC-3 | security | auto-fix | SafeUrl outcome | **High (CWE-918):** manual host parsing disagrees with the downstream WHATWG parser. | `http://2130706433/` passes as a domain and is fetched as 127.0.0.1. | Reuse locked `url`, reject ambiguous authority syntax and classify its typed host before preserving canonical output; parser-differential class eliminated. DNS rebinding remains explicit. |
+| HIB-SEC-4 | security | auto-fix | Merged-main scan follow-up | **High (CWE-918):** the first repair still used an incomplete protected-range list. | `http://100.100.100.200/` is accepted even though the address is inside `100.64.0.0/10` and is used as provider metadata. | Require public-unicast addresses for literal and resolved-IP paths; cover range edges, provider metadata, documentation, benchmarking, reserved and IPv6 special-purpose witnesses. |
+| HIB-SEC-5 | security | auto-fix | Merged-main scan follow-up | **Medium (CWE-601):** `SafeRedirectUrl` accepts backslash network-path differentials. | `/\\evil.example` passes the prefix check and a browser-compatible parser can normalize it to `//evil.example`. | Parse against a fixed origin, verify same-origin authority, canonicalize the relative result, and reject raw/encoded separators, controls and malformed percent escapes. |
 | HIB-DESIGN-1 | design | defer | N/A | No UI surface exists. | No user interaction is changed by this library maintenance milestone. | Skip design review. |
 
 ## Expanded high-severity findings
@@ -42,3 +44,13 @@ backslashes. DNS answers still require resolve/classify/pin and are not claimed.
 
 All findings were incorporated mechanically or held within the already confirmed
 scope. There is no unresolved `ask` item before execution.
+
+## Post-merge critique amendment
+
+The exact merged-main scan is authoritative over the initial local conclusion.
+It proved the URI and allocation repairs, but invalidated the claim that the
+SafeUrl class was closed. HIB-SEC-4 remains part of the same M1 outcome because
+it exercises the already public literal/resolver policy with no dependency or
+API expansion. HIB-SEC-5 is adjacent in the same type module and uses the same
+locked parser; fixing it in the corrective PR avoids knowingly shipping a
+documented parser differential while retaining the original allow-list.

@@ -15,7 +15,7 @@ use futures_util::stream;
 use secure_boundary::{
     extract::SecureJson,
     limits::RequestLimits,
-    safe_types::SafeUrl,
+    safe_types::{SafeRedirectUrl, SafeUrl},
     validate::{SecureValidate, ValidationContext},
     xml::SecureXml,
 };
@@ -136,4 +136,87 @@ fn safe_url_reuses_the_policy_for_resolved_addresses() {
     assert!(SafeUrl::validate_resolved_ip("127.0.0.1".parse().expect("IP")).is_err());
     assert!(SafeUrl::validate_resolved_ip("169.254.169.254".parse().expect("IP")).is_err());
     assert!(SafeUrl::validate_resolved_ip("8.8.8.8".parse().expect("IP")).is_ok());
+}
+
+#[test]
+fn safe_url_rejects_non_global_ipv4_literals_and_resolved_addresses() {
+    for address in [
+        "0.0.0.1",
+        "100.64.0.1",
+        "100.100.100.200",
+        "100.127.255.254",
+        "192.0.0.1",
+        "192.0.2.1",
+        "192.31.196.1",
+        "192.52.193.1",
+        "192.88.99.1",
+        "192.175.48.1",
+        "198.18.0.1",
+        "198.51.100.1",
+        "203.0.113.1",
+        "240.0.0.1",
+        "255.255.255.255",
+    ] {
+        let ip = address.parse().expect("IPv4 address");
+        assert!(
+            SafeUrl::try_from(format!("http://{address}/").as_str()).is_err(),
+            "non-global literal must be rejected: {address}"
+        );
+        assert!(
+            SafeUrl::validate_resolved_ip(ip).is_err(),
+            "non-global resolver answer must be rejected: {address}"
+        );
+    }
+
+    for address in ["8.8.8.8", "1.1.1.1"] {
+        let ip = address.parse().expect("public IPv4 address");
+        assert!(SafeUrl::try_from(format!("http://{address}/").as_str()).is_ok());
+        assert!(SafeUrl::validate_resolved_ip(ip).is_ok());
+    }
+}
+
+#[test]
+fn safe_url_rejects_non_global_ipv6_literals_and_resolved_addresses() {
+    for address in ["2001:db8::1", "2001::1", "2002::1", "3fff::1", "4000::1"] {
+        let ip = address.parse().expect("IPv6 address");
+        assert!(
+            SafeUrl::try_from(format!("http://[{address}]/").as_str()).is_err(),
+            "non-global literal must be rejected: {address}"
+        );
+        assert!(
+            SafeUrl::validate_resolved_ip(ip).is_err(),
+            "non-global resolver answer must be rejected: {address}"
+        );
+    }
+
+    let public = "2001:4860:4860::8888";
+    assert!(SafeUrl::try_from(format!("http://[{public}]/").as_str()).is_ok());
+    assert!(SafeUrl::validate_resolved_ip(public.parse().expect("public IPv6")).is_ok());
+}
+
+#[test]
+fn safe_redirect_rejects_network_path_and_encoded_separator_differentials() {
+    for value in [
+        "/\\evil.example",
+        "/%5cevil.example",
+        "/%5Cevil.example",
+        "/%2fevil.example",
+        "/%2Fevil.example",
+        "/safe/..//evil.example",
+        "/%2e%2e//evil.example",
+        "/%0d%0aLocation:%20https://evil.example",
+        "/bad%",
+    ] {
+        assert!(
+            SafeRedirectUrl::try_from(value).is_err(),
+            "ambiguous redirect must be rejected: {value:?}"
+        );
+    }
+}
+
+#[test]
+fn safe_redirect_accepts_and_canonicalizes_same_origin_relative_paths() {
+    let redirect = SafeRedirectUrl::try_from("/account/../dashboard?next=profile#settings")
+        .expect("same-origin relative redirect");
+    assert_eq!(redirect.as_inner(), "/dashboard?next=profile#settings");
 }

@@ -35,3 +35,13 @@ three high findings are absent without a new critical/high regression. This M1
 does not publish crates or change versions; coordinated publication remains a
 separate confirmed milestone after the remaining security batches and JWT HMAC
 profile are integrated.
+
+## Corrective handoff after PR #149
+
+The PR #149 merged-main scan removed two original high findings but found that
+SafeUrl still accepted carrier-grade/provider-metadata addresses and that
+SafeRedirectUrl accepted a backslash network path. M1 therefore remains open.
+The corrective branch extends the shared literal/resolver policy to conservative
+public-unicast classification and canonicalizes redirects under a fixed HTTPS
+origin. Final closure requires the corrective PR's exact-head CI and a clean
+merged-main Codex Security result for both classes.

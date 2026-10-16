@@ -416,6 +416,7 @@ let bad  = SafePath::try_from("../../etc/passwd");             // Err (path_trav
 let url  = SafeUrl::try_from("https://api.example.com")?;     // Ok
 let bad  = SafeUrl::try_from("http://169.254.169.254/");       // Err (ssrf_attempt)
 let alt  = SafeUrl::try_from("http://2130706433/");            // Err (canonical loopback)
+let cgn  = SafeUrl::try_from("http://100.100.100.200/");       // Err (non-public metadata)
 
 // SqlIdentifier — alphanumeric + underscore, max 128 chars
 let col  = SqlIdentifier::try_from("user_name")?;             // Ok
@@ -431,6 +432,7 @@ let name = SafeFilename::try_from("report.pdf")?;             // Ok
 // SafeRedirectUrl — relative paths only (open redirect prevention)
 let redir = SafeRedirectUrl::try_from("/dashboard")?;         // Ok
 let bad   = SafeRedirectUrl::try_from("https://evil.com");    // Err
+let slash = SafeRedirectUrl::try_from("/\\evil.com");         // Err (network-path differential)
 
 // LdapSafeString — escapes RFC 4515 special chars; always Ok, emits event if escaping needed
 let safe = LdapSafeString::try_from("user*admin")?;

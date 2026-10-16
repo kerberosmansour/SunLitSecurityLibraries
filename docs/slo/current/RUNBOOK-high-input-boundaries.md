@@ -29,8 +29,13 @@ changes remain a later contract.
   but chunked bodies are still bounded by the collector.
 - `SafeUrl` parses once with the existing locked `url` crate, rejects any
   credentials, backslash, fragment, missing host, non-HTTP(S) scheme, and
-  protected parsed IP, and stores the parser's canonical serialization. Decimal,
+  non-public parsed IP, and stores the parser's canonical serialization. Decimal,
   shortened and octal-like IPv4 spellings cannot fall through as domain names.
+  Literal and resolved addresses share a conservative public-unicast policy that
+  rejects carrier-grade/provider-metadata, documentation, benchmarking, reserved
+  and IPv6 special-purpose ranges. `SafeRedirectUrl` resolves against a fixed
+  HTTPS origin, retains the canonical relative reference, and rejects raw or
+  encoded path-separator/control differentials.
   DNS rebinding remains a documented residual: consumers must classify every
   resolved address and pin the approved address through connection establishment.
 - No new external dependency identity is admitted. Making the already locked
@@ -57,8 +62,9 @@ Threat model: `docs/slo/design/high-input-boundaries-threat-model.md`.
   requests crossing the configured byte cap stop at the cap and return the fixed
   oversized-body rejection before parser allocation.
 - `oc-high-input-boundaries-3` / `cuj-high-input-boundaries-3`: every known
-  alternate numeric/backslash URL witness is rejected or canonically classified
-  as a protected IP before a consumer can issue a request.
+  alternate numeric/backslash URL witness and non-public literal/resolver answer
+  is rejected before a consumer can issue a request; same-origin redirects cannot
+  become network paths under downstream normalization.
 
 BDD begins with failing public-API regressions for the scan witnesses. Negative
 controls cover normal absolute and relative links, public canonical IPs, ordinary
@@ -116,16 +122,16 @@ scope widening, or claiming DNS rebinding is solved.
 | Readiness/baseline | Base `379efff4255674ad755654b64dde086066802218`; focused package baselines passed before production edits. |
 | Red scan-witness regressions | URI suite failed 2 hostile cases; boundary suite failed all 5 original witnesses for full collection, ignored XML request limits, parser differentials and raw-value retention. |
 | Candidate exact lock/provenance/OSV | Script-disabled offline resolution retained 514 package identities. Existing locked `url` 2.5.8 archive matched checksum and declared `build = false`; crates.io owners/source/license reviewed. Official OSV 2.7.0 scanned 6 locks/1,448 package occurrences: 4 existing reviewed advisories, 0 `MAL-*`, exit 0. JSON SHA-256 `6cea97a78ce4454665abdde3ede39bbd5f76050c30914613c59f1de2a4053ed0`. |
-| Focused production and variant tests | URI 3/3 and input boundaries 6/6 passed; secure_output and secure_boundary package/doc suites passed; secure_boundary none/axum/actix/both feature matrix passed. |
+| Focused production and variant tests | URI 3/3 and corrective input boundaries 10/10 passed; secure_output and secure_boundary package/doc suites passed; secure_boundary none/axum/actix/both feature matrix passed. |
 | Workspace/static/docs/scope | Default and all-feature locked workspace suites, all-feature Clippy, zero-warning rustdoc and fmt passed. Cargo audit found 0 unaccepted vulnerabilities; deny and vet passed. Semgrep production/secrets found 0 findings/errors. Diff check and exact allow-list passed. |
-| Exact-head CI and merged-main Codex Security | Pending at signed source commit `f9ed2bf10b4cc8143e511fc33ac99952f61547b9`. |
-| Verify/retro/closure | Local verification, lessons and completion handoff recorded; exact-head CI and merged-main scan remain shipping gates. |
+| Exact-head CI and merged-main Codex Security | PR #149 passed and merged as `f76711797c37799e4d0d3b1883d758e90711175d`. Merged-main run `wfr_ea5805d2c2e414d826f50549be5e9e3501fe358e81f6dd18f5eb501c59519c03` removed the URI and allocation findings but found carrier-grade/provider-metadata acceptance and a redirect normalization gap; corrective follow-up is required before closure. |
+| Verify/retro/closure | Initial local verification, lessons and handoff recorded. Follow-up red tests reproduce the merged-main findings; final exact-head CI and merged-main rescan remain shipping gates. |
 
 ## Milestone tracker
 
 | Milestone | Status | Started | Finished |
 |---|---|---|---|
-| M1 three high-severity input-boundary repairs | verified locally; shipping gates pending | 2026-10-16 | — |
+| M1 high-severity input-boundary repairs and scan follow-up | corrective implementation in progress | 2026-10-16 | — |
 
 The user's standing instruction to continue autonomously and publish when needed
 is the confirmation basis for this concrete milestone and allow-list.
