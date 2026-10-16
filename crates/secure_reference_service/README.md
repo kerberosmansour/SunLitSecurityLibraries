@@ -20,6 +20,20 @@ A small axum service wired with the full SunLit Security Libraries stack:
 
 The library facade exposes `build_router(state, &resilience_config)` so integration tests can spin up the same stack the binary runs.
 
+## Authorization boundary
+
+Item routes resolve tenant and owner metadata from the stored item before
+authorization. GET holds the item-store read lock through its authorization
+decision; PUT and DELETE hold the write lock through authorization and mutation.
+This keeps the resource checked by `secure_authz` identical to the resource that
+is read, changed or removed, and makes cross-tenant read and mutation attempts
+fail with `403`.
+
+The request's development identity headers never supply authoritative item
+tenant or owner metadata. This pattern is the reference behavior; production
+services must obtain identity from trusted authentication and perform the same
+check in a datastore transaction or equivalent versioned write.
+
 ## Run locally
 
 ```bash
