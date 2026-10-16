@@ -84,6 +84,11 @@ pub enum DenyReason {
     DeviceTrustTierTooLow,
     /// Device trust or the bound device session was revoked or denied.
     DeviceTrustRevoked,
+    /// The device certificate or bound user session has expired or has an
+    /// invalid lifetime.
+    DeviceTrustExpired,
+    /// The device certificate or bound user session is not active yet.
+    DeviceTrustNotYetValid,
     /// Device metadata came from an untrusted edge/header source.
     UntrustedDeviceMetadata,
     /// The user session is not bound to the presented mTLS certificate.

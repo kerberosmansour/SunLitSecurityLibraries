@@ -14,7 +14,9 @@ use actix_web::body::{BoxBody, EitherBody};
 use actix_web::dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::http::StatusCode;
 use actix_web::{Error, HttpMessage, HttpResponse};
+use secure_network::MtlsRevocationLookup;
 use security_core::identity::AuthenticatedIdentity;
+use time::OffsetDateTime;
 
 use crate::action::Action;
 use crate::decision::Decision;
@@ -73,18 +75,23 @@ impl<A: Authorizer + Send + Sync + 'static> AuthzTransform<A> {
 ///
 /// An upstream mTLS/device-trust layer must insert [`DeviceTrustContext`] into
 /// request extensions. Missing context, untrusted edge metadata, revoked
-/// context, tier mismatch, or bound-session mismatch all short-circuit with
-/// `403`.
+/// context, invalid certificate/session time, certificate revocation, tier
+/// mismatch, or bound-session mismatch all short-circuit with `403`.
 #[derive(Clone)]
 pub struct DeviceTrustTransform {
     policy: DeviceTrustRoutePolicy,
+    revocation: Arc<dyn MtlsRevocationLookup + Send + Sync>,
 }
 
 impl DeviceTrustTransform {
-    /// Creates a new device-trust middleware for the route policy.
+    /// Creates device-trust middleware with the certificate revocation lookup
+    /// that must be consulted on every request.
     #[must_use]
-    pub fn new(policy: DeviceTrustRoutePolicy) -> Self {
-        Self { policy }
+    pub fn new(
+        policy: DeviceTrustRoutePolicy,
+        revocation: Arc<dyn MtlsRevocationLookup + Send + Sync>,
+    ) -> Self {
+        Self { policy, revocation }
     }
 }
 
@@ -104,6 +111,7 @@ where
         ready(Ok(DeviceTrustMiddleware {
             service: std::rc::Rc::new(service),
             policy: self.policy.clone(),
+            revocation: self.revocation.clone(),
         }))
     }
 }
@@ -112,6 +120,7 @@ where
 pub struct DeviceTrustMiddleware<S> {
     service: std::rc::Rc<S>,
     policy: DeviceTrustRoutePolicy,
+    revocation: Arc<dyn MtlsRevocationLookup + Send + Sync>,
 }
 
 impl<S, B> Service<ServiceRequest> for DeviceTrustMiddleware<S>
@@ -129,10 +138,15 @@ where
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let service = self.service.clone();
         let policy = self.policy.clone();
+        let revocation = self.revocation.clone();
         let context = req.extensions().get::<DeviceTrustContext>().cloned();
 
         Box::pin(async move {
-            match policy.evaluate(context.as_ref()) {
+            match policy.evaluate(
+                context.as_ref(),
+                OffsetDateTime::now_utc(),
+                revocation.as_ref(),
+            ) {
                 Decision::Allow { .. } => {
                     let resp = service.call(req).await?;
                     Ok(resp.map_into_left_body())

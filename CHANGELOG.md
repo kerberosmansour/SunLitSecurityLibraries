@@ -11,6 +11,11 @@ breaking API changes, but security fixes and migration notes should be explicit.
 
 ### Security
 
+- Require device-trust route authorization to validate current mTLS time bounds
+  and an explicit revocation lookup on every decision, and reject expired,
+  future or malformed bound user sessions at the same decision time. The Actix
+  adapter now requires the revocation provider; the loopback reference service
+  names its no-revocation test assumption explicitly.
 - Bind reference-service item GET, PUT and DELETE authorization to the stored
   tenant and owner under one locked snapshot. Cross-tenant administrators can no
   longer overwrite or delete another tenant's item, and denied mutations leave

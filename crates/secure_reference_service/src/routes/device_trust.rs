@@ -6,10 +6,11 @@ use http::{Response, StatusCode};
 use secure_authz::action::Action;
 use secure_authz::decision::Decision;
 use secure_authz::device_trust::{
-    DeviceTrustContext, DeviceTrustRequirement, DeviceTrustRoutePolicy,
+    DeviceTrustContext, DeviceTrustRequirement, DeviceTrustRoutePolicy, NoMtlsRevocations,
 };
 use secure_authz::resource::ResourceRef;
 use serde_json::json;
+use time::OffsetDateTime;
 
 /// `GET /device-trust/hardware` - requires hardware-backed trust.
 pub async fn hardware_route(context: Option<Extension<DeviceTrustContext>>) -> Response<Body> {
@@ -39,7 +40,13 @@ fn device_trust_response(
     policy: DeviceTrustRoutePolicy,
     context: Option<DeviceTrustContext>,
 ) -> Response<Body> {
-    match policy.evaluate(context.as_ref()) {
+    // The loopback-only reference service has no certificate revocation store.
+    // Production adapters must pass their authoritative lookup here.
+    match policy.evaluate(
+        context.as_ref(),
+        OffsetDateTime::now_utc(),
+        &NoMtlsRevocations,
+    ) {
         Decision::Allow { obligations } => json_response(
             StatusCode::OK,
             json!({"ok": true, "obligations": obligations}).to_string(),

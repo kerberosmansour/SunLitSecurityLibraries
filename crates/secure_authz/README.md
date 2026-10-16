@@ -88,6 +88,21 @@ an authorizer allow. If managing decisions directly, invalidate your own entries
 when authorization context changes. Use a separate cache for each policy engine.
 This does not refresh stale identities supplied by an upstream identity provider.
 
+## Device-trust freshness
+
+`DeviceTrustRoutePolicy::evaluate` requires the UTC decision time and an
+`MtlsRevocationLookup`. Every allow decision validates the certificate's trusted
+edge, revocation state and exclusive validity interval, then checks that a
+required bound user session is active at the same time and is pinned to that
+certificate. Expired, future, revoked or malformed authority fails closed before
+trust-tier and profile checks.
+
+Actix integrations pass an `Arc<dyn MtlsRevocationLookup + Send + Sync>` to
+`DeviceTrustTransform::new`; the middleware consults it on every request. Wire
+this to the authoritative certificate revocation source. `NoMtlsRevocations` is
+available for bounded tests or systems that can prove revocation is impossible;
+it is not a substitute for a production revocation source.
+
 ## Compatibility
 
 - MSRV: 1.78
