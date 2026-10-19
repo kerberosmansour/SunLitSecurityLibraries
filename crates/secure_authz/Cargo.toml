@@ -35,7 +35,7 @@ security_events = { workspace = true }
 casbin = "2"
 smallvec = { version = "1", features = ["serde"] }
 # Retains the pop panic-safety fix; later retain APIs remain under review.
-lru = "=0.18.3"
+lru = "=0.18.5"
 tokio = { version = "1", features = ["sync", "time", "rt"] }
 serde = { workspace = true }
 serde_json = "1"
