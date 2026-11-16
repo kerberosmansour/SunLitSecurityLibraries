@@ -48,7 +48,7 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 redis = { version = "1", features = ["aio", "tokio-comp"], optional = true }
 # Constrain Redis's existing transitive hash dependency while generic
 # custom-secret APIs in later versions remain under memory-safety review.
-xxhash-rust = { version = "=0.8.15", default-features = false, optional = true }
+xxhash-rust = { version = "=0.8.19", default-features = false, optional = true }
 security_core = { workspace = true }
 security_events = { workspace = true }
 secure_errors = { workspace = true }
